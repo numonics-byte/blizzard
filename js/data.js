@@ -1,6 +1,10 @@
 /* Blizzard content catalog */
 window.BLIZ = {
   games: [
+    { id:'neon-dash', name:'Neon Dash', file:'neon-dash.html', cat:'Arcade', icon:'⚡', g1:'#f7008a', g2:'#00e5ff', top:true,
+      desc:'One-button runner: jump, flip and fly through 10 glowing obstacle courses. A Blizzard original.' },
+    { id:'blob-arena', name:'Blob Arena', file:'blob-arena.html', cat:'Arcade', icon:'🟢', g1:'#56ab2f', g2:'#a8e063', top:true,
+      desc:'Eat dots and smaller blobs to grow, split to catch prey, and dodge the big ones. A Blizzard original.' },
     { id:'hexgl', name:'HexGL', file:'oss/HexGL/index.html', cat:'Racing', icon:'🚀', g1:'#0f2027', g2:'#00d2ff', top:true,
       desc:'Pilot an anti-gravity ship through a futuristic 3D race track. Best on a computer.' },
     { id:'retro-racer', name:'Retro Racer', file:'oss/javascript-racer/v4.final.html', cat:'Racing', icon:'🏁', g1:'#ff512f', g2:'#f09819', top:true,
