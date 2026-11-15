@@ -26,25 +26,26 @@ canvas{display:block;position:fixed;left:0;top:0;width:100%;height:100%;touch-ac
 /* ---------- version ---------- */
 const V = (function(){ try { return new URLSearchParams(location.search).get('v') === '2' ? 2 : 1; } catch(e){ return 1; } })();
 const CFG = V === 2
-  ? { name: 'ICE TUNNEL 2', title: 'Ice Tunnel 2', key: 'icetunnel2_best', speed0: 13, speedK: 0.3, speedMax: 32, turn: 4.5,
-      bend: 1, twist: 1, gapK: 0.62, sub: 'Faster. Twistier. Stranger.' }
-  : { name: 'ICE TUNNEL', title: 'Ice Tunnel', key: 'icetunnel_best', speed0: 10, speedK: 0.22, speedMax: 24, turn: 3.9,
-      bend: 0.25, twist: 0, gapK: 0.78, sub: 'Spin through the endless frozen tube' };
+  ? { name: 'ICE TUNNEL 2', title: 'Ice Tunnel 2', key: 'icetunnel2_best', speed0: 13, speedMax: 33, tau: 75, turn: 4.6,
+      bend: 1, twist: 1, gapT0: 0.85, gapT1: 0.5, sub: 'Faster. Twistier. Stranger.' }
+  : { name: 'ICE TUNNEL', title: 'Ice Tunnel', key: 'icetunnel_best', speed0: 10, speedMax: 25, tau: 70, turn: 4.0,
+      bend: 0.25, twist: 0, gapT0: 1.0, gapT1: 0.6, sub: 'Spin through the endless frozen tube' };
 document.title = CFG.title;
 
 /* ---------- canvas ---------- */
 const cv = document.getElementById('c');
 const ctx = cv.getContext('2d');
-let W = 0, H = 0, DPR = 1, M = 1, F = 300;
-const TAU = Math.PI * 2, R = 1, RIN = 0.6, PZ = 1, FAR = 36, NEAR = 0.32, SP = 1.5, DEPTH = 0.7;
-const S = 16, SW = TAU / S, HW = 0.085, SHIP_R = 0.8;
+let W = 0, H = 0, DPR = 1, M = 1, F = 300, FS = 300;
+const TAU = Math.PI * 2, R = 1, RIN = 0.58, PZ = 2, FAR = 40, NEAR = 0.7, SP = 1.5, DEPTH = 0.85;
+const S = 16, SW = TAU / S, HW = 0.08, SHIP_R = 0.79, CLOSE = 0.1, GEM_R = 0.22;
 
 function resize(){
   DPR = Math.min(window.devicePixelRatio || 1, 2.5);
   W = Math.max(1, window.innerWidth); H = Math.max(1, window.innerHeight);
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
   M = Math.min(W, H);
-  F = M * 0.47 * PZ;
+  // on tall phones let the tube overflow the sides a little so the ship and gaps are bigger
+  FS = Math.max(M * 0.47, Math.min(W * 0.58, H * 0.4)); F = FS * PZ;
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 120));
@@ -53,6 +54,7 @@ window.addEventListener('orientationchange', () => setTimeout(resize, 120));
 const rand = (a, b) => a + Math.random() * (b - a);
 const randi = n => Math.floor(Math.random() * n);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, k) => a + (b - a) * k;
 function angDiff(a, b){ let d = (a - b) % TAU; if (d < -Math.PI) d += TAU; if (d > Math.PI) d -= TAU; return d; }
 const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 const hsl = (h, s, l, a) => 'hsla(' + (((h % 360) + 360) % 360).toFixed(1) + ',' + s + '%,' + l + '%,' + (a === undefined ? 1 : a.toFixed(3)) + ')';
@@ -65,7 +67,7 @@ const store = {
 let best = parseInt(store.get(CFG.key, '0'), 10) || 0;
 let muted = store.get('muted', '0') === '1';
 
-/* ---------- audio ---------- */
+/* ---------- audio (bright, soft: sine/triangle only) ---------- */
 let AC = null, master = null;
 function ensureAudio(){
   try {
@@ -85,7 +87,7 @@ function tone(freq, dur, type, vol, slide, delay){
     o.frequency.setValueAtTime(freq, t0);
     if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, slide), t0 + dur);
     g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(vol || 0.2, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(vol || 0.2, t0 + 0.015);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + dur + 0.05);
   } catch(e){}
@@ -96,18 +98,20 @@ function noise(dur, vol, freq){
     const n = Math.floor(AC.sampleRate * dur), b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
     for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
     const s = AC.createBufferSource(); s.buffer = b;
-    const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = freq || 1500;
-    const g = AC.createGain(); g.gain.value = vol || .3;
+    const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = freq || 900;
+    const g = AC.createGain(); g.gain.value = vol || .15;
     s.connect(f); f.connect(g); g.connect(master); s.start();
   } catch(e){}
 }
+const LADDER = [659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1568, 1760];
 const sfx = {
-  start(){ tone(330, .1, 'square', .1); tone(495, .1, 'square', .1, 0, .09); tone(660, .25, 'square', .1, 880, .18); },
-  pass(){ tone(1200 + Math.random() * 200, .05, 'sine', .05); },
-  close(){ tone(900, .07, 'triangle', .12); tone(1350, .12, 'triangle', .12, 0, .06); },
-  level(){ [440, 554, 659, 880].forEach((f, i) => tone(f, .12, 'sawtooth', .07, 0, i * .07)); },
-  crash(){ noise(.8, .5, 2200); tone(400, .7, 'sawtooth', .16, 30); tone(120, .6, 'sine', .3, 25); },
-  best(){ [523, 659, 784, 1047].forEach((f, i) => tone(f, .16, 'triangle', .14, 0, i * .09)); }
+  start(){ [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, .16, 'triangle', .14, 0, i * .07)); },
+  pass(){ tone(880, .07, 'sine', .035); },
+  close(n){ const f = LADDER[Math.min(n, LADDER.length - 1)]; tone(f, .09, 'triangle', .11); tone(f * 1.5, .14, 'sine', .07, 0, .05); },
+  gem(n){ const f = LADDER[Math.min(n, LADDER.length - 1)] * 1.5; tone(f, .08, 'sine', .09); tone(f * 1.26, .12, 'sine', .06, 0, .04); },
+  level(){ [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, .16, 'triangle', .1, 0, i * .07)); },
+  crash(){ noise(.5, .2, 700); tone(783.99, .2, 'triangle', .12); tone(587.33, .24, 'triangle', .11, 0, .1); tone(392, .5, 'sine', .14, 0, .2); },
+  best(){ [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, .18, 'triangle', .13, 0, i * .09)); }
 };
 
 /* ---------- mute ---------- */
@@ -140,7 +144,8 @@ window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; p
 cv.addEventListener('pointerdown', e => {
   e.preventDefault(); ensureAudio();
   try { cv.setPointerCapture(e.pointerId); } catch(_){}
-  pointers.set(e.pointerId, { x: e.clientX });
+  // the tap that starts a run should not also spin the ship
+  pointers.set(e.pointerId, { x: e.clientX, live: state === 'play' && !paused });
   primaryAction();
 });
 cv.addEventListener('pointermove', e => { const p = pointers.get(e.pointerId); if (p) p.x = e.clientX; });
@@ -157,7 +162,7 @@ function steerInput(){
   if (keys.ArrowLeft || keys.KeyA) d -= 1;
   if (keys.ArrowRight || keys.KeyD) d += 1;
   let l = false, r = false;
-  pointers.forEach(p => { if (p.x < W / 2) l = true; else r = true; });
+  pointers.forEach(p => { if (!p.live) return; if (p.x < W / 2) l = true; else r = true; });
   if (l) d -= 1; if (r) d += 1;
   return clamp(d, -1, 1);
 }
@@ -165,15 +170,19 @@ function steerInput(){
 /* ---------- state ---------- */
 let state = 'title', paused = false, t = 0, elapsed = 0;
 let theta = 0, omega = 0, speed = CFG.speed0, dist = 0, score = 0, spawnAcc = 0, level = 1;
-let obs = [], parts = [], pops = [], dust = [];
+let obs = [], gems = [], parts = [], pops = [], dust = [];
 let shake = 0, flash = 0, overTimer = 0, dyingTimer = 0, newBest = false, rings = 0;
+let combo = 0, comboT = 0, bestCombo = 0, gemCount = 0, closes = 0, levelFlash = 0, scorePulse = 0;
 let hue = 195, obsHue = 225;
 let bendX = 0, bendY = 0, twist = 0;
+let lastExit = 0, lastU = 0, lastEnd = PZ, introLeft = 0, introAng = 0;
+let crashPt = null;
+const COMBO_TIME = 3;
 
 function primaryAction(){
   if (paused){ paused = false; return; }
   if (state === 'title') startGame();
-  else if (state === 'over' && overTimer > 0.6) startGame();
+  else if (state === 'over' && overTimer > 0.7) startGame();
 }
 function togglePause(){ if (state === 'play' || state === 'dying') paused = !paused; }
 document.addEventListener('visibilitychange', () => {
@@ -184,8 +193,16 @@ window.addEventListener('pagehide', () => { if (state === 'play') paused = true;
 
 function startGame(){
   state = 'play'; elapsed = 0; score = 0; rings = 0; level = 1; newBest = false;
-  theta = 0; omega = 0; speed = CFG.speed0; obs = []; parts.length = 0; pops.length = 0;
-  spawnAcc = 10; overTimer = 0; dyingTimer = 0;
+  combo = 0; comboT = 0; bestCombo = 0; gemCount = 0; closes = 0;
+  theta = 0; omega = 0; speed = CFG.speed0; obs = []; gems = []; parts.length = 0; pops.length = 0;
+  overTimer = 0; dyingTimer = 0; crashPt = null;
+  lastExit = theta; lastU = 0; lastEnd = PZ + 4;
+  spawnAcc = 0;
+  // gentle intro: the first 3 walls open right where the ship starts, the first one ~1.75s away
+  introLeft = 3; introAng = theta;
+  let z = PZ + CFG.speed0 * 1.75;
+  while (z < FAR){ spawnNext(z); z += spawnAcc; }
+  spawnAcc = z - FAR;
   sfx.start();
 }
 
@@ -206,6 +223,7 @@ function P(a, r, z){
   return { x: c.x + Math.cos(ang) * r * s, y: c.y + Math.sin(ang) * r * s };
 }
 function fogA(z){ return clamp(1 - Math.pow(z / FAR, 1.3), 0, 1); }
+function fogO(z){ return clamp(1 - Math.pow(z / FAR, 2.2), 0, 1); }
 
 /* ---------- obstacles ---------- */
 function blocksFrom(mask){
@@ -218,74 +236,137 @@ function blocksFrom(mask){
   }
   return out;
 }
-function gapMask(start, size){ const m = new Array(S).fill(true); for (let k = 0; k < size; k++) m[((start + k) % S + S) % S] = false; return m; }
+const segOf = a => ((Math.round(a / SW) % S) + S) % S;
+// a mask whose gap of `size` segments is centred on angle c
+function gapMaskAt(c, size){
+  const m = new Array(S).fill(true);
+  const s0 = Math.round(c / SW - size / 2);
+  for (let k = 0; k < size; k++) m[((s0 + k) % S + S) % S] = false;
+  return { m: m, c: (s0 + size / 2) * SW };
+}
 function ring(z, mask, extra){
-  const o = { z: z, d: DEPTH, blocks: blocksFrom(mask), rot: 0, amp: 0, freq: 0, ph: 0, minClear: 9, passed: false, born: t };
+  const o = { z: z, zp: z, d: DEPTH, blocks: blocksFrom(mask), rot: 0, amp: 0, freq: 0, ph: 0, minClear: 9, passed: false, born: t, hit: -1 };
   if (extra) for (const k in extra) o[k] = extra[k];
   obs.push(o); return o;
 }
-function obsOff(o){ return o.rot * (t - o.born) + o.amp * Math.sin(o.freq * t + o.ph); }
+function gem(z, a){ gems.push({ z: z, zp: z, a: a, got: false, spin: Math.random() * TAU }); }
+function obsOff(o, at){ const tt = at === undefined ? t : at; return o.rot * (tt - o.born) + o.amp * Math.sin(o.freq * tt + o.ph); }
+const arrive = z => t + (z - PZ) / Math.max(speed, 1);
 
+/* Every pattern gets an aim angle and a reach (how far from the aim its opening may be
+   while staying reachable), and returns { len, exit, u }: its length, the angle the ship
+   leaves through, and how uncertain that exit is. That keeps every run fair. */
 const PATTERNS = {
-  gap(z, diff){ ring(z, gapMask(randi(S), Math.round(5 - diff * 2))); return DEPTH; },
-  snake(z, diff){
-    const n = 4 + Math.floor(diff * 3), sp = 2.3 + speed * 0.07, dir = Math.random() < .5 ? -1 : 1, step = Math.random() < .5 ? 1 : 2;
-    let s0 = randi(S);
-    for (let i = 0; i < n; i++){ ring(z + i * sp, gapMask(s0, 4)); s0 += dir * step; }
-    return (n - 1) * sp + DEPTH;
+  gap(z, d, aim, reach){
+    const size = Math.max(3, Math.round(5 - d * 2.2));
+    const g = gapMaskAt(aim + rand(-reach, reach), size);
+    ring(z, g.m); gem(z + DEPTH / 2, g.c);
+    return { len: DEPTH, exit: g.c, u: size * SW / 2 - HW - .15 };
   },
-  scatter(z, diff){
-    const m = []; for (let i = 0; i < S; i++) m.push(Math.random() < .3 + diff * .25);
-    const r = randi(S); for (let k = 0; k < 3; k++) m[(r + k) % S] = false;
-    if (m.every(v => !v)) m[(r + 8) % S] = true;
-    ring(z, m); return DEPTH;
+  snake(z, d, aim, reach){
+    const n = 4 + Math.floor(d * 3), dir = Math.random() < .5 ? -1 : 1, step = d > .4 && Math.random() < .5 ? 2 : 1;
+    const sp = speed * (step * SW / CFG.turn) * 1.7 + 1.6;
+    let c = aim + rand(-reach, reach) * .6, g = null;
+    for (let i = 0; i < n; i++){ g = gapMaskAt(c, 4); ring(z + i * sp, g.m); if (i < n - 1) gem(z + i * sp + sp / 2, g.c + dir * step * SW / 2); c += dir * step * SW; }
+    return { len: (n - 1) * sp + DEPTH, exit: g.c, u: .3 };
   },
-  cross(z){
-    const r = randi(S), m = []; for (let i = 0; i < S; i++) m.push(((i + r) % 8) < 3);
-    ring(z, m); return DEPTH;
+  scatter(z, d, aim, reach){
+    const m = []; for (let i = 0; i < S; i++) m.push(Math.random() < .32 + d * .25);
+    const g = gapMaskAt(aim + rand(-reach, reach), 3);
+    for (let i = 0; i < S; i++) if (!g.m[i]) m[i] = false;
+    if (m.every(v => !v)) m[(segOf(g.c) + 8) % S] = true;
+    ring(z, m); gem(z + DEPTH / 2, g.c);
+    return { len: DEPTH, exit: g.c, u: .45 };
   },
-  half(z){
-    const r = randi(S), sp = 3 + speed * 0.3;
-    const m1 = []; for (let i = 0; i < S; i++) m1.push(((i - r + S) % S) < 8);
+  cross(z, d, aim, reach){
+    // four 3-wide walls, four 1-segment-wider openings
+    const c = aim + rand(-reach, reach), s0 = Math.round(c / SW - 2.5), m = [];
+    for (let i = 0; i < S; i++) m.push(((i - s0) % 8 + 8) % 8 >= 5);
+    ring(z, m); gem(z + DEPTH / 2, (s0 + 2.5) * SW);
+    return { len: DEPTH, exit: (s0 + 2.5) * SW, u: .8 };
+  },
+  half(z, d, aim, reach){
+    // open half first, then the opposite half: slide across the seam
+    const c = aim + rand(-reach * .5, reach * .5), s0 = Math.round(c / SW - 4);
+    const m1 = []; for (let i = 0; i < S; i++) m1.push(((i - s0 + S * 2) % S) >= 8);
+    const sp = 2 + speed * 0.5;
     ring(z, m1);
     ring(z + sp, m1.map(v => !v));
-    return sp + DEPTH;
+    const ex = (Math.random() < .5 ? s0 - 1.5 : s0 + 9.5) * SW;   // just across one seam
+    gem(z + sp * .6, ex);
+    return { len: sp + DEPTH, exit: ex, u: 1.2 };
   },
   // ---- Ice Tunnel 2 only ----
-  rotgap(z, diff){ ring(z, gapMask(randi(S), 4), { rot: (Math.random() < .5 ? -1 : 1) * (0.7 + diff * .6) }); return DEPTH; },
-  movers(z, diff){
-    const r = randi(S), m = new Array(S).fill(false);
-    for (const b of [0, 5, 10]){ m[(r + b) % S] = true; m[(r + b + 1) % S] = true; }
-    ring(z, m, { amp: 0.55, freq: 1.8 + diff, ph: Math.random() * TAU }); return DEPTH;
+  rotgap(z, d, aim, reach){
+    const rot = (Math.random() < .5 ? -1 : 1) * (0.6 + d * .6);
+    const at = aim + rand(-reach, reach);           // where the gap will be when it reaches you
+    const g = gapMaskAt(at - rot * (arrive(z) - t), 4);
+    ring(z, g.m, { rot: rot });
+    return { len: DEPTH, exit: at, u: .6 };
   },
-  blades(z, diff){
+  movers(z, d, aim, reach){
+    const m = new Array(S).fill(false), s0 = segOf(aim + rand(-reach, reach)) + 2;
+    for (const b of [0, 5, 10]){ m[(s0 + b) % S] = true; m[(s0 + b + 1) % S] = true; }
+    ring(z, m, { amp: 0.5, freq: 1.6 + d, ph: Math.random() * TAU });
+    return { len: DEPTH + speed * .2, exit: aim, u: 1.4 };
+  },
+  blades(z, d){
     const r = randi(S), m = new Array(S).fill(false);
     m[r] = m[(r + 1) % S] = m[(r + 8) % S] = m[(r + 9) % S] = true;
-    if (diff > .5){ m[(r + 4) % S] = m[(r + 12) % S] = true; }
-    ring(z, m, { d: DEPTH * 1.6, rot: (Math.random() < .5 ? -1 : 1) * 1.5 }); return DEPTH * 1.6;
+    if (d > .5){ m[(r + 4) % S] = m[(r + 12) % S] = true; }
+    const o = ring(z, m, { d: DEPTH * 1.5, rot: (Math.random() < .5 ? -1 : 1) * 1.3 });
+    return { len: DEPTH * 1.5 + speed * .3, exit: (r + 4.5) * SW + o.rot * (arrive(z) - t), u: 1.6 };
   },
-  counter(z){
-    const sp = 2 + speed * 0.05;
-    ring(z, gapMask(randi(S), 5), { rot: 0.9 });
-    ring(z + sp, gapMask(randi(S), 5), { rot: -0.9 });
-    return sp + DEPTH;
+  counter(z, d, aim, reach){
+    const sp = 2.5 + speed * 0.12;
+    const a1 = aim + rand(-reach, reach);
+    const a2 = a1 + rand(-1, 1) * Math.min(1.2, CFG.turn * (sp / speed) * .55);
+    const g1 = gapMaskAt(a1 - 0.9 * (arrive(z) - t), 5), g2 = gapMaskAt(a2 + 0.9 * (arrive(z + sp) - t), 5);
+    ring(z, g1.m, { rot: 0.9 });
+    ring(z + sp, g2.m, { rot: -0.9 });
+    return { len: sp + DEPTH, exit: a2, u: .7 };
   },
-  pulse(z){
-    const r = randi(S), m = new Array(S).fill(false);
-    for (let i = 0; i < S; i += 4){ m[(r + i) % S] = true; m[(r + i + 1) % S] = true; }
-    ring(z, m, { amp: SW * 2, freq: 3, ph: 0 }); return DEPTH;
+  pulse(z, d, aim){
+    const s0 = segOf(aim) + 2, m = new Array(S).fill(false);
+    for (let i = 0; i < S; i += 4){ m[(s0 + i) % S] = true; }
+    ring(z, m, { amp: SW * 1.2, freq: 2.6, ph: 0 });
+    return { len: DEPTH + speed * .15, exit: aim, u: 1.2 };
   }
 };
-const W1 = [['gap', 25], ['snake', 18], ['scatter', 20], ['cross', 15], ['half', 18]];
-const W2 = [['gap', 12], ['snake', 12], ['scatter', 10], ['cross', 8], ['half', 10], ['rotgap', 16], ['movers', 14], ['blades', 10], ['counter', 10], ['pulse', 8]];
-function spawnPattern(z){
-  const diff = clamp(elapsed / 80, 0, 1);
-  if (elapsed < 8) return PATTERNS[Math.random() < .6 ? 'gap' : 'cross'](z, 0);
-  const table = V === 2 ? W2 : W1;
-  let tot = 0; for (const e of table) tot += e[1];
-  let r = Math.random() * tot;
-  for (const e of table){ r -= e[1]; if (r <= 0) return PATTERNS[e[0]](z, diff); }
-  return PATTERNS.gap(z, diff);
+const W1 = [['gap', 26], ['snake', 18], ['scatter', 18], ['cross', 16], ['half', 14]];
+const W2 = [['gap', 10], ['snake', 12], ['scatter', 10], ['cross', 8], ['half', 8], ['rotgap', 16], ['movers', 12], ['blades', 9], ['counter', 11], ['pulse', 8]];
+const diffNow = () => clamp(elapsed / 110, 0, 1);
+function spawnNext(z){
+  const d = diffNow();
+  const turnEff = CFG.turn * (1 + d * .12);
+  const time = Math.max(0.05, (z - lastEnd) / Math.max(speed, 1));
+  const reach = clamp(turnEff * time * 0.6 - lastU + 0.45, 0.1, Math.PI);
+  let name;
+  if (elapsed < 9) name = Math.random() < .65 ? 'gap' : 'cross';
+  else {
+    const table = V === 2 ? W2 : W1;
+    let tot = 0; for (const e of table) tot += e[1];
+    let r = Math.random() * tot; name = table[0][0];
+    for (const e of table){ r -= e[1]; if (r <= 0){ name = e[0]; break; } }
+  }
+  let res;
+  if (introLeft > 0){
+    introLeft--;
+    const g = gapMaskAt(introAng, 6);   // wide opening centred on the starting angle
+    ring(z, g.m); gem(z + DEPTH / 2, g.c);
+    res = { len: DEPTH, exit: g.c, u: .3 };
+  } else res = PATTERNS[name](z, d, lastExit, reach);
+  // a trail of gems from the previous exit to this pattern's exit guides the eye
+  if (state === 'play' && z - lastEnd > 5){
+    const n = Math.floor((z - lastEnd) / 4.5);
+    const da = angDiff(res.exit, lastExit);
+    for (let i = 1; i <= n; i++){
+      const k = i / (n + 1);
+      if (Math.random() < .7) gem(lastEnd + (z - lastEnd) * k, lastExit + da * k * k);
+    }
+  }
+  lastExit = res.exit; lastU = Math.max(0, res.u); lastEnd = z + res.len;
+  spawnAcc = res.len + speed * lerp(CFG.gapT0, CFG.gapT1, d);
 }
 
 /* ---------- particles ---------- */
@@ -295,71 +376,88 @@ function burst(x, y, n, colors, spd, life, size){
     parts.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: life * rand(.5, 1), max: life, r: size * rand(.6, 1.4), c: colors[randi(colors.length)], g: 0 });
   }
 }
-function pop(text, x, y, c){ pops.push({ text: text, x: x, y: y, life: 1.1, c: c }); }
+function pop(text, x, y, c, big){ pops.push({ text: text, x: x, y: y, life: big ? 1.5 : 1.0, c: c, big: !!big }); }
+function bumpCombo(){ combo++; comboT = COMBO_TIME; if (combo > bestCombo) bestCombo = combo; }
 
 /* ---------- update ---------- */
 let last = performance.now();
 function update(dt){
   t += dt;
-  // palette + tunnel shape
-  if (V === 2){ hue = 200 + t * 14; obsHue = hue + 160; }
-  else { hue = 195 + Math.sin(t * .2) * 8; obsHue = 228; }
+  if (V === 2){ hue = 200 + t * 14; obsHue = hue + 165; }
+  else { hue = 195 + Math.sin(t * .2) * 8; obsHue = 205 + Math.sin(t * .2) * 8; }
   bendX = (Math.sin(t * .31) * .45 + Math.sin(t * .13) * .2) * CFG.bend;
   bendY = (Math.cos(t * .23) * .3 + Math.sin(t * .41) * .08) * CFG.bend;
   twist = Math.sin(t * .21) * .055 * CFG.twist;
 
   if (state === 'play'){
     elapsed += dt;
-    speed = Math.min(CFG.speedMax, CFG.speed0 + elapsed * CFG.speedK);
+    speed = CFG.speed0 + (CFG.speedMax - CFG.speed0) * (1 - Math.exp(-elapsed / CFG.tau));
     const lv = 1 + Math.floor(elapsed / 20);
-    if (lv > level){ level = lv; sfx.level(); pop('LEVEL ' + level, W / 2, H * .3, hsl(hue, 100, 75)); }
+    if (lv > level){ level = lv; sfx.level(); levelFlash = 1; pop('LEVEL ' + level, W / 2, H * .28, hsl(hue, 100, 80), true); }
   } else if (state === 'title') speed = CFG.speed0 * .8;
   else speed = Math.max(0, speed - speed * 2.2 * dt - 2 * dt);
 
   const dz = speed * dt;
   dist += dz;
   if (state === 'play') score += dz;
+  lastEnd -= dz;
 
   let target = 0;
-  if (state === 'play') target = -steerInput() * CFG.turn;
+  const d = diffNow();
+  if (state === 'play') target = -steerInput() * CFG.turn * (1 + d * .12);
   else if (state === 'title') target = Math.sin(t * .8) * 1.4;
-  omega += (target - omega) * Math.min(1, 14 * dt);
+  // fast response, quicker still when reversing direction
+  const resp = (target !== 0 && Math.sign(target) !== Math.sign(omega)) ? 26 : 16;
+  omega += (target - omega) * Math.min(1, resp * dt);
   theta += omega * dt;
 
-  // obstacles
+  if (combo > 0 && state === 'play'){ comboT -= dt; if (comboT <= 0) combo = 0; }
+
+  // obstacles (swept test: catches walls even on a slow frame)
   for (let i = obs.length - 1; i >= 0; i--){
     const o = obs[i];
-    o.z -= dz;
+    o.zp = o.z; o.z -= dz;
     if (state === 'play' && !o.passed){
-      if (o.z <= PZ + .05 && o.z + o.d >= PZ - .05){
+      if (o.z <= PZ && o.zp + o.d >= PZ){
         const off = obsOff(o);
-        for (const b of o.blocks){
-          const d = Math.abs(angDiff(theta, b.a0 + off + b.w / 2)) - b.w / 2 - HW;
-          if (d < 0){ crash(); break; }
-          if (d < o.minClear) o.minClear = d;
+        for (let bi = 0; bi < o.blocks.length; bi++){
+          const b = o.blocks[bi];
+          const dd = Math.abs(angDiff(theta, b.a0 + off + b.w / 2)) - b.w / 2 - HW;
+          if (dd < 0){ o.hit = bi; crash(o); break; }
+          if (dd < o.minClear) o.minClear = dd;
         }
       }
-      if (state === 'play' && o.z + o.d < PZ - .05){ o.passed = true; passRing(o); }
+      if (state === 'play' && o.z + o.d < PZ){ o.passed = true; passRing(o); }
     }
     if (o.z + o.d < NEAR * .6) obs.splice(i, 1);
   }
+  for (let i = gems.length - 1; i >= 0; i--){
+    const g = gems[i];
+    g.zp = g.z; g.z -= dz; g.spin += dt * 4;
+    if (state === 'play' && !g.got && g.zp >= PZ && g.z < PZ){
+      if (Math.abs(angDiff(theta, g.a)) < GEM_R){
+        g.got = true; gemCount++; bumpCombo();
+        const b = 10 * Math.min(combo, 10); score += b; scorePulse = 1;
+        const sp = P(theta, SHIP_R, PZ);
+        burst(sp.x, sp.y - FS * .05, 12, ['#ffffff', hsl(hue + 40, 100, 80), '#ffe9a8'], M * .35, .45, M / 160);
+        sfx.gem(combo);
+        if (combo > 2) pop('+' + b, sp.x, sp.y - FS * .2, hsl(hue + 40, 100, 85));
+      }
+    }
+    if (g.z < NEAR || g.got) gems.splice(i, 1);
+  }
   if (state === 'play'){
     spawnAcc -= dz;
-    if (spawnAcc <= 0){
-      const len = spawnPattern(FAR);
-      spawnAcc = len + Math.max(4.5, speed * CFG.gapK);
-    }
+    if (spawnAcc <= 0) spawnNext(FAR + spawnAcc);
   }
 
-  // dust streaks
-  for (const d of dust){ d.z -= dz * 1.15; if (d.z < NEAR){ d.z = FAR * rand(.7, 1); d.a = Math.random() * TAU; d.r = rand(.35, .97); } }
+  for (const s of dust){ s.z -= dz * 1.15; if (s.z < NEAR){ s.z = FAR * rand(.7, 1); s.a = Math.random() * TAU; s.r = rand(.35, .97); } }
 
-  // engine trail
   if (state === 'play'){
-    const sp = P(theta, SHIP_R, PZ), u = F * .07;
-    if (Math.random() < .9){
+    const sp = P(theta, SHIP_R, PZ), u = FS * .075;
+    for (let k = 0; k < 2; k++){
       parts.push({ x: sp.x + rand(-.3, .3) * u, y: sp.y + u * .35, vx: rand(-30, 30) + omega * 25, vy: rand(60, 160), life: rand(.25, .5), max: .5,
-        r: rand(2, 4) * u / 20, c: Math.random() < .5 ? '#ffffff' : hsl(hue, 100, 70), g: 0 });
+        r: rand(2, 4) * u / 20, c: Math.random() < .5 ? '#ffffff' : hsl(hue, 100, 72), g: 0 });
     }
   }
   for (let i = parts.length - 1; i >= 0; i--){
@@ -367,10 +465,13 @@ function update(dt){
     if (p.life <= 0){ parts.splice(i, 1); continue; }
     p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= Math.pow(.4, dt); p.vy *= Math.pow(.4, dt); p.vy += p.g * dt;
   }
-  for (let i = pops.length - 1; i >= 0; i--){ const q = pops[i]; q.life -= dt; q.y -= 40 * dt; if (q.life <= 0) pops.splice(i, 1); }
+  if (parts.length > 600) parts.splice(0, parts.length - 600);
+  for (let i = pops.length - 1; i >= 0; i--){ const q = pops[i]; q.life -= dt; q.y -= (q.big ? 20 : 45) * dt; if (q.life <= 0) pops.splice(i, 1); }
 
-  shake = Math.max(0, shake - 40 * dt);
+  shake = Math.max(0, shake - 45 * dt);
   flash = Math.max(0, flash - 2.5 * dt);
+  levelFlash = Math.max(0, levelFlash - 1.2 * dt);
+  scorePulse = Math.max(0, scorePulse - 3 * dt);
   if (state === 'dying'){ dyingTimer += dt; if (dyingTimer > 1.0) gameOver(); }
   if (state === 'over') overTimer += dt;
 }
@@ -378,17 +479,22 @@ function update(dt){
 function passRing(o){
   rings++;
   score += 5;
-  if (o.minClear < 0.09){
-    score += 25;
+  if (o.minClear < CLOSE){
+    bumpCombo(); closes++;
+    const b = 20 * Math.min(combo, 10);
+    score += b; scorePulse = 1; shake = Math.max(shake, 3);
     const sp = P(theta, SHIP_R, PZ);
-    pop('CLOSE! +25', sp.x, sp.y - F * .2, hsl(obsHue, 100, 80));
-    sfx.close();
+    pop('CLOSE +' + b, sp.x, sp.y - FS * .22, hsl(obsHue, 100, 82));
+    burst(sp.x, sp.y, 14, ['#ffffff', hsl(obsHue, 100, 80)], M * .4, .4, M / 170);
+    sfx.close(combo);
   } else sfx.pass();
 }
-function crash(){
-  state = 'dying'; dyingTimer = 0; shake = 22; flash = .8;
+function crash(o){
+  state = 'dying'; dyingTimer = 0; shake = 20; flash = .55;
   const sp = P(theta, SHIP_R, PZ);
-  burst(sp.x, sp.y, 70, ['#ffffff', hsl(hue, 100, 70), hsl(obsHue, 100, 75), '#bff6ff'], M * .9, 1.2, M / 110);
+  crashPt = { x: sp.x, y: sp.y };
+  burst(sp.x, sp.y, 60, ['#ffffff', hsl(hue, 100, 72), '#bff6ff'], M * .9, 1.2, M / 110);
+  burst(sp.x, sp.y, 30, [hsl(obsHue, 100, 75), hsl(obsHue, 90, 60)], M * .6, 1.0, M / 80);
   sfx.crash();
 }
 function gameOver(){
@@ -399,14 +505,12 @@ function gameOver(){
 
 /* ---------- render: tunnel ---------- */
 function drawTunnel(){
-  // background
   const cf = centerAt(FAR);
-  ctx.fillStyle = hsl(hue + 20, 70, 4); ctx.fillRect(-30, -30, W + 60, H + 60);
+  ctx.fillStyle = hsl(hue + 20, 70, 5); ctx.fillRect(-30, -30, W + 60, H + 60);
   const bg = ctx.createRadialGradient(cf.x, cf.y, 0, cf.x, cf.y, Math.max(W, H) * .8);
-  bg.addColorStop(0, hsl(hue, 80, 18)); bg.addColorStop(.35, hsl(hue + 15, 80, 8)); bg.addColorStop(1, hsl(hue + 30, 70, 3));
+  bg.addColorStop(0, hsl(hue, 85, 24)); bg.addColorStop(.35, hsl(hue + 15, 80, 11)); bg.addColorStop(1, hsl(hue + 30, 70, 5));
   ctx.fillStyle = bg; ctx.fillRect(-30, -30, W + 60, H + 60);
 
-  // ring depths (far -> near)
   const off = dist % SP, base = Math.floor(dist / SP);
   const zs = [], idx = [];
   for (let k = Math.ceil((FAR + off) / SP); k >= 0; k--){
@@ -415,63 +519,74 @@ function drawTunnel(){
     zs.push(z); idx.push(k + base);
   }
   zs.push(NEAR); idx.push(-1);
-  // grid points
   const G = zs.map(z => { const row = []; for (let i = 0; i < S; i++) row.push(P(i * SW, R, z)); return row; });
 
-  // checker panels
   for (let j = 0; j < zs.length - 1; j++){
     const za = zs[j], a = fogA(za);
     if (a <= .01) continue;
     for (let i = 0; i < S; i++){
-      if (((idx[j] + i) & 1) !== 0) continue;
       const p1 = G[j][i], p2 = G[j][(i + 1) % S], p3 = G[j + 1][(i + 1) % S], p4 = G[j + 1][i];
-      ctx.fillStyle = hsl(hue + i * 2, 85, 45, .09 * a);
+      const odd = ((idx[j] + i) & 1) !== 0;
+      ctx.fillStyle = hsl(hue + i * 2, 85, odd ? 30 : 48, (odd ? .08 : .16) * a);
       ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y); ctx.closePath(); ctx.fill();
     }
   }
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  // longitudinal lines
   for (let i = 0; i < S; i++){
-    ctx.strokeStyle = hsl(hue, 100, 65, .16);
+    ctx.strokeStyle = hsl(hue, 100, 65, .2);
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let j = 0; j < zs.length; j++){ const p = G[j][i]; j ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); }
     ctx.stroke();
   }
-  // rings
   for (let j = 0; j < zs.length - 1; j++){
     const z = zs[j], a = fogA(z), c = centerAt(z), r = R * F / z;
     const big = (idx[j] % 4) === 0;
     if (big){
-      ctx.strokeStyle = hsl(hue, 100, 60, .25 * a); ctx.lineWidth = Math.max(2, .09 * F / z);
+      ctx.strokeStyle = hsl(hue, 100, 60, (.25 + levelFlash * .5) * a); ctx.lineWidth = Math.max(2, .09 * F / z);
       ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, TAU); ctx.stroke();
-      ctx.strokeStyle = hsl(hue, 100, 82, .85 * a); ctx.lineWidth = Math.max(1, .022 * F / z);
+      ctx.strokeStyle = hsl(hue, 100, 85, .85 * a); ctx.lineWidth = Math.max(1, .022 * F / z);
     } else {
-      ctx.strokeStyle = hsl(hue, 100, 70, .35 * a); ctx.lineWidth = Math.max(.75, .01 * F / z);
+      ctx.strokeStyle = hsl(hue, 100, 70, .3 * a); ctx.lineWidth = Math.max(.75, .01 * F / z);
     }
     ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, TAU); ctx.stroke();
   }
-  // far glow
-  const fr = M * .3;
+  const fr = M * .32;
   const fg = ctx.createRadialGradient(cf.x, cf.y, 0, cf.x, cf.y, fr);
-  fg.addColorStop(0, hsl(hue, 100, 85, .5)); fg.addColorStop(.3, hsl(hue, 100, 60, .15)); fg.addColorStop(1, hsl(hue, 100, 50, 0));
+  fg.addColorStop(0, hsl(hue, 100, 88, .55)); fg.addColorStop(.3, hsl(hue, 100, 60, .16)); fg.addColorStop(1, hsl(hue, 100, 50, 0));
   ctx.fillStyle = fg; ctx.fillRect(cf.x - fr, cf.y - fr, fr * 2, fr * 2);
-  // dust streaks
   ctx.lineCap = 'round';
-  for (const d of dust){
-    const a = fogA(d.z); if (a < .05) continue;
-    const p1 = P(d.a, d.r, d.z), p2 = P(d.a, d.r, d.z + .25 + speed * .025);
-    ctx.strokeStyle = 'rgba(220,250,255,' + (.55 * a).toFixed(3) + ')';
-    ctx.lineWidth = Math.max(1, .012 * F / d.z);
+  for (const s of dust){
+    const a = fogA(s.z); if (a < .05) continue;
+    const p1 = P(s.a, s.r, s.z), p2 = P(s.a, s.r, s.z + .25 + speed * .03);
+    ctx.strokeStyle = 'rgba(220,250,255,' + (.5 * a).toFixed(3) + ')';
+    ctx.lineWidth = Math.max(1, .012 * F / s.z);
     ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
   }
-  // player's lane guide
+  // the ship's lane, painted ahead on the wall
   if (state === 'play'){
-    ctx.strokeStyle = hsl(hue, 100, 80, .18); ctx.lineWidth = 2;
+    ctx.strokeStyle = hsl(hue, 100, 82, .3); ctx.lineWidth = Math.max(2, FS * .012);
     ctx.beginPath();
-    for (let z = PZ, k = 0; z < FAR * .6; z *= 1.25, k++){ const p = P(theta, R, z); k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); }
+    for (let z = PZ, k = 0; z < FAR * .7; z *= 1.2, k++){ const p = P(theta, R * .995, z); k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); }
     ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawGems(){
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (const g of gems){
+    if (g.z < NEAR + .1 || g.z > FAR) continue;
+    const a = fogO(g.z); if (a < .03) continue;
+    const p = P(g.a, SHIP_R, g.z), s = F / g.z * .06;
+    const rg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, s * 3);
+    rg.addColorStop(0, hsl(hue + 40, 100, 80, .55 * a)); rg.addColorStop(1, hsl(hue + 40, 100, 60, 0));
+    ctx.fillStyle = rg; ctx.fillRect(p.x - s * 3, p.y - s * 3, s * 6, s * 6);
+    const w = Math.abs(Math.cos(g.spin)) * .7 + .3;
+    ctx.fillStyle = hsl(hue + 40, 100, 88, a);
+    ctx.beginPath(); ctx.moveTo(p.x, p.y - s * 1.3); ctx.lineTo(p.x + s * w, p.y); ctx.lineTo(p.x, p.y + s * 1.3); ctx.lineTo(p.x - s * w, p.y); ctx.closePath(); ctx.fill();
   }
   ctx.restore();
 }
@@ -481,33 +596,44 @@ function drawObstacles(){
   for (const o of list){
     const z1 = Math.max(o.z, NEAR), z2 = o.z + o.d;
     if (z2 <= NEAR || z1 > FAR + 1) continue;
-    const a = fogA(z1);
+    const a = fogO(z1);
     const off = obsOff(o);
     const s1 = F / z1;
     const fade = clamp((FAR + 1 - o.z) / 4, 0, 1) * a;
-    for (const b of o.blocks){
-      const a0 = b.a0 + off, a1 = a0 + b.w, n = Math.max(2, Math.ceil(b.w / .15));
-      // top (inner) face
-      ctx.fillStyle = hsl(obsHue, 80, 45, .75 * fade);
+    const tti = (o.z - PZ) / Math.max(speed, 1);
+    const warn = tti > 0 && tti < .55 ? (1 - tti / .55) : 0;
+    // walls that have gone past the ship fade out fast so they never smother the view
+    const passedA = o.z < PZ ? clamp((o.z - NEAR) / (PZ - NEAR), 0, 1) * (o.hit >= 0 ? .8 : .45) : 1;
+    for (let bi = 0; bi < o.blocks.length; bi++){
+      const b = o.blocks[bi];
+      const a0 = b.a0 + off, a1 = a0 + b.w, n = Math.max(2, Math.ceil(b.w / .12));
+      const hitB = o.hit === bi;
+      // inner (top) face
+      ctx.fillStyle = hsl(obsHue, 75, hitB ? 80 : 38, .85 * fade * passedA);
       ctx.beginPath();
       for (let k = 0; k <= n; k++){ const p = P(a0 + (a1 - a0) * k / n, RIN, z2); k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); }
       for (let k = n; k >= 0; k--){ const p = P(a0 + (a1 - a0) * k / n, RIN, z1); ctx.lineTo(p.x, p.y); }
       ctx.closePath(); ctx.fill();
+      // side faces
+      ctx.fillStyle = hsl(obsHue, 70, 30, .85 * fade * passedA);
+      for (const ae of [a0, a1]){
+        const q1 = P(ae, R, z1), q2 = P(ae, RIN, z1), q3 = P(ae, RIN, z2), q4 = P(ae, R, z2);
+        ctx.beginPath(); ctx.moveTo(q1.x, q1.y); ctx.lineTo(q2.x, q2.y); ctx.lineTo(q3.x, q3.y); ctx.lineTo(q4.x, q4.y); ctx.closePath(); ctx.fill();
+      }
       // front face
       const front = [];
       for (let k = 0; k <= n; k++) front.push(P(a0 + (a1 - a0) * k / n, R, z1));
       for (let k = n; k >= 0; k--) front.push(P(a0 + (a1 - a0) * k / n, RIN, z1));
       const c = centerAt(z1);
       const g = ctx.createRadialGradient(c.x, c.y, RIN * s1, c.x, c.y, R * s1);
-      g.addColorStop(0, hsl(obsHue, 95, 82, .95 * fade)); g.addColorStop(1, hsl(obsHue, 90, 55, .9 * fade));
+      g.addColorStop(0, hsl(obsHue, 95, hitB ? 95 : 84, .97 * fade * passedA)); g.addColorStop(1, hsl(obsHue, 90, hitB ? 80 : 56, .95 * fade * passedA));
       ctx.fillStyle = g;
       ctx.beginPath(); front.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.closePath(); ctx.fill();
-      // glowing outline
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      ctx.strokeStyle = hsl(obsHue, 100, 70, .35 * fade); ctx.lineWidth = Math.max(2, .07 * s1);
+      ctx.strokeStyle = hsl(obsHue, 100, 70, (.35 + warn * .3) * fade * passedA); ctx.lineWidth = Math.max(2, .07 * s1);
       ctx.stroke();
-      ctx.strokeStyle = hsl(obsHue, 100, 92, fade); ctx.lineWidth = Math.max(1, .018 * s1);
+      ctx.strokeStyle = hsl(obsHue, 100, 94, fade * passedA); ctx.lineWidth = Math.max(1, (.018 + warn * .012) * s1);
       ctx.stroke();
       ctx.restore();
     }
@@ -516,31 +642,34 @@ function drawObstacles(){
 
 function drawShip(){
   if (state !== 'play') return;
-  const sp = P(theta, SHIP_R, PZ), u = F * .07;
+  const sp = P(theta, SHIP_R, PZ), u = FS * .075;
   ctx.save();
   ctx.translate(sp.x, sp.y);
   ctx.rotate(clamp(-omega * .07, -.35, .35));
-  // glow
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
-  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, u * 2.6);
-  g.addColorStop(0, hsl(hue, 100, 70, .55)); g.addColorStop(1, hsl(hue, 100, 60, 0));
-  ctx.fillStyle = g; ctx.fillRect(-u * 2.6, -u * 2.6, u * 5.2, u * 5.2);
-  // flame
+  const ga = .5 + Math.min(combo, 8) * .04;
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, u * 2.8);
+  g.addColorStop(0, hsl(hue, 100, 70, ga)); g.addColorStop(1, hsl(hue, 100, 60, 0));
+  ctx.fillStyle = g; ctx.fillRect(-u * 2.8, -u * 2.8, u * 5.6, u * 5.6);
   const fl = 1 + Math.sin(t * 40) * .2 + Math.random() * .15;
-  ctx.fillStyle = hsl(hue - 20, 100, 70, .9);
+  ctx.fillStyle = hsl(hue - 20, 100, 72, .9);
   ctx.beginPath(); ctx.moveTo(-u * .35, u * .3); ctx.lineTo(0, u * (.3 + .9 * fl)); ctx.lineTo(u * .35, u * .3); ctx.closePath(); ctx.fill();
   ctx.restore();
-  // hull
   const hg = ctx.createLinearGradient(0, -u * 1.2, 0, u * .4);
   hg.addColorStop(0, '#ffffff'); hg.addColorStop(1, hsl(hue, 90, 75));
   ctx.fillStyle = hg;
   ctx.beginPath();
   ctx.moveTo(0, -u * 1.25); ctx.lineTo(u * 1.05, u * .4); ctx.lineTo(u * .3, u * .2); ctx.lineTo(0, u * .42); ctx.lineTo(-u * .3, u * .2); ctx.lineTo(-u * 1.05, u * .4); ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = hsl(hue, 100, 55); ctx.lineWidth = Math.max(1.5, u * .08); ctx.stroke();
-  // cockpit
-  ctx.fillStyle = hsl(hue + 180, 100, 65);
+  ctx.strokeStyle = hsl(hue, 100, 50); ctx.lineWidth = Math.max(1.5, u * .08); ctx.stroke();
+  ctx.fillStyle = hsl(hue + 180, 100, 68);
   ctx.beginPath(); ctx.ellipse(0, -u * .35, u * .16, u * .32, 0, 0, TAU); ctx.fill();
+  // wing-tip lights
+  ctx.fillStyle = '#ffffff';
+  const blink = Math.sin(t * 10) > 0 ? 1 : .4;
+  ctx.globalAlpha = blink;
+  ctx.beginPath(); ctx.arc(-u * 1.0, u * .36, u * .09, 0, TAU); ctx.arc(u * 1.0, u * .36, u * .09, 0, TAU); ctx.fill();
+  ctx.globalAlpha = 1;
   ctx.restore();
 }
 
@@ -553,21 +682,36 @@ function text(str, x, y, size, color, glow, align, weight){
   ctx.fillStyle = color; ctx.fillText(str, x, y); ctx.shadowBlur = 0;
 }
 function panel(x, y, w, h){
-  ctx.fillStyle = 'rgba(4,8,28,.65)'; ctx.strokeStyle = hsl(hue, 100, 70, .5); ctx.lineWidth = 1.5;
+  ctx.fillStyle = 'rgba(4,8,28,.7)'; ctx.strokeStyle = hsl(hue, 100, 70, .55); ctx.lineWidth = 1.5;
   ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, 18); else ctx.rect(x, y, w, h);
   ctx.fill(); ctx.stroke();
 }
+// HUD sits top-centre; on narrow screens it drops below the exit/music buttons (top-left, ~y 12-50)
+function hudTop(){ return W / 2 - 110 < 350 ? 64 : 14; }
 function drawHUD(){
-  const sz = clamp(M * .075, 24, 48), pad = 16, glow = hsl(hue, 100, 60);
-  text(Math.floor(score).toLocaleString(), pad, pad + sz * .55, sz, '#ffffff', glow, 'left');
-  text('BEST ' + Math.max(best, Math.floor(score)).toLocaleString(), pad, pad + sz * 1.3, sz * .38, hsl(hue, 100, 85), null, 'left', 700);
-  text((V === 2 ? 'IT2' : 'IT') + '  ·  LV ' + level, pad, pad + sz * 1.75, sz * .32, hsl(hue, 80, 80, .8), null, 'left', 600);
-  for (const q of pops){ ctx.globalAlpha = clamp(q.life, 0, 1); text(q.text, q.x, q.y, clamp(M * .05, 16, 30), q.c, q.c); }
+  const sz = clamp(M * .085, 28, 50), top = hudTop(), glow = hsl(hue, 100, 60);
+  const ps = 1 + scorePulse * .16;
+  ctx.save(); ctx.translate(W / 2, top + sz * .55); ctx.scale(ps, ps);
+  text(Math.floor(score).toLocaleString(), 0, 0, sz, '#ffffff', glow);
+  ctx.restore();
+  text('BEST ' + Math.max(best, Math.floor(score)).toLocaleString() + '   ·   LV ' + level, W / 2, top + sz * 1.3, clamp(sz * .34, 12, 16), hsl(hue, 100, 88), 'rgba(0,0,20,.8)', 'center', 700);
+  if (combo > 1){
+    const cy = top + sz * 1.85, k = clamp(comboT / COMBO_TIME, 0, 1);
+    text('COMBO x' + combo, W / 2, cy, clamp(sz * .42, 14, 20), hsl(obsHue, 100, 85), hsl(obsHue, 100, 60), 'center', 900);
+    const bw = 90;
+    ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.fillRect(W / 2 - bw / 2, cy + 12, bw, 4);
+    ctx.fillStyle = hsl(obsHue, 100, 80); ctx.fillRect(W / 2 - bw / 2, cy + 12, bw * k, 4);
+  }
+  for (const q of pops){
+    ctx.globalAlpha = clamp(q.life * 1.5, 0, 1);
+    const sc = q.big ? 1 + Math.max(0, q.life - 1.1) * 1.5 : 1;
+    text(q.text, q.x, q.y, (q.big ? clamp(M * .09, 28, 54) : clamp(M * .045, 15, 26)) * sc, q.c, q.c);
+  }
   ctx.globalAlpha = 1;
 }
 function drawTitle(){
   ctx.fillStyle = 'rgba(2,4,18,.4)'; ctx.fillRect(0, 0, W, H);
-  const ts = clamp(Math.min(W * .12, H * .12), 32, 92), cy = H * .27, wob = Math.sin(t * 2) * 3;
+  const ts = clamp(Math.min(W * .12, H * .12), 32, 92), cy = Math.max(H * .24, 80 + ts * .5), wob = Math.sin(t * 2) * 3;
   if (V === 2){
     text('ICE TUNNEL', W / 2, cy + wob, ts, '#ffffff', hsl(hue, 100, 60));
     ctx.save(); ctx.translate(W / 2, cy + ts * .95 + wob); ctx.rotate(Math.sin(t * 3) * .06);
@@ -578,35 +722,36 @@ function drawTitle(){
   }
   const subY = cy + ts * (V === 2 ? 1.75 : 1.0);
   text(CFG.sub, W / 2, subY, clamp(M * .04, 14, 22), hsl(hue, 100, 85), null, 'center', 600);
-  const pw = Math.min(W - 32, 460), ph = clamp(M * .26, 120, 170), y0 = Math.max(subY + 24, H * .5);
+  const pw = Math.min(W - 32, 460), ph = clamp(M * .34, 150, 200), y0 = Math.max(subY + 28, H * .48);
   panel(W / 2 - pw / 2, y0, pw, ph);
   const fs = clamp(M * .036, 13, 19);
-  text(isTouch ? 'Hold LEFT or RIGHT side of the screen' : 'Rotate with  ← →  or  A / D', W / 2, y0 + ph * .25, fs, '#ffffff', null, 'center', 700);
-  text(isTouch ? 'to spin around the tunnel' : 'to spin around the tunnel', W / 2, y0 + ph * .45, fs * .92, hsl(hue, 100, 85), null, 'center', 500);
-  text(V === 2 ? 'Dodge spinning gaps and moving blocks' : 'Slip through the gaps in the ice walls', W / 2, y0 + ph * .67, fs * .92, hsl(obsHue, 100, 82), null, 'center', 500);
-  text('Shave close for bonus points', W / 2, y0 + ph * .84, fs * .85, 'rgba(255,255,255,.75)', null, 'center', 500);
+  text(isTouch ? 'Hold LEFT or RIGHT side of the screen' : 'Rotate with  ← →  or  A / D', W / 2, y0 + ph * .18, fs, '#ffffff', null, 'center', 700);
+  text('to spin around the tunnel', W / 2, y0 + ph * .34, fs * .92, hsl(hue, 100, 85), null, 'center', 500);
+  text(V === 2 ? 'Dodge spinning gaps and moving blocks' : 'Slip through the gaps in the ice walls', W / 2, y0 + ph * .52, fs * .92, hsl(obsHue, 100, 82), null, 'center', 500);
+  text('Follow the gems  ·  shave walls for a COMBO', W / 2, y0 + ph * .7, fs * .88, '#ffe9a8', null, 'center', 600);
+  text('There is always a way through', W / 2, y0 + ph * .86, fs * .82, 'rgba(255,255,255,.7)', null, 'center', 500);
   ctx.globalAlpha = .55 + .45 * Math.sin(t * 4);
-  text('Tap / press Space to start', W / 2, Math.min(H - 40, y0 + ph + clamp(M * .09, 34, 60)), clamp(M * .05, 18, 28), '#ffffff', hsl(hue, 100, 60));
+  text('Tap / press Space to start', W / 2, Math.min(H - 44, y0 + ph + clamp(M * .09, 34, 60)), clamp(M * .05, 18, 28), '#ffffff', hsl(hue, 100, 60));
   ctx.globalAlpha = 1;
-  if (best > 0) text('BEST ' + best.toLocaleString(), W / 2, Math.min(H - 14, y0 + ph + clamp(M * .15, 60, 100)), clamp(M * .035, 13, 18), hsl(hue, 100, 85), null, 'center', 700);
+  if (best > 0) text('BEST ' + best.toLocaleString(), W / 2, Math.min(H - 16, y0 + ph + clamp(M * .15, 60, 100)), clamp(M * .035, 13, 18), hsl(hue, 100, 85), null, 'center', 700);
 }
 function drawOver(){
   const a = clamp(overTimer * 3, 0, 1);
   ctx.fillStyle = 'rgba(2,4,18,' + (.55 * a).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H);
   ctx.globalAlpha = a;
-  const pw = Math.min(W - 32, 420), ph = clamp(M * .62, 260, 360), x0 = W / 2 - pw / 2, y0 = H / 2 - ph / 2;
+  const pw = Math.min(W - 32, 420), ph = clamp(M * .66, 280, 370), x0 = W / 2 - pw / 2, y0 = Math.max(60, H / 2 - ph / 2);
   panel(x0, y0, pw, ph);
-  text('SHATTERED!', W / 2, y0 + ph * .14, clamp(M * .085, 28, 52), '#ffffff', hsl(obsHue, 100, 60));
-  text('SCORE', W / 2, y0 + ph * .3, 14, hsl(hue, 100, 85), null, 'center', 700);
-  text(Math.floor(score).toLocaleString(), W / 2, y0 + ph * .42, clamp(M * .1, 34, 64), '#ffffff', hsl(hue, 100, 60));
-  text('BEST  ' + best.toLocaleString(), W / 2, y0 + ph * .56, clamp(M * .04, 15, 22), '#ffe066', null, 'center', 700);
-  text('Walls passed: ' + rings, W / 2, y0 + ph * .66, clamp(M * .033, 13, 18), hsl(obsHue, 100, 85), null, 'center', 600);
+  text('SHATTERED!', W / 2, y0 + ph * .13, clamp(M * .085, 28, 52), '#ffffff', hsl(obsHue, 100, 60));
+  text('SCORE', W / 2, y0 + ph * .28, 14, hsl(hue, 100, 85), null, 'center', 700);
+  text(Math.floor(score).toLocaleString(), W / 2, y0 + ph * .4, clamp(M * .1, 34, 64), '#ffffff', hsl(hue, 100, 60));
+  text('BEST  ' + best.toLocaleString(), W / 2, y0 + ph * .54, clamp(M * .04, 15, 22), '#ffe066', null, 'center', 700);
+  text('Walls ' + rings + '   ·   Gems ' + gemCount + '   ·   Top combo x' + bestCombo, W / 2, y0 + ph * .65, clamp(M * .03, 12, 16), hsl(obsHue, 100, 85), null, 'center', 600);
   if (newBest){
     const s = 1 + Math.sin(t * 6) * .05;
     ctx.save(); ctx.translate(W / 2, y0 + ph * .76); ctx.scale(s, s);
     text('NEW BEST!', 0, 0, clamp(M * .045, 16, 24), '#ffe066', '#ffd23f'); ctx.restore();
   }
-  if (overTimer > .6){
+  if (overTimer > .7){
     ctx.globalAlpha = a * (.55 + .45 * Math.sin(t * 4));
     text('Tap / press Space to restart', W / 2, y0 + ph * .9, clamp(M * .04, 15, 22), '#ffffff', hsl(hue, 100, 60));
   }
@@ -622,14 +767,14 @@ function render(){
   const sx = shake > 0 ? (Math.random() * 2 - 1) * shake : 0, sy = shake > 0 ? (Math.random() * 2 - 1) * shake : 0;
   ctx.setTransform(DPR, 0, 0, DPR, sx * DPR, sy * DPR);
   drawTunnel();
+  drawGems();
   drawObstacles();
   drawShip();
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   for (const p of parts){ ctx.globalAlpha = clamp(p.life / p.max, 0, 1); ctx.fillStyle = p.c; ctx.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.r); }
   ctx.restore(); ctx.globalAlpha = 1;
-  // vignette
   const vg = ctx.createRadialGradient(W / 2, H / 2, M * .35, W / 2, H / 2, Math.max(W, H) * .75);
-  vg.addColorStop(0, 'rgba(0,0,10,0)'); vg.addColorStop(1, 'rgba(0,0,10,.55)');
+  vg.addColorStop(0, 'rgba(0,0,10,0)'); vg.addColorStop(1, 'rgba(0,0,10,.5)');
   ctx.fillStyle = vg; ctx.fillRect(-30, -30, W + 60, H + 60);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   if (flash > 0){ ctx.fillStyle = 'rgba(255,255,255,' + (flash * .6).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); }
