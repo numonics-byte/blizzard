@@ -45,7 +45,7 @@
       }
     }catch(e){}
     if(/^(https?|file):$/.test(location.protocol)){
-      location.href = new URL('../../index.html#' + view, location.href).href;
+      location.href = new URL('../../../index.html#' + view, location.href).href;
       return;
     }
     // Page has no real address (e.g. a preview snapshot), so it can't move to another page: close it instead.

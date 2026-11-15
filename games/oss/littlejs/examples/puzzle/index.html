@@ -1,0 +1,72 @@
+<!DOCTYPE html><head>
+<title>Gem Swap</title>
+<meta charset=utf-8>
+<meta name=viewport content=width=device-width,height=device-height,initial-scale=1,maximum-scale=1>
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=mobile-web-app-capable content=yes>
+<link rel=icon type=image/png href=../favicon.png>
+</head><body>
+<script src=game.js type=module></script><script id="blizExitScript">
+/* Blizzard exit bar: shown inside every game so there is always a way out. */
+(function(){
+  // Inside the Blizzard about:blank tab or the in-site player, the parent page already shows exit buttons.
+  try{ if(window.top !== window) return; }catch(e){ return; }
+
+  var LOCAL_SITE = 'http://localhost:8642/index.html';
+  function back(view){
+    try{
+      if(window.opener && !window.opener.closed && window.opener.BLIZ){
+        window.opener.BLIZ.go(view); window.opener.focus(); window.close(); return;
+      }
+    }catch(e){}
+    if(/^(https?|file):$/.test(location.protocol)){
+      location.href = new URL('../../../../../index.html#' + view, location.href).href;
+      return;
+    }
+    // Page has no real address (e.g. a preview snapshot), so it can't move to another page: close it instead.
+    try{ location.href = LOCAL_SITE + '#' + view; }catch(e){}
+    setTimeout(function(){
+      try{ window.close(); }catch(e){}
+      setTimeout(showClosed, 300);
+    }, 250);
+  }
+  // Last resort if the tab can't be closed either: cover and silence the game.
+  function showClosed(){
+    try{ document.querySelectorAll('audio,video').forEach(function(m){ m.pause(); }); }catch(e){}
+    var c = document.createElement('div');
+    c.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#04060f;color:#e8f3ff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font:600 18px system-ui,sans-serif;text-align:center;padding:20px';
+    c.innerHTML = '<div style="font-size:48px">❄️</div><div>Game closed</div><div style="font-size:14px;opacity:.7">Close this tab, or open Blizzard at localhost:8642</div>';
+    ['pointerdown','touchstart','keydown','click'].forEach(function(ev){ c.addEventListener(ev, function(e){ e.stopPropagation(); }, true); });
+    addEventListener('keydown', function(e){ e.stopImmediatePropagation(); e.preventDefault(); }, true);
+    document.body.appendChild(c);
+  }
+
+  var bar = document.createElement('div');
+  bar.id = 'blizExit';
+  bar.innerHTML = '<button class="bx-x" data-v="games" title="Exit game" aria-label="Exit game">✕</button>'
+    + '<button class="bx-m" data-v="home" title="Back to Blizzard main menu">⌂ Main Menu</button>';
+  var css = document.createElement('style');
+  css.textContent = '#blizExit{position:fixed;top:12px;left:12px;z-index:2147483647;display:flex;align-items:center;gap:8px;font:700 14px system-ui,-apple-system,sans-serif;touch-action:manipulation}'
+    + '#blizExit button{cursor:pointer;font:inherit;color:#fff;border:2px solid rgba(255,255,255,.85);box-shadow:0 4px 14px rgba(0,0,0,.45)}'
+    + '#blizExit .bx-x{width:44px;height:44px;border-radius:50%;background:#ff3b5c;font-size:22px;line-height:1;padding:0;display:grid;place-items:center}'
+    + '#blizExit .bx-x:hover{background:#ff1f45;transform:scale(1.08)}'
+    + '#blizExit .bx-m{height:36px;padding:0 14px;border-radius:999px;background:rgba(4,6,15,.8)}'
+    + '#blizExit .bx-m:hover{background:#7fdbff;color:#001018}';
+  document.head.appendChild(css);
+
+  // Keep taps on the bar from also starting or steering the game underneath.
+  ['pointerdown','mousedown','touchstart','touchend','click'].forEach(function(ev){
+    bar.addEventListener(ev, function(e){ e.stopPropagation(); }, { passive:true });
+  });
+  bar.addEventListener('pointerup', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    e.stopPropagation(); back(b.dataset.v);
+  });
+  bar.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' || e.key === ' '){ var b = e.target.closest('button'); if(b){ e.preventDefault(); back(b.dataset.v); } }
+  });
+
+  function add(){ document.body.appendChild(bar); }
+  if(document.body) add(); else addEventListener('DOMContentLoaded', add);
+})();
+</script>
