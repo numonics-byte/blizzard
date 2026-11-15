@@ -1,6 +1,10 @@
 /* Blizzard content catalog */
 window.BLIZ = {
   games: [
+    { id:'snow-fort', name:'Snow Fort Defense', file:'snow-fort.html', cat:'Strategy', icon:'🏰', g1:'#4b6cb7', g2:'#a1c4fd', top:true,
+      desc:'Build and upgrade snowball towers to stop waves of snow critters. 3 maps, boss every 5 waves. A Blizzard original.' },
+    { id:'frosty-greens', name:'Frosty Greens', file:'frosty-greens.html', cat:'Sports', icon:'⛳', g1:'#56ab2f', g2:'#d4fc79', top:true,
+      desc:'18 holes of icy mini golf with ramps, spinners and teleporters. Drag back and release to putt. A Blizzard original.' },
     { id:'snow-soccer', name:'Snow Soccer', file:'snow-soccer.html', cat:'Sports', icon:'⚽', g1:'#11998e', g2:'#e0f7ff', top:true,
       desc:'1-on-1 big-head soccer on a snowy pitch, against the computer or a friend. A Blizzard original.' },
     { id:'frost-jumper', name:'Frost Jumper', file:'frost-jumper.html', cat:'Arcade', icon:'🏔️', g1:'#2193b0', g2:'#6dd5ed', top:true,
