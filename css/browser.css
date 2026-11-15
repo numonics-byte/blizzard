@@ -296,3 +296,10 @@
 .bb-newsres img{width:120px;height:84px;object-fit:cover;border-radius:10px;flex:none}
 @media (max-width:760px){.bb-irow{grid-template-columns:repeat(2,minmax(0,1fr))}.bb-vres .bb-vth img{width:150px}.bb-newsres img{width:90px;height:64px}}
 .bb-kp img{background:#fff;padding:10px;border-radius:10px}
+.bb-toggle{display:flex;align-items:center;gap:10px;margin-top:26px;font-size:14px;color:var(--bt,#e6f0ff);cursor:pointer;flex-wrap:wrap;justify-content:center}
+.bb-toggle small{color:var(--bm,#93a4c3);font-size:12px}
+.bb-toggle input{position:absolute;opacity:0;pointer-events:none}
+.bb-sw{width:42px;height:24px;border-radius:999px;background:#2a3557;position:relative;transition:background .2s;flex:none}
+.bb-sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s}
+.bb-toggle input:checked + .bb-sw{background:linear-gradient(90deg,#00e5ff,#39ff14)}
+.bb-toggle input:checked + .bb-sw::after{transform:translateX(18px)}

@@ -152,7 +152,7 @@
       else if(url.startsWith('blizz://maps')) await pageMaps(new URL(url.replace('blizz://','https://x/')).searchParams.get('q') || '', live);
       else if(url.startsWith('blizz://watch')) pageWatch(url);
       else if(url.startsWith('blizz://games')){ setTitle('Blizzard Games'); BLIZ.go('games'); }
-      else pageExternal(url);
+      else pageExternal(url, fresh);
     }catch(err){
       if(live()) content.innerHTML = `<div class="bb-err bb-page"><div class="big">🌨️</div><h2>Couldn't load this page</h2><p>${esc(err.message || err)}</p><p style="margin-top:8px">Check your internet connection and try again.</p></div>`;
     }
@@ -206,6 +206,8 @@
       ${searchBox()}
       <div class="bb-btns"><button data-k="search">BlizBrowse Search</button><button data-k="lucky">I'm Feeling Snowy</button></div>
       <div class="bb-shortcuts">${sc.map(s => `<div class="bb-sc" data-u="${s[2]}"><i>${s[0]}</i>${s[1]}</div>`).join('')}</div>
+      <label class="bb-toggle"><input type="checkbox" ${BLIZ.store.get('bbNewTab', true) ? 'checked' : ''}><span class="bb-sw"></span>
+        Open websites in a new tab <small>(recommended: every site works this way)</small></label>
     </div>`;
     wireSearch(content);
     content.querySelector('[data-k=search]').onclick = () => content.querySelector('.bb-sbox').requestSubmit();
@@ -214,6 +216,7 @@
       catch(e){ BLIZ.toast('Could not reach the internet'); }
     };
     content.querySelectorAll('[data-u]').forEach(el => el.onclick = () => nav(el.dataset.u));
+    content.querySelector('.bb-toggle input').onchange = e => { BLIZ.store.set('bbNewTab', e.target.checked); BLIZ.toast(e.target.checked ? 'Websites will open in a new tab' : 'BlizBrowse will try to show websites inside'); };
     setTimeout(() => { const i = content.querySelector('.bb-sbox input'); if(i && matchMedia('(pointer:fine)').matches) i.focus(); }, 50);
   }
 
@@ -595,7 +598,7 @@
   }
 
   /* ---------- any other website ---------- */
-  function pageExternal(url){
+  function pageExternal(url, fresh){
     let u = null, host = url; try{ u = new URL(url); host = u.hostname; }catch(e){}
     if(!u || isDangerous(u)){
       setTitle('Blocked');
@@ -606,6 +609,28 @@
       return;
     }
     const isEmbed = /^(player\.twitch\.tv|player\.vimeo\.com|www\.openstreetmap\.org)$/.test(host) || /\/embed(\/|$)/.test(u.pathname);
+    // Real websites: open them in a new tab, where every site works (most sites refuse to load inside another site)
+    if(!isEmbed && BLIZ.store.get('bbNewTab', true)){
+      setTitle(host.replace(/^www\./, ''));
+      let opened = false;
+      if(fresh){ try{ opened = !!window.open(u.href, '_blank', 'noopener'); }catch(e){} }
+      content.innerHTML = `<div class="bb-err bb-page bb-noframe"><div class="big">${opened ? '🚀' : '🌐'}</div>
+        <h2>${opened ? 'Opened ' + esc(host.replace(/^www\./, '')) + ' in a new tab' : esc(host.replace(/^www\./, ''))}</h2>
+        <p>${opened ? 'The site is open in its own tab, so everything on it works. Come back to this tab any time.' : 'Websites open in their own tab so everything on them works.'}</p>
+        <div class="bb-nf-btns">
+          <button class="bb-more" data-k="open">↗ ${opened ? 'Open it again' : 'Open ' + esc(host.replace(/^www\./, ''))}</button>
+          <button class="bb-more" data-k="inside">Try showing it inside BlizBrowse</button>
+          <button class="bb-more" data-k="home">⌂ Back to BlizBrowse</button>
+        </div></div>`;
+      content.querySelector('[data-k=open]').onclick = () => window.open(u.href, '_blank', 'noopener');
+      content.querySelector('[data-k=inside]').onclick = () => showInside(u, host);
+      content.querySelector('[data-k=home]').onclick = () => nav('blizz://home');
+      return;
+    }
+    showInside(u, host, isEmbed);
+  }
+  function showInside(u, host, isEmbed){
+    const url = u.href;
     const blockedBy = isEmbed ? null : noFrameName(host);
     if(blockedBy){
       setTitle(blockedBy);
