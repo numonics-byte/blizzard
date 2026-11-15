@@ -1,6 +1,10 @@
 /* Blizzard content catalog */
 window.BLIZ = {
   games: [
+    { id:'snow-soccer', name:'Snow Soccer', file:'snow-soccer.html', cat:'Sports', icon:'⚽', g1:'#11998e', g2:'#e0f7ff', top:true,
+      desc:'1-on-1 big-head soccer on a snowy pitch, against the computer or a friend. A Blizzard original.' },
+    { id:'frost-jumper', name:'Frost Jumper', file:'frost-jumper.html', cat:'Arcade', icon:'🏔️', g1:'#2193b0', g2:'#6dd5ed', top:true,
+      desc:'Run, jump and stomp through 12 levels in 3 icy worlds. Find every coin and hidden gem. A Blizzard original.' },
     { id:'neon-dash', name:'Neon Dash', file:'neon-dash.html', cat:'Arcade', icon:'⚡', g1:'#f7008a', g2:'#00e5ff', top:true,
       desc:'One-button runner: jump, flip and fly through 10 glowing obstacle courses. A Blizzard original.' },
     { id:'blob-arena', name:'Blob Arena', file:'blob-arena.html', cat:'Arcade', icon:'🟢', g1:'#56ab2f', g2:'#a8e063', top:true,
