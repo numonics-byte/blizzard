@@ -13,7 +13,9 @@
       <button class="nb" data-a="fwd" title="Forward">→</button>
       <button class="nb" data-a="reload" title="Reload">↻</button>
       <button class="nb" data-a="home" title="Home">⌂</button>
-      <form class="bb-url"><span class="lock">🔒</span><input spellcheck="false" autocomplete="off" placeholder="Search BlizBrowse or type a URL"></form>
+      <form class="bb-url"><span class="lock">🔒</span><input list="bbHist" spellcheck="false" autocomplete="off" placeholder="Search BlizBrowse or type a URL"></form>
+      <button class="nb bb-star" data-a="star" title="Bookmark this page">☆</button>
+      <datalist id="bbHist"></datalist>
       <button class="nb bb-exit" data-go="home" title="Exit BlizBrowse">✕</button>
     </div>
     <div class="bb-view"><div class="bb-loading"></div><div class="bb-content"></div></div>`;
@@ -49,6 +51,20 @@
     });
     btn('back').disabled = !cur || cur.idx <= 0;
     btn('fwd').disabled = !cur || cur.idx >= cur.hist.length-1;
+    saveTabs(); updateStar();
+  }
+  function saveTabs(){ BLIZ.store.set('bbTabs', { list: tabs.map(t => t.hist[t.idx]).filter(Boolean).slice(0, 12), cur: Math.max(0, tabs.indexOf(cur)) }); }
+  const bookmarks = () => BLIZ.store.get('bbBookmarks', []);
+  function updateStar(){
+    const u = cur && cur.hist[cur.idx], b = btn('star'); if(!b) return;
+    const on = !!u && bookmarks().some(x => x.u === u);
+    b.textContent = on ? '★' : '☆'; b.classList.toggle('on', on); b.disabled = !u || u === 'blizz://home';
+  }
+  function addHistory(u, t){
+    if(!u || u === 'blizz://home' || u.startsWith('blizz://history')) return;
+    const h = BLIZ.store.get('bbHistory', []).filter(x => x.u !== u);
+    h.unshift({ u, t, ts: Date.now() });
+    BLIZ.store.set('bbHistory', h.slice(0, 150));
   }
   root.querySelector('.bb-newtab').onclick = () => newTab();
   btn('back').onclick = () => { if(cur.idx > 0){ cur.idx--; load(cur.hist[cur.idx], false); } };
@@ -61,18 +77,31 @@
     if(v && ddgOn() && dest.startsWith('blizz://search')){ toDDG(urlForm, urlIn, v); return; }   // let the browser submit it
     e.preventDefault(); nav(dest);
   };
-  urlIn.addEventListener('focus', () => urlIn.select());
+  urlIn.addEventListener('focus', () => {
+    urlIn.select();
+    root.querySelector('#bbHist').innerHTML = BLIZ.store.get('bbHistory', []).slice(0, 30).map(x => {
+      const v = x.u.startsWith('blizz://search?q=') ? decodeURIComponent(x.u.slice(17).split('&')[0]) : x.u;
+      return `<option value="${esc(v)}">${esc(x.t || '')}</option>`;
+    }).join('');
+  });
+  btn('star').onclick = () => {
+    const u = cur.hist[cur.idx]; if(!u || u === 'blizz://home') return;
+    let b = bookmarks();
+    if(b.some(x => x.u === u)){ b = b.filter(x => x.u !== u); BLIZ.toast('Bookmark removed'); }
+    else { b.unshift({ u, t: cur.title }); BLIZ.toast('Bookmarked ★'); }
+    BLIZ.store.set('bbBookmarks', b.slice(0, 40)); updateStar();
+  };
 
   function nav(url){
     cur.hist = cur.hist.slice(0, cur.idx+1); cur.hist.push(url); cur.idx++;
     load(url, true);
   }
-  function setTitle(t){ cur.title = t; renderTabs(); }
+  function setTitle(t){ cur.title = t; renderTabs(); addHistory(cur.hist[cur.idx], t); }
   function busy(on){ loader.classList.toggle('on', on); }
 
 
   /* DuckDuckGo search: submitted like a normal form into a new tab, so pop-up blockers don't stop it */
-  const ddgOn = () => BLIZ.store.get('engine', 'ddg') === 'ddg';
+  const ddgOn = () => BLIZ.store.get('engine', 'bliz') === 'ddg';
   function toDDG(form, input, q){
     form.action = 'https://duckduckgo.com/'; form.method = 'get'; form.target = '_blank';
     input.name = 'q'; input.value = q;
@@ -86,6 +115,7 @@
       <p>${sent ? 'Look for the new tab at the top of your browser. Every site you click there works.' : 'Results open in their own tab so every site works.'}</p>
       <div class="bb-nf-btns">
         <a class="bb-more" href="${esc(href)}" target="_blank" rel="noopener">🦆 ${sent ? 'Open the results again' : 'Search on DuckDuckGo'}</a>
+        <a class="bb-more" href="${esc(href)}" target="_top">⤵ Open DuckDuckGo in this tab</a>
         <button class="bb-more" data-k="bliz">❄️ Show BlizBrowse results here instead</button>
       </div></div>`;
     content.querySelector('[data-k=bliz]').onclick = () => nav('blizz://search?q=' + encodeURIComponent(q) + '&t=all');
@@ -176,6 +206,7 @@
       else if(url.startsWith('blizz://weather')) await pageWeather(new URL(url.replace('blizz://','https://x/')).searchParams.get('q') || '', live);
       else if(url.startsWith('blizz://dictionary')) await pageDict(new URL(url.replace('blizz://','https://x/')).searchParams.get('w') || '', live);
       else if(url.startsWith('blizz://maps')) await pageMaps(new URL(url.replace('blizz://','https://x/')).searchParams.get('q') || '', live);
+      else if(url.startsWith('blizz://history')) pageHistory();
       else if(url.startsWith('blizz://watch')) pageWatch(url);
       else if(url.startsWith('blizz://games')){ setTitle('Blizzard Games'); BLIZ.go('games'); }
       else pageExternal(url, fresh);
@@ -233,14 +264,17 @@
       ['🎬','Movies','blizz://watch/movies'], ['📰','News','blizz://search?q=technology&t=news'],
     ];
     content.innerHTML = `<div class="bb-home bb-page">
-      <div class="bb-logo">${LOGO}<small>SEARCH WITH DUCKDUCKGO</small></div>
+      <div class="bb-logo">${LOGO}<small>POWERED BY BLIZZARD</small></div>
       ${searchBox()}
       <div class="bb-btns"><button data-k="search">BlizBrowse Search</button><button data-k="lucky">I'm Feeling Snowy</button></div>
       <div class="bb-shortcuts">${sc.map(s => `<div class="bb-sc" data-u="${s[2]}"><i>${s[0]}</i>${s[1]}</div>`).join('')}</div>
+      ${bookmarks().length ? `<div class="bb-bmarks"><div class="bb-bm-h">★ Bookmarks</div><div class="bb-bm-row">${bookmarks().map((b, i) =>
+        `<div class="bb-bm" data-u="${esc(b.u)}"><i>${esc(((b.t || b.u).replace(/^https?:\/\/(www\.)?/, '')[0] || '★').toUpperCase())}</i><span>${esc((b.t || b.u).slice(0, 24))}</span><button class="bb-bm-x" data-rm="${i}" title="Remove bookmark">×</button></div>`).join('')}</div></div>` : ''}
+      <a class="bb-histlink" data-u="blizz://history">🕘 History</a>
       <label class="bb-toggle"><input type="checkbox" ${BLIZ.store.get('bbNewTab', true) ? 'checked' : ''}><span class="bb-sw"></span>
         Open websites in a new tab <small>(recommended: every site works this way)</small></label>
-      <label class="bb-toggle"><input type="checkbox" data-eng ${BLIZ.store.get('engine', 'ddg') === 'ddg' ? 'checked' : ''}><span class="bb-sw"></span>
-        Search with DuckDuckGo <small>(off = BlizBrowse results)</small></label>
+      <label class="bb-toggle"><input type="checkbox" data-eng ${BLIZ.store.get('engine', 'bliz') === 'ddg' ? 'checked' : ''}><span class="bb-sw"></span>
+        Send searches straight to DuckDuckGo <small>(off = results show here)</small></label>
     </div>`;
     wireSearch(content);
     content.querySelector('[data-k=search]').onclick = () => content.querySelector('.bb-sbox').requestSubmit();
@@ -249,6 +283,7 @@
       catch(e){ BLIZ.toast('Could not reach the internet'); }
     };
     content.querySelectorAll('[data-u]').forEach(el => el.onclick = () => nav(el.dataset.u));
+    content.querySelectorAll('[data-rm]').forEach(b => b.onclick = e => { e.stopPropagation(); const l = bookmarks(); l.splice(+b.dataset.rm, 1); BLIZ.store.set('bbBookmarks', l); pageHome(); });
     content.querySelector('[data-eng]').onchange = e => { BLIZ.store.set('engine', e.target.checked ? 'ddg' : 'bliz'); BLIZ.toast(e.target.checked ? 'Searching with DuckDuckGo' : 'Searching with BlizBrowse'); };
     content.querySelector('.bb-toggle input').onchange = e => { BLIZ.store.set('bbNewTab', e.target.checked); BLIZ.toast(e.target.checked ? 'Websites will open in a new tab' : 'BlizBrowse will try to show websites inside'); };
     setTimeout(() => { const i = content.querySelector('.bb-sbox input'); if(i && matchMedia('(pointer:fine)').matches) i.focus(); }, 50);
@@ -287,49 +322,29 @@
     if(t === 'videos') return searchVideos(q, body, live);
     if(t === 'news') return searchNews(q, body, live);
 
-    let html = '';
     const c = calc(q);
-    if(c) html += `<div class="bb-card bb-calc"><small>${esc(c.expr)} =</small>${esc(c.v)}</div>`;
     const wx = q.match(/^(?:weather|forecast)(?:\s+(?:in|for))?\s+(.+)$/i) || q.match(/^(.+?)\s+weather$/i);
     const def = q.match(/^(?:define|definition of|meaning of|what does)\s+(\w[\w-]*)/i);
-    html += `<div class="bb-ia"></div>`;
-    body.innerHTML = `<div class="bb-results"><div class="bb-meta">Searching the web…</div></div>`;
     const t0 = performance.now();
     const enc = encodeURIComponent(q);
-    // Ask many free sources at once; any that fail or are slow are simply skipped.
-    const tm = (pr, ms=7000) => Promise.race([pr, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms))]);
-    const got = await Promise.allSettled([
-      tm(getJSON(`${WIKI}/w/api.php?action=query&list=search&srsearch=${enc}&srlimit=10&srprop=snippet&format=json&origin=*`)),
-      tm(getJSON(`https://api.duckduckgo.com/?q=${enc}&format=json&no_html=1&skip_disambig=1`)),
-      tm(getJSON(`https://api.stackexchange.com/2.3/search/advanced?order=desc&sort=relevance&q=${enc}&site=stackoverflow&pagesize=5`)),
-      tm(getJSON(`https://api.github.com/search/repositories?q=${enc}&per_page=5`)),
-      tm(getJSON(`https://openlibrary.org/search.json?q=${enc}&limit=8&fields=key,title,author_name,first_publish_year,cover_i`)),
-      tm(getJSON(`https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(q + ' sourcelang:english')}&mode=artlist&maxrecords=14&format=json&sort=hybridrel`), 9000),
-      tm(BLIZ.yt ? BLIZ.yt.piped('/search?q=' + enc + '&filter=videos') : Promise.reject(new Error('no yt')), 8000),
-      tm(getJSON(`https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${enc}&gsrnamespace=6&gsrlimit=14&prop=imageinfo&iiprop=url&iiurlwidth=240&format=json&origin=*`)),
-      tm(getJSON(`${WIKI}/w/api.php?action=opensearch&search=${enc}&limit=9&namespace=0&format=json&origin=*`)),
-      tm(getJSON(`https://hn.algolia.com/api/v1/search?query=${enc}&tags=story&hitsPerPage=10`)),
-    ]);
-    if(!live()) return;
-    const [wiki, ddg, so, gh, ol, news, yt, imgs, rel, hn] = got.map(r => r.status === 'fulfilled' ? r.value : null);
+    const ddgHref = 'https://duckduckgo.com/?q=' + enc;
+    // Every section has its own slot and fills in the moment its source answers (no waiting on the slowest one)
+    const SLOTS = ['ia', 'official', 'wiki0', 'news', 'videos', 'wiki1', 'qa', 'code', 'images', 'morenews', 'wiki2', 'books', 'related'];
+    body.innerHTML = `<div class="bb-serp"><div class="bb-results">
+        <div class="bb-ddgbar"><span>🦆 Also see <b>DuckDuckGo</b> results</span>
+          <a href="${esc(ddgHref)}" target="_blank" rel="noopener">New tab ↗</a><a href="${esc(ddgHref)}" target="_top">This tab</a></div>
+        <div class="bb-meta">Searching the web…</div>
+        ${c ? `<div class="bb-card bb-calc"><small>${esc(c.expr)} =</small>${esc(c.v)}</div>` : ''}
+        ${SLOTS.map(n => `<div data-slot="${n}"></div>`).join('')}
+        <div class="bb-skel"><i></i><i></i><i></i></div>
+      </div><div data-slot="panel"></div></div>`;
+    const slot = n => body.querySelector(`[data-slot="${n}"]`);
+    const fill = (n, html) => { if(!live()) return; const el = slot(n); if(!el) return; el.innerHTML = html || ''; wireLinks(el); };
+    const tm = (pr, ms) => Promise.race([pr, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms || 7000))]);
+    const jobs = [];
+    const job = (pr, ok, fail, ms) => { const j = tm(pr, ms).then(d => { if(live()) ok(d); }, () => { if(live() && fail) fail(); }); jobs.push(j); return j; };
+
     const gdate = s => { const m = /^(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)/.exec(s || ''); if(!m) return ''; const d = new Date(Date.UTC(+m[1], m[2]-1, +m[3], +m[4], +m[5])); const h = (Date.now() - d) / 36e5; return h < 1 ? 'Just now' : h < 24 ? Math.round(h) + ' hours ago' : h < 48 ? 'Yesterday' : d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }); };
-    const seenNews = new Set();
-    const articles = (news && news.articles ? news.articles : []).filter(a => {
-      if(!a.title || !a.url || !/^https?:/.test(a.url)) return false;
-      const k = a.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40);
-      if(seenNews.has(k)) return false; seenNews.add(k); return true;
-    });
-    // backup news source if the main one is slow or down
-    if(articles.length < 4 && hn && hn.hits){
-      hn.hits.filter(h => h.title).forEach(h => {
-        const url = h.url || `https://news.ycombinator.com/item?id=${h.objectID}`;
-        const k = h.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40);
-        if(seenNews.has(k)) return; seenNews.add(k);
-        const d = new Date(h.created_at);
-        const p2 = n => String(n).padStart(2, '0');
-        articles.push({ url, title:h.title, domain:'', socialimage:'', seendate:`${d.getUTCFullYear()}${p2(d.getUTCMonth()+1)}${p2(d.getUTCDate())}T${p2(d.getUTCHours())}${p2(d.getUTCMinutes())}00Z` });
-      });
-    }
     const unent = s => { const t = document.createElement('textarea'); t.innerHTML = s; return t.value; };
     const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 1);
     const relevant = text => { const t = (text || '').toLowerCase(); return words.length && words.every(w => t.includes(w)); };
@@ -338,84 +353,106 @@
     const fav = u => `<img class="fav" src="https://icons.duckduckgo.com/ip3/${encodeURIComponent(hostOf(u))}.ico" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`;
     const webResult = (url, title, site, snippet, extra='') => `<div class="bb-r"><div class="src">${fav(url)}<div>${esc(site)}<small>${crumb(url)}</small></div></div>
       <a data-u="${esc(url)}">${esc(title)}</a>${snippet ? `<p>${snippet}</p>` : ''}${extra}</div>`;
-
-    const hits = wiki ? wiki.query.search : [];
-    const total = (wiki ? wiki.query.searchinfo.totalhits : 0) + (gh ? gh.total_count : 0) + (ol ? ol.numFound : 0) + articles.length * 2311 + (yt && yt.items ? 1e5 : 0);
-    const out = [];
-
-    // 1. Official website (like Google's top result)
-    const official = ddg && (ddg.OfficialWebsite || (ddg.Results && ddg.Results[0] && ddg.Results[0].FirstURL));
-    if(official) out.push(webResult(official, `${ddg.Heading || q} - Official Site`, hostOf(official),
-      ddg.AbstractText ? esc(ddg.AbstractText.slice(0, 190)) + (ddg.AbstractText.length > 190 ? '…' : '') : ''));
-
     const wikiResult = h => {
-      const slug = encodeURIComponent(h.title.replace(/ /g,'_'));
+      const sl = encodeURIComponent(h.title.replace(/ /g,'_'));
       return `<div class="bb-r"><div class="src"><i>W</i><div>Wikipedia<small>https://en.wikipedia.org › wiki › ${esc(h.title)}</small></div></div>
-        <a data-u="blizz://wiki/${slug}">${esc(h.title)}</a><p>${h.snippet.replace(/<(?!\/?span[ >])[^>]*>/g,'')}…</p></div>`;
+        <a data-u="blizz://wiki/${sl}">${esc(h.title)}</a><p>${h.snippet.replace(/<(?!\/?span[ >])[^>]*>/g,'')}…</p></div>`;
     };
-    if(hits[0]) out.push(wikiResult(hits[0]));
+    let total = 0;
+    const setMeta = () => { const m = body.querySelector('.bb-meta'); if(m && live()) m.textContent = `About ${total.toLocaleString()} results (${((performance.now() - t0) / 1000).toFixed(2)} seconds)`; };
 
-    // 2. Top stories (real news from many sites)
-    const stories = articles.slice(0, 4);
-    if(stories.length) out.push(`<div class="bb-h2">Top stories</div><div class="bb-news">${stories.map(a =>
-      `<div class="bb-nc" data-u="${esc(a.url)}">${a.socialimage && a.socialimage.startsWith('https:') ? `<img class="bb-nimg" loading="lazy" src="${esc(a.socialimage)}" alt="" onerror="this.remove()">` : ''}
-        <div class="src">${fav(a.url)} ${esc(a.domain || hostOf(a.url))}</div><b>${esc(a.title)}</b><small>${gdate(a.seendate)}</small></div>`).join('')}</div>`);
+    // Instant answers
+    if(wx) weatherCard(wx[1], slot('ia')).catch(() => {});
+    else if(def) dictCard(def[1], slot('ia')).catch(() => {});
 
-    // 3. Videos (real YouTube results)
-    const ytv = (yt && yt.items && BLIZ.yt ? yt.items.map(BLIZ.yt.fromPiped).filter(Boolean) : []).slice(0, 8);
-    const vids = ytv.length ? ytv : matchVideos(q).slice(0, 6);
-    if(vids.length) out.push(videoRow(vids));
+    // Wikipedia
+    job(getJSON(`${WIKI}/w/api.php?action=query&list=search&srsearch=${enc}&srlimit=10&srprop=snippet&format=json&origin=*`), d => {
+      const hits = d.query.search; total += d.query.searchinfo.totalhits; setMeta();
+      fill('wiki0', hits[0] ? wikiResult(hits[0]) : ''); fill('wiki1', hits[1] ? wikiResult(hits[1]) : ''); fill('wiki2', hits[2] ? wikiResult(hits[2]) : '');
+      if(!wx && !def && !c && /^\w+$/.test(q) && hits.length) dictCard(q, slot('ia'), true).catch(() => {});
+    });
+    // Official website + knowledge panel
+    job(getJSON(`https://api.duckduckgo.com/?q=${enc}&format=json&no_html=1&skip_disambig=1`), ddg => {
+      const official = ddg.OfficialWebsite || (ddg.Results && ddg.Results[0] && ddg.Results[0].FirstURL);
+      if(official) fill('official', webResult(official, `${ddg.Heading || q} - Official Site`, hostOf(official),
+        ddg.AbstractText ? esc(ddg.AbstractText.slice(0, 190)) + (ddg.AbstractText.length > 190 ? '…' : '') : ''));
+      if(ddg.Heading && ddg.AbstractText){
+        const img = ddg.Image ? (ddg.Image.startsWith('http') ? ddg.Image : 'https://duckduckgo.com' + ddg.Image) : '';
+        const facts = ((ddg.Infobox && ddg.Infobox.content) || []).filter(f => typeof f.value === 'string' && f.value.length < 80).slice(0, 6);
+        const wikiLink = /wikipedia\.org\/wiki\//.test(ddg.AbstractURL || '') ? 'blizz://wiki/' + ddg.AbstractURL.split('/wiki/')[1] : ddg.AbstractURL;
+        fill('panel', `<aside class="bb-kp">${img ? `<img src="${esc(img)}" alt="" onerror="this.remove()">` : ''}
+          <h2>${esc(ddg.Heading)}</h2>${ddg.Entity ? `<div class="ent">${esc(ddg.Entity)}</div>` : ''}
+          <p>${esc(ddg.AbstractText.slice(0, 420))}${ddg.AbstractText.length > 420 ? '…' : ''} ${wikiLink ? `<a data-u="${esc(wikiLink)}">${esc(ddg.AbstractSource || 'More')}</a>` : ''}</p>
+          ${facts.length ? `<dl>${facts.map(f => `<div><dt>${esc(f.label)}:</dt> <dd>${esc(f.value)}</dd></div>`).join('')}</dl>` : ''}
+          ${official ? `<button class="bb-kp-site" data-u="${esc(official)}">🌐 Website</button>` : ''}</aside>`);
+      }
+    });
+    // Videos (real YouTube results, with Blizzard's library as a backup)
+    job(BLIZ.yt ? BLIZ.yt.piped('/search?q=' + enc + '&filter=videos') : Promise.reject(new Error('no yt')), yt => {
+      const v = (yt.items || []).map(BLIZ.yt.fromPiped).filter(Boolean).slice(0, 8);
+      fill('videos', v.length ? videoRow(v) : '');
+    }, () => { const v = matchVideos(q).slice(0, 6); fill('videos', v.length ? videoRow(v) : ''); }, 8000);
+    // News: quick results first, then upgrade with the bigger news source when it answers
+    const seen = new Set(); let newsList = [], gotBig = false;
+    const addNews = arr => arr.forEach(a => {
+      if(!a.title || !a.url || !/^https?:/.test(a.url)) return;
+      const k = a.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40);
+      if(!seen.has(k)){ seen.add(k); newsList.push(a); }
+    });
+    const renderNews = () => {
+      const top = newsList.slice(0, 4);
+      fill('news', top.length ? `<div class="bb-h2">Top stories</div><div class="bb-news">${top.map(a =>
+        `<div class="bb-nc" data-u="${esc(a.url)}">${a.socialimage && a.socialimage.startsWith('https:') ? `<img class="bb-nimg" loading="lazy" src="${esc(a.socialimage)}" alt="" onerror="this.remove()">` : ''}
+          <div class="src">${fav(a.url)} ${esc(a.domain || hostOf(a.url))}</div><b>${esc(a.title)}</b><small>${gdate(a.seendate)}</small></div>`).join('')}</div>` : '');
+      fill('morenews', newsList.slice(4, 11).map(a => webResult(a.url, a.title, a.domain || hostOf(a.url), '', `<div class="bb-tags">${gdate(a.seendate)}</div>`)).join(''));
+    };
+    job(getJSON(`https://hn.algolia.com/api/v1/search?query=${enc}&tags=story&hitsPerPage=10`), d => {
+      if(gotBig) return;
+      const p2 = n => String(n).padStart(2, '0');
+      addNews((d.hits || []).filter(h => h.title).map(h => { const t = new Date(h.created_at);
+        return { url: h.url || `https://news.ycombinator.com/item?id=${h.objectID}`, title: h.title, domain: '', socialimage: '',
+          seendate: `${t.getUTCFullYear()}${p2(t.getUTCMonth()+1)}${p2(t.getUTCDate())}T${p2(t.getUTCHours())}${p2(t.getUTCMinutes())}00Z` }; }));
+      renderNews();
+    });
+    job(getJSON(`https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(q + ' sourcelang:english')}&mode=artlist&maxrecords=14&format=json&sort=hybridrel`), d => {
+      const big = (d.articles || []); if(!big.length) return;
+      gotBig = true; const old = newsList; newsList = []; seen.clear(); addNews(big); addNews(old); total += big.length * 2311; setMeta(); renderNews();
+    }, null, 9000);
+    // Q&A, code, images, books, related searches
+    job(getJSON(`https://api.stackexchange.com/2.3/search/advanced?order=desc&sort=relevance&q=${enc}&site=stackoverflow&pagesize=5`), so => {
+      fill('qa', (so.items || []).filter(it => relevant(unent(it.title)) || it.score > 50).slice(0, 2).map(it =>
+        webResult(it.link, unent(it.title), 'Stack Overflow', '', `<div class="bb-tags">${it.answer_count} answers · ${it.score} votes${it.is_answered ? ' · ✓ answered' : ''}</div>`)).join(''));
+    });
+    job(getJSON(`https://api.github.com/search/repositories?q=${enc}&per_page=5`), gh => {
+      total += gh.total_count || 0; setMeta();
+      fill('code', (gh.items || []).filter(r => r.stargazers_count > 30 && (relevant(r.full_name + ' ' + r.description) || r.stargazers_count > 2000)).slice(0, 2).map(r =>
+        webResult(r.html_url, `${r.full_name}: ${r.description ? unent(r.description).slice(0, 70) : 'GitHub repository'}`, 'GitHub',
+          r.description ? esc(unent(r.description).slice(0, 180)) : '', `<div class="bb-tags">★ ${r.stargazers_count.toLocaleString()} stars${r.language ? ' · ' + esc(r.language) : ''}</div>`)).join(''));
+    });
+    job(getJSON(`https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${enc}&gsrnamespace=6&gsrlimit=14&prop=imageinfo&iiprop=url&iiurlwidth=240&format=json&origin=*`), imgs => {
+      const pics = imgs.query ? Object.values(imgs.query.pages).filter(p => p.imageinfo && /\.(jpe?g|png|webp|gif)$/i.test(p.title)).sort((a, b) => a.index - b.index).slice(0, 8) : [];
+      fill('images', pics.length ? `<div class="bb-h2">Images</div><div class="bb-irow" data-u="blizz://search?q=${enc}&t=images">${pics.map(p => `<img loading="lazy" src="${esc(p.imageinfo[0].thumburl)}" alt="">`).join('')}</div>` : '');
+    });
+    job(getJSON(`https://openlibrary.org/search.json?q=${enc}&limit=8&fields=key,title,author_name,first_publish_year,cover_i`), ol => {
+      total += ol.numFound || 0; setMeta();
+      const books = (ol.docs || []).filter(b => b.cover_i).slice(0, 6);
+      fill('books', books.length ? `<div class="bb-h2">Books</div><div class="bb-books">${books.map(b =>
+        `<div class="bb-book" data-u="https://openlibrary.org${esc(b.key)}"><img loading="lazy" src="https://covers.openlibrary.org/b/id/${b.cover_i}-M.jpg" alt=""><b>${esc(b.title)}</b><small>${esc((b.author_name || [''])[0])}${b.first_publish_year ? ' · ' + b.first_publish_year : ''}</small></div>`).join('')}</div>` : '');
+    });
+    job(getJSON(`${WIKI}/w/api.php?action=opensearch&search=${enc}&limit=9&namespace=0&format=json&origin=*`), rel => {
+      const related = (rel[1] || []).filter(r => r.toLowerCase() !== q.toLowerCase()).slice(0, 8);
+      fill('related', related.length ? `<div class="bb-h2">Related searches</div><div class="bb-related">${related.map(r =>
+        `<button data-u="blizz://search?q=${encodeURIComponent(r)}">🔍 ${esc(r)}</button>`).join('')}</div>` : '');
+    });
 
-    hits.slice(1, 2).forEach(h => out.push(wikiResult(h)));
-
-    // 4. Q&A and code
-    (so ? so.items : []).filter(it => relevant(unent(it.title)) || it.score > 50).slice(0, 2).forEach(it =>
-      out.push(webResult(it.link, unent(it.title), 'Stack Overflow', '', `<div class="bb-tags">${it.answer_count} answers · ${it.score} votes${it.is_answered ? ' · ✓ answered' : ''}</div>`)));
-    (gh ? gh.items : []).filter(r => r.stargazers_count > 30 && (relevant(r.full_name + ' ' + r.description) || r.stargazers_count > 2000)).slice(0, 2).forEach(r =>
-      out.push(webResult(r.html_url, `${r.full_name}: ${r.description ? unent(r.description).slice(0, 70) : 'GitHub repository'}`, 'GitHub',
-        r.description ? esc(unent(r.description).slice(0, 180)) : '', `<div class="bb-tags">★ ${r.stargazers_count.toLocaleString()} stars${r.language ? ' · ' + esc(r.language) : ''}</div>`)));
-
-    // Images strip
-    const pics = imgs && imgs.query ? Object.values(imgs.query.pages).filter(p => p.imageinfo && /\.(jpe?g|png|webp|gif)$/i.test(p.title)).sort((a, b) => a.index - b.index).slice(0, 8) : [];
-    if(pics.length) out.push(`<div class="bb-h2">Images</div><div class="bb-irow" data-u="blizz://search?q=${enc}&t=images">${pics.map(p => `<img loading="lazy" src="${esc(p.imageinfo[0].thumburl)}" alt="">`).join('')}</div>`);
-
-    // More web results from news and blog sites
-    articles.slice(4, 11).forEach(a => out.push(webResult(a.url, a.title, a.domain || hostOf(a.url), '', `<div class="bb-tags">${gdate(a.seendate)}</div>`)));
-
-    hits.slice(2, 3).forEach(h => out.push(wikiResult(h)));
-
-    // 5. Books
-    const books = (ol ? ol.docs : []).filter(b => b.cover_i).slice(0, 6);
-    if(books.length) out.push(`<div class="bb-h2">Books</div><div class="bb-books">${books.map(b =>
-      `<div class="bb-book" data-u="https://openlibrary.org${esc(b.key)}"><img loading="lazy" src="https://covers.openlibrary.org/b/id/${b.cover_i}-M.jpg" alt=""><b>${esc(b.title)}</b><small>${esc((b.author_name || [''])[0])}${b.first_publish_year ? ' · ' + b.first_publish_year : ''}</small></div>`).join('')}</div>`);
-
-    // 6. Related searches
-    const related = (rel ? rel[1] : []).filter(r => r.toLowerCase() !== q.toLowerCase()).slice(0, 8);
-    if(related.length) out.push(`<div class="bb-h2">Related searches</div><div class="bb-related">${related.map(r =>
-      `<button data-u="blizz://search?q=${encodeURIComponent(r)}">🔍 ${esc(r)}</button>`).join('')}</div>`);
-
-    if(!out.length) out.push(`<div class="bb-r"><p>Your search - <b>${esc(q)}</b> - did not match any documents. Try different words.</p></div>`);
-
-    // Knowledge panel (right side), like Google's info box
-    let panel = '';
-    if(ddg && ddg.Heading && ddg.AbstractText){
-      const img = ddg.Image ? (ddg.Image.startsWith('http') ? ddg.Image : 'https://duckduckgo.com' + ddg.Image) : '';
-      const facts = ((ddg.Infobox && ddg.Infobox.content) || []).filter(f => typeof f.value === 'string' && f.value.length < 80).slice(0, 6);
-      const wikiLink = /wikipedia\.org\/wiki\//.test(ddg.AbstractURL || '') ? 'blizz://wiki/' + ddg.AbstractURL.split('/wiki/')[1] : ddg.AbstractURL;
-      panel = `<aside class="bb-kp">${img ? `<img src="${esc(img)}" alt="" onerror="this.remove()">` : ''}
-        <h2>${esc(ddg.Heading)}</h2>${ddg.Entity ? `<div class="ent">${esc(ddg.Entity)}</div>` : ''}
-        <p>${esc(ddg.AbstractText.slice(0, 420))}${ddg.AbstractText.length > 420 ? '…' : ''} ${wikiLink ? `<a data-u="${esc(wikiLink)}">${esc(ddg.AbstractSource || 'More')}</a>` : ''}</p>
-        ${facts.length ? `<dl>${facts.map(f => `<div><dt>${esc(f.label)}:</dt> <dd>${esc(f.value)}</dd></div>`).join('')}</dl>` : ''}
-        ${official ? `<button class="bb-kp-site" data-u="${esc(official)}">🌐 Website</button>` : ''}</aside>`;
-    }
-    const meta = `<div class="bb-meta">About ${total.toLocaleString()} results (${((performance.now()-t0)/1000).toFixed(2)} seconds)</div>`;
-    body.innerHTML = `<div class="bb-serp"><div class="bb-results">${meta}${html}${out.join('')}</div>${panel}</div>`;
-    wireLinks(body);
-    const ia = body.querySelector('.bb-ia');
-    if(wx) weatherCard(wx[1], ia).catch(()=>{});
-    else if(def) dictCard(def[1], ia).catch(()=>{});
-    else if(/^\w+$/.test(q) && !c && hits.length) dictCard(q, ia, true).catch(()=>{});
+    await Promise.allSettled(jobs);
+    if(!live()) return;
+    const sk = body.querySelector('.bb-skel'); if(sk) sk.remove();
+    setMeta();
+    if(!c && !SLOTS.some(n => slot(n) && slot(n).innerHTML.trim()))
+      fill('wiki0', `<div class="bb-r"><p>Your search - <b>${esc(q)}</b> - did not match any documents. Try different words.</p></div>`);
   }
+
 
   function videoRow(vids){
     const dur = v => v.dur && BLIZ.yt ? `<span class="bb-vdur">${BLIZ.yt.fmtDur(v.dur)}</span>` : '';
@@ -590,6 +627,28 @@
     return leafletReady;
   }
 
+  function pageHistory(){
+    setTitle('History');
+    const h = BLIZ.store.get('bbHistory', []);
+    const day = ts => {
+      const d = new Date(ts), n = new Date();
+      const diff = Math.round((new Date(n.toDateString()) - new Date(d.toDateString())) / 864e5);
+      return diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : d.toLocaleDateString(undefined, { weekday:'long', month:'short', day:'numeric' });
+    };
+    let html = '', last = '';
+    h.forEach(x => {
+      const g = day(x.ts);
+      if(g !== last){ html += `<h3 class="bb-hday">${g}</h3>`; last = g; }
+      html += `<div class="bb-hrow" data-u="${esc(x.u)}"><span class="bb-htime">${new Date(x.ts).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}</span>
+        <b>${esc(x.t || x.u)}</b><small>${esc(x.u.startsWith('blizz://') ? 'BlizBrowse' : x.u.replace(/^https?:\/\//, '').slice(0, 60))}</small></div>`;
+    });
+    content.innerHTML = `<div class="bb-app bb-page"><h1>🕘 History</h1>
+      <button class="bb-more" data-k="clear" style="margin:0 0 16px">Clear history</button>
+      ${html || '<p class="bb-meta">Nothing here yet. Pages you visit in BlizBrowse show up here.</p>'}</div>`;
+    content.querySelector('[data-k=clear]').onclick = () => { BLIZ.store.set('bbHistory', []); pageHistory(); BLIZ.toast('History cleared'); };
+    wireLinks(content);
+  }
+
   function pageWatch(url){
     const m = url.match(/^blizz:\/\/watch\/(\w+)(?:\/([\w-]{11}))?(?:\?u=(.*))?/) || [];
     setTitle('Blizzard Watch');
@@ -653,6 +712,7 @@
         <h2>${opened ? 'Opened ' + esc(host.replace(/^www\./, '')) + ' in a new tab' : esc(host.replace(/^www\./, ''))}</h2>
         <p>${opened ? 'The site is open in its own tab, so everything on it works. Come back to this tab any time.' : 'Websites open in their own tab so everything on them works.'}</p>
         <div class="bb-nf-btns">
+          <a class="bb-more" href="${esc(u.href)}" target="_top">⤵ Open it in this tab</a>
           <a class="bb-more" href="${esc(u.href)}" target="_blank" rel="noopener">↗ ${opened ? 'Open it again' : 'Open ' + esc(host.replace(/^www\./, ''))}</a>
           <button class="bb-more" data-k="inside">Try showing it inside BlizBrowse</button>
           <button class="bb-more" data-k="home">⌂ Back to BlizBrowse</button>
@@ -693,5 +753,13 @@
   /* public hook so other parts of the site can open a page in BlizBrowse */
   BLIZ.browse = (u) => { BLIZ.go('browser'); nav(resolveInput(u)); };
 
-  newTab();
+  (function restoreTabs(){
+    const saved = BLIZ.store.get('bbTabs', null);
+    if(saved && saved.list && saved.list.length){
+      saved.list.forEach(u => tabs.push({ id:++seq, hist:[u], idx:0,
+        title: u === 'blizz://home' ? 'BlizBrowse' : decodeURIComponent(u.replace(/^blizz:\/\/search\?q=/, '').replace(/^https?:\/\/(www\.)?/, '').split('&')[0]).slice(0, 30) }));
+      cur = tabs[Math.min(saved.cur || 0, tabs.length - 1)];
+      load(cur.hist[0], false); renderTabs();
+    } else newTab();
+  })();
 })();
