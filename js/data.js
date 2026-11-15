@@ -1,6 +1,10 @@
 /* Blizzard content catalog */
 window.BLIZ = {
   games: [
+    { id:'frost-kart', name:'Frost Kart', file:'frost-kart.html', cat:'Racing', icon:'🏎️', g1:'#ee0979', g2:'#ff6a00', top:true,
+      desc:'Race 5 computer drivers on 4 tracks. Drift through turns for a mini-boost. A Blizzard original.' },
+    { id:'snowball-brawl', name:'Snowball Brawl', file:'snowball-brawl.html', cat:'Arcade', icon:'❄️', g1:'#4facfe', g2:'#00f2fe', top:true,
+      desc:'Snowball fight against 5 bot kids: scoop, throw, hide behind snow walls. First to 10 hits wins. A Blizzard original.' },
     { id:'snow-fort', name:'Snow Fort Defense', file:'snow-fort.html', cat:'Strategy', icon:'🏰', g1:'#4b6cb7', g2:'#a1c4fd', top:true,
       desc:'Build and upgrade snowball towers to stop waves of snow critters. 3 maps, boss every 5 waves. A Blizzard original.' },
     { id:'frosty-greens', name:'Frosty Greens', file:'frosty-greens.html', cat:'Sports', icon:'⛳', g1:'#56ab2f', g2:'#d4fc79', top:true,
