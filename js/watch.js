@@ -36,7 +36,7 @@
     else if(!app) openApp(store.get('watchApp', 'youtube'));
   });
 
-  const ytEmbed = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1&modestbranding=1`;
+  const ytEmbed = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
   const ytFrame = id => `<iframe src="${ytEmbed(id)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
   const parseYT = s => {
     s = s.trim();
@@ -44,6 +44,88 @@
     const m = s.match(/(?:v=|youtu\.be\/|\/shorts\/|\/embed\/|\/live\/)([\w-]{11})/);
     return m ? m[1] : null;
   };
+
+
+  /* ---------- Auto-play + scroll-to-skip helpers ----------
+     Both YouTube and TikTok players accept commands through postMessage. We start each video automatically,
+     with sound if the browser allows it; if it refuses, we fall back to muted play and show "Tap for sound". */
+  let soundWanted = store.get('soundOn', true);
+  function playerCtl(ifr, kind, onSoundBlocked){
+    let state = -1, gotState = false, muted = null;
+    const send = cmd => {
+      try{
+        if(kind === 'yt') ifr.contentWindow.postMessage(JSON.stringify({ event:'command', func:cmd, args:[] }), '*');
+        else ifr.contentWindow.postMessage({ 'x-tiktok-player':true, type:cmd }, '*');
+      }catch(e){}
+    };
+    const map = { play: kind === 'yt' ? 'playVideo' : 'play', pause: kind === 'yt' ? 'pauseVideo' : 'pause', mute:'mute', unmute: kind === 'yt' ? 'unMute' : 'unMute' };
+    const onMsg = e => {
+      if(e.source !== ifr.contentWindow) return;
+      let d = e.data;
+      if(typeof d === 'string'){ try{ d = JSON.parse(d); }catch(_){ return; } }
+      if(!d) return;
+      if(kind === 'yt'){
+        if(d.event === 'onStateChange' && typeof d.info === 'number'){ state = d.info; gotState = true; }
+        if(d.event === 'infoDelivery' && d.info && typeof d.info.playerState === 'number'){ state = d.info.playerState; gotState = true; }
+        if(d.event === 'infoDelivery' && d.info && typeof d.info.muted === 'boolean') muted = d.info.muted;
+      }else if(d['x-tiktok-player']){
+        if(d.type === 'onStateChange'){ state = d.value; gotState = true; }
+        if(d.type === 'onMute') muted = !!d.value;
+      }
+    };
+    addEventListener('message', onMsg);
+    ifr.addEventListener('load', () => {
+      if(kind === 'yt') try{ ifr.contentWindow.postMessage(JSON.stringify({ event:'listening', id:1, channel:'widget' }), '*'); }catch(e){}
+      [400, 1200].forEach(t => setTimeout(() => { send(map.play); if(soundWanted) send(map.unmute); }, t));
+      // if it still isn't playing, the browser blocked sound: play muted instead so nobody has to press play
+      setTimeout(() => {
+        if(!document.body.contains(ifr)) return;
+        if(!gotState || state !== 1){ send(map.mute); send(map.play); if(onSoundBlocked) onSoundBlocked(); }
+        else if(muted !== false && onSoundBlocked) onSoundBlocked();   // playing, but silent: offer sound
+      }, 2600);
+    }, { once:true });
+    return {
+      play(){ send(map.play); state = 1; }, pause(){ send(map.pause); state = 2; },
+      toggle(){ if(state === 1) this.pause(); else this.play(); return state === 1; },
+      sound(){ soundWanted = true; store.set('soundOn', true); send(map.unmute); send(map.play); },
+      dispose(){ removeEventListener('message', onMsg); }
+    };
+  }
+  // Transparent layer over a vertical video: scroll or swipe = next/previous, tap = pause/play
+  function skipLayer(frame, go, ctl){
+    const layer = document.createElement('div');
+    layer.className = 'skip-layer';
+    layer.innerHTML = '<div class="skip-pp"></div>';
+    frame.appendChild(layer);
+    let lock = 0, ty = null, tx = null, moved = false;
+    layer.addEventListener('wheel', e => {
+      e.preventDefault();
+      if(Math.abs(e.deltaY) < 12 || Date.now() < lock) return;
+      lock = Date.now() + 650; go(e.deltaY > 0 ? 1 : -1);
+    }, { passive:false });
+    layer.addEventListener('touchstart', e => { ty = e.touches[0].clientY; tx = e.touches[0].clientX; moved = false; }, { passive:true });
+    layer.addEventListener('touchmove', e => { if(ty !== null && Math.abs(e.touches[0].clientY - ty) > 12) moved = true; }, { passive:true });
+    layer.addEventListener('touchend', e => {
+      if(ty === null) return;
+      const dy = e.changedTouches[0].clientY - ty; ty = null;
+      if(Math.abs(dy) > 50){ go(dy < 0 ? 1 : -1); }
+    }, { passive:true });
+    layer.addEventListener('click', () => {
+      if(moved) return;
+      const c = ctl(); if(!c) return;
+      const playing = c.toggle();
+      const pp = layer.querySelector('.skip-pp');
+      pp.textContent = playing ? '▶' : '❚❚'; pp.classList.remove('show'); void pp.offsetWidth; pp.classList.add('show');
+    });
+    return layer;
+  }
+  function soundHint(frame, getCtl){
+    if(frame.querySelector('.snd-hint')) return;
+    const b = document.createElement('button');
+    b.className = 'snd-hint'; b.textContent = '🔇 Tap for sound';
+    b.onclick = e => { e.stopPropagation(); const c = getCtl(); if(c) c.sound(); b.remove(); };
+    frame.appendChild(b);
+  }
 
   /* ================= YouTube ================= */
   let ytState = { cat:'All', q:'', extra:{} };
@@ -205,6 +287,8 @@
         <div class="yt-desc">Playing inside Blizzard Watch. No sign-in needed. Tap ⛶ in the player for full screen.</div>
       </div>
       <div class="yt-next"><div class="yt-msg" style="padding:6px 0">Loading up next…</div></div></div>`;
+    { const pf = body.querySelector('.yt-player'), ifr = pf.querySelector('iframe'); let c = null;
+      c = playerCtl(ifr, 'yt', () => soundHint(pf, () => c)); }
     const nextBox = body.querySelector('.yt-next');
     const wireNext = () => nextBox.querySelectorAll('[data-id]').forEach(c => c.onclick = () => { ytPlay(c.dataset.id, body); stage.scrollIntoView({behavior:'smooth'}); });
     const myToken = ytToken;
@@ -292,7 +376,7 @@
     }catch(e){ host.remove(); }
   }
 
-  let ysState = { list:[], i:0, who:'all', loading:false, used:new Set() }, ysKeys = false;
+  let ysState = { list:[], i:0, who:'all', loading:false, used:new Set() }, ysKeys = false, ysCtl = null;
   async function ytShorts(body, who, seed, startId){
     ++ytToken; const token = ytToken;
     ytState.cat = 'Shorts';
@@ -352,7 +436,7 @@
     let ty = null, lock = 0;
     feed.addEventListener('touchstart', e => { ty = e.touches[0].clientY; }, { passive:true });
     feed.addEventListener('touchend', e => { if(ty === null) return; const dy = e.changedTouches[0].clientY - ty; ty = null; if(Math.abs(dy) > 60) go(dy < 0 ? 1 : -1); }, { passive:true });
-    feed.addEventListener('wheel', e => { if(Math.abs(e.deltaY) < 30 || Date.now() < lock) return; e.preventDefault(); lock = Date.now() + 700; go(e.deltaY > 0 ? 1 : -1); }, { passive:false });
+
     if(!ysKeys){
       ysKeys = true;
       addEventListener('keydown', e => {
@@ -367,7 +451,11 @@
   function ysShow(body){
     const v = ysState.list[ysState.i]; if(!v) return;
     const f = body.querySelector('.ys-feed'); if(!f) return;
-    f.querySelector('.ys-frame').innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${v.id}?autoplay=1&loop=1&playlist=${v.id}&playsinline=1&rel=0&modestbranding=1" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+    const yf = f.querySelector('.ys-frame');
+    yf.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${v.id}?autoplay=1&loop=1&playlist=${v.id}&playsinline=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(location.origin)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+    if(ysCtl) ysCtl.dispose();
+    ysCtl = playerCtl(yf.querySelector('iframe'), 'yt', () => soundHint(yf, () => ysCtl));
+    skipLayer(yf, d => { const n = ysState.i + d; if(n < 0 || n >= ysState.list.length) return; ysState.i = n; ysShow(body); ysMaybeMore(body); }, () => ysCtl);
     f.querySelector('.ys-title').textContent = v.t;
     f.querySelector('.ys-ch').textContent = ' · ' + v.ch + (v.views ? ' · ' + fmtViews(v.views) : '');
     f.querySelector('.ys-count').textContent = `${ysState.i + 1} / ${ysState.list.length}`;
@@ -435,15 +523,19 @@
     if(startId) list = [{ id:startId, u:'', n:'TikTok', t:'Shared video' }, ...list.filter(v => v.id !== startId)];
     ttState = { list, i:0, who };
     main.innerHTML = `<div class="tt-feed">
-        <div class="tt-stage"><div class="tt-frame"></div>
+        <div class="tt-stage">
+          <div class="tt-col"><div class="tt-frame"></div>
+            <div class="tt-cap"><b class="tt-who"></b><span class="tt-text"></span></div></div>
           <div class="tt-actions">
+            <button data-a="prev" class="tt-arrow" title="Previous (↑)">▲</button>
             <button data-a="like" title="Like">🤍<small>Like</small></button>
             <button data-a="share" title="Copy link">↗<small>Share</small></button>
             <button data-a="creator" title="More from this creator">👤<small>Creator</small></button>
+            <span class="tt-count"></span>
+            <button data-a="next" class="tt-arrow" title="Next (↓)">▼</button>
           </div></div>
-        <div class="tt-cap"><b class="tt-who"></b><span class="tt-text"></span></div>
-        <div class="tt-nav"><button data-a="prev">▲ Previous</button><span class="tt-count"></span><button data-a="next">Next ▼</button></div>
       </div>`;
+    stage.scrollIntoView({ behavior:'smooth', block:'start' });
     const go = d => { const n = ttState.i + d; if(n < 0 || n >= ttState.list.length) return; ttState.i = n; ttShow(main); };
     main.querySelector('[data-a=prev]').onclick = () => go(-1);
     main.querySelector('[data-a=next]').onclick = () => go(1);
@@ -455,10 +547,10 @@
     main.querySelector('[data-a=creator]').onclick = () => { const v = ttState.list[ttState.i]; if(v.u) ttFeed(v.u, main); };
     // swipe / wheel / keys to move through the feed
     const feed = main.querySelector('.tt-feed');
-    let ty = null, wheelLock = 0;
+    let ty = null;
     feed.addEventListener('touchstart', e => { ty = e.touches[0].clientY; }, { passive:true });
     feed.addEventListener('touchend', e => { if(ty === null) return; const dy = e.changedTouches[0].clientY - ty; ty = null; if(Math.abs(dy) > 60) go(dy < 0 ? 1 : -1); }, { passive:true });
-    feed.addEventListener('wheel', e => { if(Math.abs(e.deltaY) < 30 || Date.now() < wheelLock) return; e.preventDefault(); wheelLock = Date.now() + 700; go(e.deltaY > 0 ? 1 : -1); }, { passive:false });
+
     if(!ttKeys){
       ttKeys = true;
       addEventListener('keydown', e => {
@@ -470,10 +562,19 @@
     }
     ttShow(main);
   }
-  let ttKeys = false;
+  let ttKeys = false, ttCtl = null;
   function ttShow(main){
     const v = ttState.list[ttState.i]; if(!v) return;
-    main.querySelector('.tt-frame').innerHTML = `<iframe src="${ttPlayerURL(v.id)}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+    const frame = main.querySelector('.tt-frame');
+    frame.innerHTML = `<div class="tt-loading"><div class="tt-spin"></div><span>${esc(v.n || 'TikTok')}</span></div>
+      <iframe src="${ttPlayerURL(v.id)}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+    const ifr = frame.querySelector('iframe'), cover = frame.querySelector('.tt-loading');
+    if(ttCtl) ttCtl.dispose();
+    ttCtl = playerCtl(ifr, 'tt', () => soundHint(frame, () => ttCtl));
+    skipLayer(frame, d => { const n = ttState.i + d; if(n < 0 || n >= ttState.list.length) return; ttState.i = n; ttShow(main); }, () => ttCtl);
+    const reveal = () => { cover.classList.add('done'); setTimeout(() => cover.remove(), 400); };
+    ifr.addEventListener('load', () => setTimeout(reveal, 350), { once:true });
+    setTimeout(reveal, 6000);
     main.querySelector('.tt-who').textContent = v.u ? '@' + v.u : 'TikTok';
     main.querySelector('.tt-text').textContent = v.t ? ' ' + v.t : '';
     main.querySelector('.tt-count').textContent = `${ttState.i + 1} / ${ttState.list.length}`;

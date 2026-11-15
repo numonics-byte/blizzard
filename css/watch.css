@@ -199,3 +199,38 @@
 .ys-nav button:disabled{opacity:.35;cursor:default}
 .ys-count{color:#888;font-size:13px;min-width:64px;text-align:center}
 @media (max-width:600px){.ys-shelf{padding:0 12px 18px}.ys-card{flex-basis:130px}.ys-card img{width:130px}.ys-actions button{width:44px;height:44px;font-size:16px}.ys-stage{gap:8px}}
+/* TikTok feed v2: fits the screen, buttons beside the video */
+.tt-main{padding:16px 12px;align-items:center}
+.tt-feed{gap:0}
+.tt-stage{align-items:center;gap:16px}
+.tt-col{display:flex;flex-direction:column;align-items:center;gap:10px}
+.tt-feed .tt-frame{height:clamp(380px,calc(100vh - 230px),700px);width:auto;max-width:calc(100vw - 110px);max-height:none;aspect-ratio:9/16}
+.tt-cap{max-width:380px;min-height:20px;font-size:13.5px}
+.tt-actions{padding-bottom:0;align-items:center}
+.tt-actions .tt-arrow{background:#fe2c55;font-size:20px}
+.tt-actions .tt-arrow:hover{background:#ff4d6f}
+.tt-actions .tt-arrow:disabled{opacity:.3;cursor:default}
+.tt-count{color:#888;font-size:12px}
+.tt-loading{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#111;color:#bbb;font-size:13px;transition:opacity .35s}
+.tt-loading.done{opacity:0;pointer-events:none}
+.tt-spin{width:34px;height:34px;border-radius:50%;border:3px solid #333;border-top-color:#fe2c55;border-right-color:#25f4ee;animation:ttspin .8s linear infinite}
+@keyframes ttspin{to{transform:rotate(360deg)}}
+@media (max-width:900px){
+  .tt-acc div{display:block}
+  .tt-acc{padding:6px 12px 6px 6px;border-radius:999px;background:#1a1a1a}
+  .tt-acc .av{width:28px;height:28px;font-size:13px}
+  .tt-acc small{display:none}
+  .tt-acc b{font-size:13px;white-space:nowrap}
+}
+@media (max-width:600px){
+  .tt-feed .tt-frame{height:clamp(360px,calc(100vh - 260px),640px);max-width:calc(100vw - 80px)}
+  .tt-stage{gap:8px}
+}
+/* scroll-to-skip layer over vertical videos (leaves the player's bottom controls clickable) */
+.skip-layer{position:absolute;left:0;right:0;top:0;bottom:64px;z-index:3;cursor:pointer;touch-action:none}
+.skip-pp{position:absolute;left:50%;top:50%;width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:28px;display:grid;place-items:center;opacity:0;pointer-events:none}
+.skip-pp.show{animation:ppPop .7s ease-out}
+@keyframes ppPop{0%{opacity:1;transform:scale(.7)}60%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.15)}}
+.snd-hint{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:4;padding:8px 14px;border-radius:999px;background:rgba(0,0,0,.75);color:#fff;font-weight:700;font-size:13px;border:1px solid rgba(255,255,255,.4)}
+.yt-player .snd-hint{top:auto;bottom:60px}
+.ys-frame,.tt-frame{position:relative}
