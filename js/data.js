@@ -1,6 +1,20 @@
 /* Blizzard content catalog */
 window.BLIZ = {
   games: [
+    { id:'hexgl', name:'HexGL', file:'oss/HexGL/index.html', cat:'Racing', icon:'🚀', g1:'#0f2027', g2:'#00d2ff', top:true,
+      desc:'Pilot an anti-gravity ship through a futuristic 3D race track. Best on a computer.' },
+    { id:'2048', name:'2048', file:'oss/2048/index.html', cat:'Puzzle', icon:'🔢', g1:'#edc22e', g2:'#f59563', top:true,
+      desc:'Slide the tiles and merge matching numbers. Can you reach the 2048 tile?' },
+    { id:'tower-builder', name:'Tower Builder', file:'oss/tower_game/index.html', cat:'Arcade', icon:'🏗️', g1:'#f7971e', g2:'#ffd200', top:true,
+      desc:'Drop each swinging floor at the perfect moment to build the tallest tower.' },
+    { id:'hextris', name:'Hextris', file:'oss/hextris/index.html', cat:'Puzzle', icon:'⬢', g1:'#e74c3c', g2:'#3498db', top:true,
+      desc:'Spin the hexagon to catch falling blocks and clear three of a color.' },
+    { id:'radius-raid', name:'Radius Raid', file:'oss/radius-raid-js13k/index.html', cat:'Arcade', icon:'👾', g1:'#200122', g2:'#6f0000', top:true,
+      desc:'Fast space shooter: dodge and blast waves of enemies. Best on a computer (mouse + WASD).' },
+    { id:'astray', name:'Astray', file:'oss/Astray/index.html', cat:'Puzzle', icon:'🌀', g1:'#3a6073', g2:'#16222a', top:true,
+      desc:'Roll a ball through a 3D maze to find the exit. Best on a computer (arrow keys).' },
+    { id:'a-dark-room', name:'A Dark Room', file:'oss/adarkroom/index.html', cat:'Adventure', icon:'🔥', g1:'#232526', g2:'#414345', top:true,
+      desc:'A mysterious adventure that begins with lighting a single fire.' },
     { id:'sled-storm', name:'Sled Storm 3D', file:'sled-storm.html', cat:'Racing', icon:'🛷', g1:'#3aa8ff', g2:'#c7f0ff',
       desc:'Bomb down an endless snowy mountain. Dodge trees, hit ramps, grab gifts.' },
     { id:'frost-blocks', name:'Frost Blocks', file:'frost-blocks.html', cat:'Puzzle', icon:'🧊', g1:'#7b5cff', g2:'#3ad1ff',

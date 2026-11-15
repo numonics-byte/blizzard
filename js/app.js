@@ -61,7 +61,7 @@
   let cat = 'All', query = '';
   let favs = store.get('favs', []);
   let recent = store.get('recent', []);
-  const cats = ['All','★ Favorites','Recent', ...new Set(games.map(g => g.cat))];
+  const cats = ['All','🔥 Top Picks','★ Favorites','Recent', ...new Set(games.map(g => g.cat))];
   const chipBox = $('#gameChips');
   cats.forEach(c => {
     const b = document.createElement('button');
@@ -74,7 +74,8 @@
   function renderGames(){
     const grid = $('#gameGrid'); grid.innerHTML = '';
     let list = games.filter(g => !query || (g.name + ' ' + g.cat + ' ' + g.desc).toLowerCase().includes(query));
-    if(cat === '★ Favorites') list = list.filter(g => favs.includes(g.id));
+    if(cat === '🔥 Top Picks') list = list.filter(g => g.top);
+    else if(cat === '★ Favorites') list = list.filter(g => favs.includes(g.id));
     else if(cat === 'Recent') list = recent.map(id => list.find(g => g.id === id)).filter(Boolean);
     else if(cat !== 'All') list = list.filter(g => g.cat === cat);
     if(!list.length){ grid.innerHTML = `<div class="empty">${cat==='★ Favorites'?'Tap ☆ on a game to add it here.':cat==='Recent'?'Games you play show up here.':'No games found.'}</div>`; return; }

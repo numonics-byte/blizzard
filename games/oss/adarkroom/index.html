@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html itemscope itemtype="https://schema.org/CreativeWork">
+<head>
+	<meta charset="UTF-8"/>
+	<!--  
+		A Dark Room (v1.4)
+		==================
+		
+		A minimalist text adventure by Michael Townsend and all his friends.
+		Inspired by Candy Box (https://candybox2.github.io/candybox)
+		Contribute on GitHub! (https://github.com/doublespeakgames/adarkroom/)
+	-->
+	<title>A Dark Room</title>
+	<meta itemprop="description" name="description" property="og:description" content="A minimalist text adventure">
+	<meta itemprop="image" property="og:image" content="img/adr.png" />
+	<meta itemprop="name" property="og:title" content="A Dark Room" />
+	<link rel="shortcut icon" href="favicon.ico" />
+	<link rel="image_src" href="img/adr.png" />
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+	<script>
+		if(!window.jQuery) {
+			document.write('<script src="lib/jquery.min.js"><\/script>')
+		}
+	</script>
+	<script src="lib/jquery.color-2.1.2.min.js"></script>
+	<script src="lib/jquery.event.move.js"></script>
+	<script src="lib/jquery.event.swipe.js"></script>
+	<script src="lib/base64.js"></script>
+	<script src="lib/translate.js"></script>
+	
+	<script src="lang/langs.js"></script>
+	
+	<script>
+		// try to read "lang" param's from url
+		var lang = decodeURIComponent((new RegExp('[?|&]lang=' + '([^&;]+?)(&|#|;|$)').exec(location.search)||[,""])[1].replace(/\+/g, '%20'))||null;
+		// if no language requested, try to read it from local storage
+		if(!lang){
+			try {
+				lang = localStorage.lang;
+			} catch(e) {}
+		}
+		// if a language different than english requested, load all translations
+		if(lang && lang != 'en'){
+			document.write('<script src="lang/'+lang+'/strings.js"><\/script>');
+			document.write('<link rel="stylesheet" type="text/css" href="lang/'+lang+'/main.css" \/>');
+		}
+	</script>
+	
+	<script src="script/Button.js"></script>
+	<script src="script/audioLibrary.js"></script>
+	<script src="script/audio.js"></script>
+	<script src="script/engine.js"></script>
+	<script src="script/state_manager.js"></script>
+	<script src="script/header.js"></script>
+	<script src="script/notifications.js"></script>
+	<script src="script/events.js"></script>
+	<script src="script/room.js"></script>
+	<script src="script/outside.js"></script>
+	<script src="script/world.js"></script>
+	<script src="script/path.js"></script>
+	<script src="script/ship.js"></script>
+  <script src="script/space.js"></script>
+  <script src="script/fabricator.js"></script>
+	<script src="script/prestige.js"></script>
+	<script src="script/scoring.js"></script>
+	<!-- Event modules -->
+	<script src="script/events/global.js"></script>
+	<script src="script/events/room.js"></script>
+	<script src="script/events/outside.js"></script>
+	<script src="script/events/encounters.js"></script>
+  <script src="script/events/setpieces.js"></script>
+  <script src="script/events/marketing.js"></script>
+	<script src="script/events/executioner.js"></script>
+	
+	<script type='text/javascript'>
+		var oldIE = false;
+	</script>
+	<!--[if lt IE 9]> 
+		<script type="text/javascript">oldIE = true;</script> 
+	<![endif]-->
+	
+	<link rel="stylesheet" type="text/css" href="css/main.css" />
+	<link rel="stylesheet" type="text/css" href="css/room.css" />
+	<link rel="stylesheet" type="text/css" href="css/outside.css" />
+	<link rel="stylesheet" type="text/css" href="css/path.css" />
+	<link rel="stylesheet" type="text/css" href="css/world.css" />
+	<link rel="stylesheet" type="text/css" href="css/ship.css" />
+  <link rel="stylesheet" type="text/css" href="css/space.css" />
+  <link rel="stylesheet" type="text/css" href="css/fabricator.css" />
+	
+	<script src="script/localization.js"></script>
+	<!-- Google tag (gtag.js) -->
+	
+	
+	
+<style>body{padding-top:58px!important}</style>
+</head>
+<body>
+	<div id="wrapper">
+		<div id="saveNotify"><script>document.write(_("saved."));</script></div>
+		<div id="content">
+			<div id="outerSlider">
+				<div id="main">
+					<div id="header"></div>
+				</div>
+			</div>
+		</div>
+  </div>
+  <a class="logo" href="https://www.doublespeakgames.com" alt="doublespeak games" target="_blank">
+    <svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 41.75 32.84375" class="logo-icon">
+      <path d="m 18.024533,28.5722 c 2.532365,-2.243 5.064679,-4.4861 7.596993,-6.7292 4.907813,0 9.815625,0 14.723438,0 0,-6.8136 0,-13.6272 0,-20.4408 -12.976656,0 -25.953312,0 -38.9299676,0 0,6.8136 0,13.6272 0,20.4408 3.2917905,0 6.5835811,0 9.8753716,0 -0.643311,2.2431 -1.286622,4.4861 -1.9299604,6.7292 2.5323644,-2.243 5.0646784,-4.4861 7.5969924,-6.7292 0.999066,0 1.998131,0 2.997197,0 -0.643345,2.2431 -1.286691,4.4861 -1.930064,6.7292 z" style="stroke-width:1.0;fill:none;stroke-linejoin:miter;stroke-miterlimit:10;stroke-dasharray:none"></path>
+    </svg>
+  </a>
+<script id="blizExitScript">
+/* Blizzard exit bar: shown inside every game so there is always a way out. */
+(function(){
+  // Inside the Blizzard about:blank tab or the in-site player, the parent page already shows exit buttons.
+  try{ if(window.top !== window) return; }catch(e){ return; }
+
+  var LOCAL_SITE = 'http://localhost:8642/index.html';
+  function back(view){
+    try{
+      if(window.opener && !window.opener.closed && window.opener.BLIZ){
+        window.opener.BLIZ.go(view); window.opener.focus(); window.close(); return;
+      }
+    }catch(e){}
+    if(/^(https?|file):$/.test(location.protocol)){
+      location.href = new URL('../../index.html#' + view, location.href).href;
+      return;
+    }
+    // Page has no real address (e.g. a preview snapshot), so it can't move to another page: close it instead.
+    try{ location.href = LOCAL_SITE + '#' + view; }catch(e){}
+    setTimeout(function(){
+      try{ window.close(); }catch(e){}
+      setTimeout(showClosed, 300);
+    }, 250);
+  }
+  // Last resort if the tab can't be closed either: cover and silence the game.
+  function showClosed(){
+    try{ document.querySelectorAll('audio,video').forEach(function(m){ m.pause(); }); }catch(e){}
+    var c = document.createElement('div');
+    c.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#04060f;color:#e8f3ff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font:600 18px system-ui,sans-serif;text-align:center;padding:20px';
+    c.innerHTML = '<div style="font-size:48px">❄️</div><div>Game closed</div><div style="font-size:14px;opacity:.7">Close this tab, or open Blizzard at localhost:8642</div>';
+    ['pointerdown','touchstart','keydown','click'].forEach(function(ev){ c.addEventListener(ev, function(e){ e.stopPropagation(); }, true); });
+    addEventListener('keydown', function(e){ e.stopImmediatePropagation(); e.preventDefault(); }, true);
+    document.body.appendChild(c);
+  }
+
+  var bar = document.createElement('div');
+  bar.id = 'blizExit';
+  bar.innerHTML = '<button class="bx-x" data-v="games" title="Exit game" aria-label="Exit game">✕</button>'
+    + '<button class="bx-m" data-v="home" title="Back to Blizzard main menu">⌂ Main Menu</button>';
+  var css = document.createElement('style');
+  css.textContent = '#blizExit{position:fixed;top:12px;left:12px;z-index:2147483647;display:flex;align-items:center;gap:8px;font:700 14px system-ui,-apple-system,sans-serif;touch-action:manipulation}'
+    + '#blizExit button{cursor:pointer;font:inherit;color:#fff;border:2px solid rgba(255,255,255,.85);box-shadow:0 4px 14px rgba(0,0,0,.45)}'
+    + '#blizExit .bx-x{width:44px;height:44px;border-radius:50%;background:#ff3b5c;font-size:22px;line-height:1;padding:0;display:grid;place-items:center}'
+    + '#blizExit .bx-x:hover{background:#ff1f45;transform:scale(1.08)}'
+    + '#blizExit .bx-m{height:36px;padding:0 14px;border-radius:999px;background:rgba(4,6,15,.8)}'
+    + '#blizExit .bx-m:hover{background:#7fdbff;color:#001018}';
+  document.head.appendChild(css);
+
+  // Keep taps on the bar from also starting or steering the game underneath.
+  ['pointerdown','mousedown','touchstart','touchend','click'].forEach(function(ev){
+    bar.addEventListener(ev, function(e){ e.stopPropagation(); }, { passive:true });
+  });
+  bar.addEventListener('pointerup', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    e.stopPropagation(); back(b.dataset.v);
+  });
+  bar.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' || e.key === ' '){ var b = e.target.closest('button'); if(b){ e.preventDefault(); back(b.dataset.v); } }
+  });
+
+  function add(){ document.body.appendChild(bar); }
+  if(document.body) add(); else addEventListener('DOMContentLoaded', add);
+})();
+</script>
+</body>
+</html>
