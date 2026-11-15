@@ -324,3 +324,25 @@ body[data-view="home"] .exit-btn{display:none}
 @media (max-width:900px){ .exit-btn .lbl,#blizMusicSlot #blizMusicBtn span{display:none} }
 @media (max-width:720px){ .nav .lbl{display:none} .nav button{padding:7px 10px} }
 @media (max-width:420px){ .logo span{display:none} }
+
+/* ---------- start page: logo + color-cycling title ---------- */
+.hero-logo{width:clamp(90px,16vw,150px);aspect-ratio:1;margin-bottom:14px;animation:logoSpin 16s linear infinite}
+.hero-logo svg{width:100%;height:100%;overflow:visible}
+.hero-logo .flake,.hero-logo .core{stroke:var(--neon);animation:neonCycle 4s linear infinite;filter:drop-shadow(0 0 6px var(--neon)) drop-shadow(0 0 18px var(--neon))}
+@keyframes logoSpin{to{transform:rotate(360deg)}}
+.neon-title{background:none;-webkit-background-clip:border-box;background-clip:border-box;color:inherit;filter:none;animation:none;display:flex;justify-content:center;gap:.02em}
+.neon-title span{display:inline-block;animation:letterCycle 4s linear infinite;animation-delay:calc(var(--d) * -.25s);-webkit-text-stroke:2px rgba(255,255,255,.18)}
+@property --neon{syntax:"<color>";initial-value:#ff2bd6;inherits:true}
+@keyframes neonCycle{
+  0%,100%{--neon:#ff2bd6}
+  25%{--neon:#00e5ff}
+  50%{--neon:#39ff14}
+  75%{--neon:#7a7a7a}
+}
+@keyframes letterCycle{
+  0%,100%{color:#ff2bd6;text-shadow:0 0 8px #ff2bd6,0 0 24px #ff2bd6,0 0 48px rgba(255,43,214,.6)}
+  25%{color:#00e5ff;text-shadow:0 0 8px #00e5ff,0 0 24px #00e5ff,0 0 48px rgba(0,229,255,.6)}
+  50%{color:#39ff14;text-shadow:0 0 8px #39ff14,0 0 24px #39ff14,0 0 48px rgba(57,255,20,.6)}
+  75%{color:#000;text-shadow:0 0 6px rgba(255,255,255,.85),0 0 18px rgba(255,255,255,.35)}
+}
+@media (prefers-reduced-motion:reduce){.neon-title span{color:#00e5ff}}

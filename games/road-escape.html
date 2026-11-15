@@ -487,8 +487,8 @@ function update(dt){
   if(p.type==='$'&&d<110&&d>28){p.x+=(player.x-p.x)*Math.min(1,dt*6);p.y+=(player.y-p.y)*Math.min(1,dt*6);}
   if(d<30&&player.air<=0){p.taken=true;
    if(p.type==='$'){G.coins++;sfx.coin();}
-   else if(p.type==='n'){G.nitro=Math.min(100,G.nitro+35);sfx.nitroPick();toast('+NITRO',1);}
-   else{player.hp=Math.min(100,player.hp+25);sfx.repair();toast('+25 REPAIR',1.2);}
+   else if(p.type==='n'){G.nitro=Math.min(100,G.nitro+20);sfx.nitroPick();toast('+NITRO',1);}
+   else{player.hp=Math.min(100,player.hp+12);sfx.repair();toast('+12 REPAIR',1.2);}
    for(let i=0;i<6;i++)G.parts.push({x:p.x,y:p.y,vx:rnd(-90,90),vy:rnd(-90,90),t:0,d:.4,s:3,type:'spark',col:p.type==='$'?'#ffd84a':p.type==='n'?'#5cf':'#7f7'});}}
  for(const p of G.parts){p.t+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=Math.exp(-2*dt);p.vy*=Math.exp(-2*dt);}
  G.parts=G.parts.filter(p=>p.t<p.d);if(G.parts.length>500)G.parts.splice(0,G.parts.length-500);

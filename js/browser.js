@@ -79,7 +79,7 @@
   function mapSite(u){
     const h = u.hostname.replace(/^www\.|^m\./,'');
     if(/(^|\.)wikipedia\.org$/.test(h) && u.pathname.startsWith('/wiki/')) return 'blizz://wiki/' + u.pathname.slice(6);
-    if(/^google\.|^bing\.com$|^duckduckgo\.com$|^search\.yahoo\.com$/.test(h)){
+    if(/^google\.|^bing\.com$|^duckduckgo\.com$|^search\.yahoo\.com$/.test(h) && !u.pathname.startsWith('/maps') && h !== 'maps.google.com'){
       const q = u.searchParams.get('q') || u.searchParams.get('p');
       return q ? 'blizz://search?q=' + encodeURIComponent(q) : 'blizz://home';
     }
@@ -88,8 +88,51 @@
       return 'blizz://watch/youtube' + (id ? '/' + id : '');
     }
     if(h === 'tiktok.com') return 'blizz://watch/tiktok?u=' + encodeURIComponent(u.href);
-    if(h === 'netflix.com') return 'blizz://watch/movies';
+    if(/^(netflix|disneyplus|hulu|max|primevideo|peacocktv|paramountplus)\.com$/.test(h)) return 'blizz://watch/movies';
+    // Sites that offer an official embeddable version: use it so they work inside BlizBrowse
+    if(h === 'twitch.tv'){
+      const ch = u.pathname.split('/').filter(Boolean)[0];
+      if(ch && !/^(directory|videos|settings|search|p)$/.test(ch)) return `https://player.twitch.tv/?channel=${encodeURIComponent(ch)}&parent=${location.hostname || 'localhost'}`;
+    }
+    if(h === 'open.spotify.com' && !u.pathname.startsWith('/embed')) return 'https://open.spotify.com/embed' + u.pathname;
+    if(h === 'vimeo.com'){ const id = (u.pathname.match(/^\/(\d+)/) || [])[1]; if(id) return 'https://player.vimeo.com/video/' + id; }
+    if(h === 'scratch.mit.edu'){ const id = (u.pathname.match(/\/projects\/(\d+)/) || [])[1]; if(id) return `https://scratch.mit.edu/projects/${id}/embed`; }
+    if(/^(maps\.google\.|google\.[a-z.]+\/maps|openstreetmap\.org)/.test(h + u.pathname) || (/^google\./.test(h) && u.pathname.startsWith('/maps'))){
+      const q = u.searchParams.get('q') || decodeURIComponent((u.pathname.match(/\/(?:place|search)\/([^/@]+)/) || [])[1] || '').replace(/\+/g,' ');
+      return 'blizz://maps' + (q ? '?q=' + encodeURIComponent(q) : '');
+    }
+    if(/^(weather\.com|accuweather\.com|weather\.gov)$/.test(h)) return 'blizz://weather';
+    if(/^(dictionary\.com|merriam-webster\.com|dictionary\.cambridge\.org)$/.test(h)){
+      const w = u.pathname.split('/').filter(Boolean).pop();
+      return 'blizz://dictionary' + (w && !/^(browse|dictionary|define)$/.test(w) ? '?w=' + encodeURIComponent(w) : '');
+    }
     return u.href;
+  }
+
+  /* ---------- safety + sites that refuse to be shown inside other sites ---------- */
+  const DANGER_WORDS = /(porn|xxx|xvideo|xhamster|hentai|onlyfans|nsfw|sex|nude|escort|camgirl|casino|gambl|poker|betting|sportsbook|stake\.com|roobet|bet365|draftkings|fanduel|crack|keygen|warez|torrent|piratebay|1337x|malware|phish|darkweb|\.onion|ip-?logger|grabify|iplogger)/i;
+  function isDangerous(u){
+    if(!/^https?:$/.test(u.protocol)) return true;
+    return DANGER_WORDS.test(u.hostname) || DANGER_WORDS.test(u.pathname.slice(0, 80));
+  }
+  // Big sites known to block embedding, with the best Blizzard alternative for each
+  const NO_FRAME = {
+    'instagram.com':'Instagram', 'facebook.com':'Facebook', 'x.com':'X (Twitter)', 'twitter.com':'X (Twitter)',
+    'reddit.com':'Reddit', 'amazon.com':'Amazon', 'ebay.com':'eBay', 'github.com':'GitHub', 'stackoverflow.com':'Stack Overflow',
+    'discord.com':'Discord', 'roblox.com':'Roblox', 'snapchat.com':'Snapchat', 'pinterest.com':'Pinterest', 'linkedin.com':'LinkedIn',
+    'cnn.com':'CNN', 'bbc.com':'BBC', 'bbc.co.uk':'BBC', 'nytimes.com':'The New York Times', 'espn.com':'ESPN', 'apple.com':'Apple',
+    'microsoft.com':'Microsoft', 'chatgpt.com':'ChatGPT', 'openai.com':'OpenAI', 'claude.ai':'Claude', 'gmail.com':'Gmail',
+    'mail.google.com':'Gmail', 'docs.google.com':'Google Docs', 'drive.google.com':'Google Drive', 'classroom.google.com':'Google Classroom',
+    'outlook.com':'Outlook', 'live.com':'Outlook', 'spotify.com':'Spotify', 'twitch.tv':'Twitch', 'paypal.com':'PayPal', 'walmart.com':'Walmart',
+    'target.com':'Target', 'yahoo.com':'Yahoo', 'imdb.com':'IMDb', 'fandom.com':'Fandom', 'quora.com':'Quora', 'steampowered.com':'Steam',
+    'epicgames.com':'Epic Games', 'minecraft.net':'Minecraft', 'nintendo.com':'Nintendo', 'playstation.com':'PlayStation', 'xbox.com':'Xbox',
+    'coolmathgames.com':'Coolmath Games', 'poki.com':'Poki', 'crazygames.com':'CrazyGames', 'khanacademy.org':'Khan Academy', 'quizlet.com':'Quizlet',
+    'canva.com':'Canva', 'zoom.us':'Zoom', 'whatsapp.com':'WhatsApp', 'telegram.org':'Telegram', 'tumblr.com':'Tumblr', 'medium.com':'Medium'
+  };
+  function noFrameName(host){
+    host = host.replace(/^www\.|^m\./,'');
+    for(const d in NO_FRAME){ if(host === d || host.endsWith('.' + d)) return NO_FRAME[d]; }
+    return null;
   }
 
   /* ---------- page loader ---------- */
@@ -106,6 +149,7 @@
       else if(url.startsWith('blizz://wiki/')) await pageWiki(decodeURIComponent(url.slice(13)), live);
       else if(url.startsWith('blizz://weather')) await pageWeather(new URL(url.replace('blizz://','https://x/')).searchParams.get('q') || '', live);
       else if(url.startsWith('blizz://dictionary')) await pageDict(new URL(url.replace('blizz://','https://x/')).searchParams.get('w') || '', live);
+      else if(url.startsWith('blizz://maps')) await pageMaps(new URL(url.replace('blizz://','https://x/')).searchParams.get('q') || '', live);
       else if(url.startsWith('blizz://watch')) pageWatch(url);
       else if(url.startsWith('blizz://games')){ setTitle('Blizzard Games'); BLIZ.go('games'); }
       else pageExternal(url);
@@ -153,7 +197,7 @@
     setTitle('BlizBrowse');
     const sc = [
       ['📚','Wikipedia','blizz://wiki/Main_Page'], ['🌤️','Weather','blizz://weather'],
-      ['📖','Dictionary','blizz://dictionary'], ['🎮','Games','blizz://games'],
+      ['🗺️','Maps','blizz://maps'], ['📖','Dictionary','blizz://dictionary'],
       ['▶️','YouTube','blizz://watch/youtube'], ['🎵','TikTok','blizz://watch/tiktok'],
       ['🎬','Movies','blizz://watch/movies'], ['📰','News','blizz://search?q=technology&t=news'],
     ];
@@ -417,6 +461,26 @@
     if(!w){ out.innerHTML = '<p style="color:#5f6368">Look up the meaning of any English word.</p>'; return; }
     await dictCard(w, out);
   }
+  async function pageMaps(q, live){
+    setTitle(q ? q + ' - BlizMaps' : 'BlizMaps');
+    const out = appShell('🗺️ BlizMaps', 'Search a place, like Eiffel Tower or Denver', q, 'maps?q');
+    let bbox = '-130,15,-60,55', marker = '', label = 'Search for any place in the world.';
+    if(q){
+      const r = await getJSON(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`);
+      if(!live()) return;
+      if(r[0]){
+        const b = r[0].boundingbox.map(Number); // [south, north, west, east]
+        const pad = Math.max(.01, (b[1]-b[0]) * .15);
+        bbox = [b[2]-pad, b[0]-pad, b[3]+pad, b[1]+pad].join(',');
+        marker = `&marker=${r[0].lat},${r[0].lon}`;
+        label = r[0].display_name;
+      }else label = `Couldn't find "${q}".`;
+    }
+    out.innerHTML = `<p class="bb-meta" style="margin-bottom:10px">${esc(label)}</p>
+      <div class="bb-map"><iframe src="https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik${marker}" loading="lazy"></iframe></div>
+      <p class="bb-meta" style="margin-top:8px;font-size:12px">Map data © OpenStreetMap contributors</p>`;
+  }
+
   function pageWatch(url){
     const m = url.match(/^blizz:\/\/watch\/(\w+)(?:\/([\w-]{11}))?(?:\?u=(.*))?/) || [];
     setTitle('Blizzard Watch');
@@ -461,7 +525,32 @@
 
   /* ---------- any other website ---------- */
   function pageExternal(url){
-    let host = url; try{ host = new URL(url).hostname; }catch(e){}
+    let u = null, host = url; try{ u = new URL(url); host = u.hostname; }catch(e){}
+    if(!u || isDangerous(u)){
+      setTitle('Blocked');
+      content.innerHTML = `<div class="bb-err bb-page bb-blocked"><div class="big">🛡️</div><h2>BlizBrowse blocked this site</h2>
+        <p>${esc(host)} looks unsafe (adult content, gambling, piracy or scams), so it won't open here.</p>
+        <button class="bb-more" data-k="home" style="margin:18px auto 0">⌂ Back to BlizBrowse</button></div>`;
+      content.querySelector('[data-k=home]').onclick = () => nav('blizz://home');
+      return;
+    }
+    const isEmbed = /^(player\.twitch\.tv|player\.vimeo\.com|www\.openstreetmap\.org)$/.test(host) || /\/embed(\/|$)/.test(u.pathname);
+    const blockedBy = isEmbed ? null : noFrameName(host);
+    if(blockedBy){
+      setTitle(blockedBy);
+      const name = blockedBy.replace(/ \(.*\)$/,'');
+      content.innerHTML = `<div class="bb-err bb-page bb-noframe"><div class="big">🧊</div><h2>${esc(blockedBy)} can't be shown inside other websites</h2>
+        <p>${esc(blockedBy)} blocks every site from displaying it inside a frame, so no in-site browser can load it. Here's what you can do instead:</p>
+        <div class="bb-nf-btns">
+          <button class="bb-more" data-k="search">🔍 Search "${esc(name)}" on BlizBrowse</button>
+          <button class="bb-more" data-k="wiki">📚 Read about ${esc(name)}</button>
+          <button class="bb-more" data-k="tab">↗ Open ${esc(name)} in a new tab</button>
+        </div></div>`;
+      content.querySelector('[data-k=search]').onclick = () => nav('blizz://search?q=' + encodeURIComponent(name + ' ' + u.pathname.replace(/[/_-]+/g,' ').trim()));
+      content.querySelector('[data-k=wiki]').onclick = () => nav('blizz://wiki/' + encodeURIComponent(name.replace(/ /g,'_')));
+      content.querySelector('[data-k=tab]').onclick = () => window.open(u.href, '_blank', 'noopener');
+      return;
+    }
     setTitle(host);
     content.innerHTML = `<iframe src="${esc(url)}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups-to-escape-sandbox allow-presentation" referrerpolicy="no-referrer" allow="fullscreen; autoplay"></iframe>
       <div class="bb-ext-note">ℹ️ Some sites block being shown inside other sites. If this one stays blank, search for it instead.
