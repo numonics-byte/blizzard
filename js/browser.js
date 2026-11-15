@@ -211,22 +211,95 @@
     const wx = q.match(/^(?:weather|forecast)(?:\s+(?:in|for))?\s+(.+)$/i) || q.match(/^(.+?)\s+weather$/i);
     const def = q.match(/^(?:define|definition of|meaning of|what does)\s+(\w[\w-]*)/i);
     html += `<div class="bb-ia"></div>`;
+    body.innerHTML = `<div class="bb-results"><div class="bb-meta">Searching the web…</div></div>`;
     const t0 = performance.now();
-    const d = await getJSON(`${WIKI}/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&srlimit=10&srprop=snippet|wordcount&format=json&origin=*`);
+    const enc = encodeURIComponent(q);
+    // Ask many free sources at once; any that fail or are slow are simply skipped.
+    const tm = (pr, ms=7000) => Promise.race([pr, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms))]);
+    const got = await Promise.allSettled([
+      tm(getJSON(`${WIKI}/w/api.php?action=query&list=search&srsearch=${enc}&srlimit=10&srprop=snippet&format=json&origin=*`)),
+      tm(getJSON(`https://api.duckduckgo.com/?q=${enc}&format=json&no_html=1&skip_disambig=1`)),
+      tm(getJSON(`https://api.stackexchange.com/2.3/search/advanced?order=desc&sort=relevance&q=${enc}&site=stackoverflow&pagesize=5`)),
+      tm(getJSON(`https://api.github.com/search/repositories?q=${enc}&per_page=5`)),
+      tm(getJSON(`https://openlibrary.org/search.json?q=${enc}&limit=8&fields=key,title,author_name,first_publish_year,cover_i`)),
+      tm(getJSON(`https://hn.algolia.com/api/v1/search?query=${enc}&tags=story&hitsPerPage=6`)),
+      tm(getJSON(`${WIKI}/w/api.php?action=opensearch&search=${enc}&limit=9&namespace=0&format=json&origin=*`)),
+    ]);
     if(!live()) return;
-    const hits = d.query.search, total = d.query.searchinfo.totalhits;
-    const vids = matchVideos(q).slice(0, 6);
-    let res = `<div class="bb-meta">About ${total.toLocaleString()} results (${((performance.now()-t0)/1000).toFixed(2)} seconds)</div>` + html;
-    hits.forEach((h, i) => {
-      if(i === 2 && vids.length) res += videoRow(vids);
+    const [wiki, ddg, so, gh, ol, hn, rel] = got.map(r => r.status === 'fulfilled' ? r.value : null);
+    const unent = s => { const t = document.createElement('textarea'); t.innerHTML = s; return t.value; };
+    const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+    const relevant = text => { const t = (text || '').toLowerCase(); return words.length && words.every(w => t.includes(w)); };
+    const hostOf = u => { try{ return new URL(u).hostname.replace(/^www\./,''); }catch(e){ return u; } };
+    const crumb = u => { try{ const x = new URL(u); return esc(x.origin + (x.pathname.length > 1 ? ' › ' + x.pathname.split('/').filter(Boolean).slice(0,2).join(' › ') : '')); }catch(e){ return esc(u); } };
+    const fav = u => `<img class="fav" src="https://icons.duckduckgo.com/ip3/${encodeURIComponent(hostOf(u))}.ico" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`;
+    const webResult = (url, title, site, snippet, extra='') => `<div class="bb-r"><div class="src">${fav(url)}<div>${esc(site)}<small>${crumb(url)}</small></div></div>
+      <a data-u="${esc(url)}">${esc(title)}</a>${snippet ? `<p>${snippet}</p>` : ''}${extra}</div>`;
+
+    const hits = wiki ? wiki.query.search : [];
+    const total = (wiki ? wiki.query.searchinfo.totalhits : 0) + (gh ? gh.total_count : 0) + (ol ? ol.numFound : 0) + (hn ? hn.nbHits : 0);
+    const out = [];
+
+    // 1. Official website (like Google's top result)
+    const official = ddg && (ddg.OfficialWebsite || (ddg.Results && ddg.Results[0] && ddg.Results[0].FirstURL));
+    if(official) out.push(webResult(official, `${ddg.Heading || q} - Official Site`, hostOf(official),
+      ddg.AbstractText ? esc(ddg.AbstractText.slice(0, 190)) + (ddg.AbstractText.length > 190 ? '…' : '') : ''));
+
+    const wikiResult = h => {
       const slug = encodeURIComponent(h.title.replace(/ /g,'_'));
-      res += `<div class="bb-r"><div class="src"><i>W</i><div>Wikipedia<small>https://en.wikipedia.org › wiki › ${esc(h.title)}</small></div></div>
-        <a data-u="blizz://wiki/${slug}">${esc(h.title)}</a>
-        <p>${h.snippet.replace(/<(?!\/?span[ >])[^>]*>/g,'')}…</p></div>`;
-    });
-    if(hits.length < 2 && vids.length) res += videoRow(vids);
-    if(!hits.length) res += `<div class="bb-r"><p>Your search - <b>${esc(q)}</b> - did not match any documents. Try different words.</p></div>`;
-    body.innerHTML = `<div class="bb-results">${res}</div>`;
+      return `<div class="bb-r"><div class="src"><i>W</i><div>Wikipedia<small>https://en.wikipedia.org › wiki › ${esc(h.title)}</small></div></div>
+        <a data-u="blizz://wiki/${slug}">${esc(h.title)}</a><p>${h.snippet.replace(/<(?!\/?span[ >])[^>]*>/g,'')}…</p></div>`;
+    };
+    if(hits[0]) out.push(wikiResult(hits[0]));
+
+    // 2. Top stories
+    const stories = (hn ? hn.hits : []).filter(h => h.title).slice(0, 4);
+    if(stories.length) out.push(`<div class="bb-h2">Top stories</div><div class="bb-news">${stories.map(h => {
+      const url = h.url || `https://news.ycombinator.com/item?id=${h.objectID}`;
+      return `<div class="bb-nc" data-u="${esc(url)}"><div class="src">${fav(url)} ${esc(hostOf(url))}</div><b>${esc(h.title)}</b><small>${new Date(h.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}</small></div>`;
+    }).join('')}</div>`);
+
+    hits.slice(1, 3).forEach(h => out.push(wikiResult(h)));
+
+    // 3. Videos
+    const vids = matchVideos(q).slice(0, 6);
+    if(vids.length) out.push(videoRow(vids));
+
+    // 4. Q&A and code
+    (so ? so.items : []).filter(it => relevant(unent(it.title)) || it.score > 50).slice(0, 2).forEach(it =>
+      out.push(webResult(it.link, unent(it.title), 'Stack Overflow', '', `<div class="bb-tags">${it.answer_count} answers · ${it.score} votes${it.is_answered ? ' · ✓ answered' : ''}</div>`)));
+    (gh ? gh.items : []).filter(r => r.stargazers_count > 30 && (relevant(r.full_name + ' ' + r.description) || r.stargazers_count > 2000)).slice(0, 2).forEach(r =>
+      out.push(webResult(r.html_url, `${r.full_name}: ${r.description ? unent(r.description).slice(0, 70) : 'GitHub repository'}`, 'GitHub',
+        r.description ? esc(unent(r.description).slice(0, 180)) : '', `<div class="bb-tags">★ ${r.stargazers_count.toLocaleString()} stars${r.language ? ' · ' + esc(r.language) : ''}</div>`)));
+
+    hits.slice(3).forEach(h => out.push(wikiResult(h)));
+
+    // 5. Books
+    const books = (ol ? ol.docs : []).filter(b => b.cover_i).slice(0, 6);
+    if(books.length) out.push(`<div class="bb-h2">Books</div><div class="bb-books">${books.map(b =>
+      `<div class="bb-book" data-u="https://openlibrary.org${esc(b.key)}"><img loading="lazy" src="https://covers.openlibrary.org/b/id/${b.cover_i}-M.jpg" alt=""><b>${esc(b.title)}</b><small>${esc((b.author_name || [''])[0])}${b.first_publish_year ? ' · ' + b.first_publish_year : ''}</small></div>`).join('')}</div>`);
+
+    // 6. Related searches
+    const related = (rel ? rel[1] : []).filter(r => r.toLowerCase() !== q.toLowerCase()).slice(0, 8);
+    if(related.length) out.push(`<div class="bb-h2">Related searches</div><div class="bb-related">${related.map(r =>
+      `<button data-u="blizz://search?q=${encodeURIComponent(r)}">🔍 ${esc(r)}</button>`).join('')}</div>`);
+
+    if(!out.length) out.push(`<div class="bb-r"><p>Your search - <b>${esc(q)}</b> - did not match any documents. Try different words.</p></div>`);
+
+    // Knowledge panel (right side), like Google's info box
+    let panel = '';
+    if(ddg && ddg.Heading && ddg.AbstractText){
+      const img = ddg.Image ? (ddg.Image.startsWith('http') ? ddg.Image : 'https://duckduckgo.com' + ddg.Image) : '';
+      const facts = ((ddg.Infobox && ddg.Infobox.content) || []).filter(f => typeof f.value === 'string' && f.value.length < 80).slice(0, 6);
+      const wikiLink = /wikipedia\.org\/wiki\//.test(ddg.AbstractURL || '') ? 'blizz://wiki/' + ddg.AbstractURL.split('/wiki/')[1] : ddg.AbstractURL;
+      panel = `<aside class="bb-kp">${img ? `<img src="${esc(img)}" alt="" onerror="this.remove()">` : ''}
+        <h2>${esc(ddg.Heading)}</h2>${ddg.Entity ? `<div class="ent">${esc(ddg.Entity)}</div>` : ''}
+        <p>${esc(ddg.AbstractText.slice(0, 420))}${ddg.AbstractText.length > 420 ? '…' : ''} ${wikiLink ? `<a data-u="${esc(wikiLink)}">${esc(ddg.AbstractSource || 'More')}</a>` : ''}</p>
+        ${facts.length ? `<dl>${facts.map(f => `<div><dt>${esc(f.label)}:</dt> <dd>${esc(f.value)}</dd></div>`).join('')}</dl>` : ''}
+        ${official ? `<button class="bb-kp-site" data-u="${esc(official)}">🌐 Website</button>` : ''}</aside>`;
+    }
+    const meta = `<div class="bb-meta">About ${total.toLocaleString()} results (${((performance.now()-t0)/1000).toFixed(2)} seconds)</div>`;
+    body.innerHTML = `<div class="bb-serp"><div class="bb-results">${meta}${html}${out.join('')}</div>${panel}</div>`;
     wireLinks(body);
     const ia = body.querySelector('.bb-ia');
     if(wx) weatherCard(wx[1], ia).catch(()=>{});
@@ -239,7 +312,11 @@
       `<div class="bb-v" data-u="blizz://watch/youtube/${v.id}"><img loading="lazy" src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt=""><b>${esc(v.t)}</b></div>`).join('')}</div>`;
   }
   function wireLinks(scope){
-    scope.querySelectorAll('[data-u]').forEach(el => el.onclick = e => { e.preventDefault(); nav(el.dataset.u); });
+    scope.querySelectorAll('[data-u]').forEach(el => el.onclick = e => {
+      e.preventDefault();
+      const u = el.dataset.u;
+      nav(u.startsWith('blizz://') ? u : resolveInput(u));
+    });
   }
 
   async function searchImages(q, body, live){

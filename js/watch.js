@@ -186,12 +186,13 @@
   const poster = m => m.src === 'yt' ? `https://i.ytimg.com/vi/${m.id}/hqdefault.jpg` : `https://archive.org/services/img/${m.id}`;
   function MOVIES(){
     const ms = BLIZ.movies;
-    const feat = ms[Math.floor(Math.random() * 7)];
+    const longOnes = ms.filter(m => m.mins >= 70);
+    const feat = longOnes[Math.floor(Math.random() * longOnes.length)];
     const rows = [...new Set(ms.map(m => m.row))];
     stage.innerHTML = `<div class="bm">
       <div class="bm-top"><div class="bm-logo">BLIZZARD<b>MOVIES</b></div><input class="bm-search" placeholder="🔍 Search movies"></div>
-      <div class="bm-hero" style="background-image:url('https://i.ytimg.com/vi/${feat.id}/maxresdefault.jpg')">
-        <div><span class="bm-tag">★ FEATURED</span><h2>${esc(feat.title)}</h2><p>${esc(feat.d)} · ${feat.year} · ${feat.len}</p>
+      <div class="bm-hero"><div class="bm-hero-bg" style="background-image:url('${poster(feat)}')"></div>
+        <div><span class="bm-tag">★ FEATURED · FULL MOVIE</span><h2>${esc(feat.title)}</h2><p>${esc(feat.d)} · ${feat.year} · ${feat.len}</p>
         <button class="bm-btn" data-play="${ms.indexOf(feat)}">▶ Play</button><button class="bm-btn alt" data-info="${ms.indexOf(feat)}">ⓘ More info</button></div>
       </div>
       <div class="bm-rows"></div></div>`;
@@ -203,7 +204,7 @@
       const recent = !q && continueIds.map(i => ms[i]).filter(Boolean);
       if(recent && recent.length) html += rowHTML('Continue watching', recent);
       if(q) html += rowHTML(`Results for "${esc(q)}"`, f);
-      else rows.forEach(r => html += rowHTML(r === 'Classics' ? 'Golden-age classics' : r === 'Spooky' ? 'Spooky night' : r + ' movies', f.filter(m => m.row === r)));
+      else rows.forEach(r => html += rowHTML(r, f.filter(m => m.row === r)));
       rowsEl.innerHTML = html || '<p style="padding:26px;color:#99a">No movies found.</p>';
     }
     function rowHTML(title, list){

@@ -65,30 +65,417 @@ window.BLIZ = {
     { u:'sciencemuseum', n:'Science Museum', d:'Cool science' },
   ],
 
-  /* BlizzardMovies: open & public-domain films */
+  /* BlizzardMovies: full-length public-domain & Creative Commons films (all checked playable) */
   movies: [
-    { title:'Big Buck Bunny', year:2008, src:'yt', id:'aqz-KE-bpKQ', row:'Animated', len:'10m', d:'A giant, gentle rabbit gets his revenge on three bullying rodents.' },
-    { title:'Sintel', year:2010, src:'yt', id:'eRsGyueVLvQ', row:'Animated', len:'15m', d:'A lonely girl searches the world for the baby dragon she raised.' },
-    { title:'Sprite Fright', year:2021, src:'yt', id:'_cMxraX_5RE', row:'Animated', len:'10m', d:'Teenagers on a forest trip meet some very unfriendly mushroom sprites.' },
-    { title:'Spring', year:2019, src:'yt', id:'WhWc3b3KhnY', row:'Animated', len:'8m', d:'A shepherd girl and her dog face ancient spirits to bring back spring.' },
-    { title:'Elephants Dream', year:2006, src:'yt', id:'TLkA0RELQ1g', row:'Animated', len:'11m', d:'Two men explore a strange, endless machine.' },
-    { title:'Caminandes 2', year:2013, src:'yt', id:'Z4C82eyhwgU', row:'Animated', len:'2m', d:'A llama really wants to get to the other side of the fence.' },
-    { title:'Agent 327', year:2017, src:'yt', id:'mN0zPOpADL4', row:'Animated', len:'4m', d:'A secret agent goes undercover in a barbershop.' },
-    { title:'Sita Sings the Blues', year:2008, src:'ia', id:'Sita_Sings_the_Blues', row:'Animated', len:'82m', d:'An animated retelling of the Ramayana set to 1920s jazz.' },
-    { title:'Gulliver\'s Travels', year:1939, src:'ia', id:'gullivers_travels1939', row:'Animated', len:'76m', d:'A shipwrecked sailor wakes up in the land of tiny people.' },
-    { title:'Superman: Mechanical Monsters', year:1941, src:'ia', id:'superman_the_mechanical_monsters', row:'Animated', len:'10m', d:'Superman battles giant robots.' },
-    { title:'Tears of Steel', year:2012, src:'yt', id:'R6MlUcmOul8', row:'Sci-Fi', len:'12m', d:'Warriors and scientists try to save the world from robots.' },
-    { title:'Cosmos Laundromat', year:2015, src:'yt', id:'Y-rmzh0PI3c', row:'Sci-Fi', len:'12m', d:'A sheep gets a chance to live a thousand different lives.' },
-    { title:'A Trip to the Moon', year:1902, src:'ia', id:'ATripToTheMoon1902', row:'Sci-Fi', len:'13m', d:'The first sci-fi movie ever: astronomers fly a rocket to the moon.' },
-    { title:'20,000 Leagues Under the Sea', year:1916, src:'ia', id:'20000LeaguesUndertheSea', row:'Sci-Fi', len:'85m', d:'Captain Nemo and his submarine, the Nautilus.' },
-    { title:'The Lost World', year:1925, src:'ia', id:'lost_world', row:'Sci-Fi', len:'64m', d:'Explorers find a plateau where dinosaurs still live.' },
-    { title:'Nosferatu', year:1922, src:'ia', id:'Nosferatu1922', row:'Spooky', len:'94m', d:'The classic silent vampire film.' },
-    { title:'The Phantom of the Opera', year:1925, src:'ia', id:'ThePhantomoftheOpera', row:'Spooky', len:'93m', d:'A masked figure haunts the Paris Opera House.' },
-    { title:'House on Haunted Hill', year:1959, src:'ia', id:'house_on_haunted_hill_ipod', row:'Spooky', len:'75m', d:'Five guests are paid to spend a night in a haunted house.' },
-    { title:'The Little Shop of Horrors', year:1960, src:'ia', id:'TheLittleShopOfHorrors1960', row:'Spooky', len:'72m', d:'A flower shop worker grows a plant that is always hungry.' },
-    { title:'The Cabinet of Dr. Caligari', year:1920, src:'ia', id:'DasKabinettdesDoktorCaligariTheCabinetofDrCaligari', row:'Spooky', len:'71m', d:'A strange doctor and his sleepwalker.' },
-    { title:'His Girl Friday', year:1940, src:'ia', id:'his_girl_friday', row:'Classics', len:'92m', d:'A fast-talking newspaper editor tries to win back his star reporter.' },
-    { title:'Charlie Chaplin Festival', year:1938, src:'ia', id:'charlie_chaplin_film_fest', row:'Classics', len:'60m', d:'Four classic Chaplin comedy shorts.' },
-    { title:'Jungle Book', year:1942, src:'ia', id:'JungleBook', row:'Classics', len:'105m', d:'Mowgli, raised by wolves, returns to the human village.' },
+   {
+    "title": "Star Wreck: In the Pirkining",
+    "year": 2005,
+    "src": "ia",
+    "id": "StarWreckInThePirkining",
+    "row": "Newest free movies",
+    "len": "1h 44m",
+    "mins": 104,
+    "d": "A space-fleet captain gets stranded in the past and decides to conquer Earth. A fan-made sci-fi comedy epic."
+   },
+   {
+    "title": "Valkaama",
+    "year": 2010,
+    "src": "ia",
+    "id": "valkaama",
+    "row": "Newest free movies",
+    "len": "1h 33m",
+    "mins": 93,
+    "d": "Two friends set off on a road trip to find a lake that may only exist in legend. A Creative Commons open movie."
+   },
+   {
+    "title": "Sita Sings the Blues",
+    "year": 2008,
+    "src": "ia",
+    "id": "Sita_Sings_the_Blues",
+    "row": "Newest free movies",
+    "len": "1h 22m",
+    "mins": 82,
+    "d": "An animated retelling of the Ramayana set to 1920s jazz."
+   },
+   {
+    "title": "McLintock!",
+    "year": 1963,
+    "src": "ia",
+    "id": "mclintok_widescreen",
+    "row": "Family & adventure",
+    "len": "2h 7m",
+    "mins": 127,
+    "d": "A cattle baron's chaotic family reunion in the Old West, starring John Wayne."
+   },
+   {
+    "title": "Jungle Book",
+    "year": 1942,
+    "src": "ia",
+    "id": "JungleBook",
+    "row": "Family & adventure",
+    "len": "1h 45m",
+    "mins": 105,
+    "d": "Mowgli, raised by wolves, returns to the human village."
+   },
+   {
+    "title": "20,000 Leagues Under the Sea",
+    "year": 1916,
+    "src": "ia",
+    "id": "20000LeaguesUndertheSea",
+    "row": "Family & adventure",
+    "len": "1h 39m",
+    "mins": 99,
+    "d": "Captain Nemo and his submarine, the Nautilus."
+   },
+   {
+    "title": "Hercules Unchained",
+    "year": 1959,
+    "src": "ia",
+    "id": "HerculesUnchained",
+    "row": "Family & adventure",
+    "len": "1h 36m",
+    "mins": 96,
+    "d": "The mighty Hercules must stop a war between two brothers."
+   },
+   {
+    "title": "Mr. Bug Goes to Town",
+    "year": 1941,
+    "src": "ia",
+    "id": "hoppity-goes-to-town-nta-reprint",
+    "row": "Family & adventure",
+    "len": "1h 18m",
+    "mins": 78,
+    "d": "An animated feature about a grasshopper trying to save his bug neighborhood."
+   },
+   {
+    "title": "Daniel Boone, Trail Blazer",
+    "year": 1956,
+    "src": "ia",
+    "id": "Daniel_Boone_-_Trail_Blazer",
+    "row": "Family & adventure",
+    "len": "1h 16m",
+    "mins": 76,
+    "d": "The frontier hero leads settlers through the wilderness to Kentucky."
+   },
+   {
+    "title": "Jack and the Beanstalk",
+    "year": 1952,
+    "src": "ia",
+    "id": "jackandthebeanstalk1952_202001",
+    "row": "Family & adventure",
+    "len": "1h 14m",
+    "mins": 74,
+    "d": "Abbott and Costello climb the beanstalk into a giant's castle."
+   },
+   {
+    "title": "Gulliver's Travels",
+    "year": 1939,
+    "src": "ia",
+    "id": "gullivers_travels1939",
+    "row": "Family & adventure",
+    "len": "1h 13m",
+    "mins": 73,
+    "d": "A shipwrecked sailor wakes up in the land of tiny people."
+   },
+   {
+    "title": "Meet John Doe",
+    "year": 1941,
+    "src": "ia",
+    "id": "meet_john_doe",
+    "row": "Comedy",
+    "len": "2h 3m",
+    "mins": 123,
+    "d": "A made-up letter turns an ordinary man into a national hero."
+   },
+   {
+    "title": "My Man Godfrey",
+    "year": 1936,
+    "src": "ia",
+    "id": "MyManGodfrey1936",
+    "row": "Comedy",
+    "len": "1h 35m",
+    "mins": 95,
+    "d": "A rich, wacky family hires a forgotten man as their butler."
+   },
+   {
+    "title": "Royal Wedding",
+    "year": 1951,
+    "src": "ia",
+    "id": "royalwedding1951film",
+    "row": "Comedy",
+    "len": "1h 33m",
+    "mins": 93,
+    "d": "A brother-and-sister dance team in London. Fred Astaire dances on the ceiling!"
+   },
+   {
+    "title": "His Girl Friday",
+    "year": 1940,
+    "src": "ia",
+    "id": "his_girl_friday",
+    "row": "Comedy",
+    "len": "1h 32m",
+    "mins": 92,
+    "d": "A fast-talking newspaper editor tries to win back his star reporter."
+   },
+   {
+    "title": "At War with the Army",
+    "year": 1950,
+    "src": "ia",
+    "id": "AtWarWithTheArmy",
+    "row": "Comedy",
+    "len": "1h 31m",
+    "mins": 91,
+    "d": "Martin and Lewis cause chaos at an army training camp."
+   },
+   {
+    "title": "Topper Returns",
+    "year": 1941,
+    "src": "ia",
+    "id": "Topper_Returns_41",
+    "row": "Comedy",
+    "len": "1h 28m",
+    "mins": 88,
+    "d": "A friendly ghost needs help solving her own mystery."
+   },
+   {
+    "title": "Santa Claus Conquers the Martians",
+    "year": 1964,
+    "src": "ia",
+    "id": "SantaClausConquerstheMartians1964",
+    "row": "Comedy",
+    "len": "1h 21m",
+    "mins": 81,
+    "d": "Martians kidnap Santa so their kids can have Christmas too."
+   },
+   {
+    "title": "Africa Screams",
+    "year": 1949,
+    "src": "ia",
+    "id": "AfricaScreams",
+    "row": "Comedy",
+    "len": "1h 19m",
+    "mins": 79,
+    "d": "Abbott and Costello bluff their way onto an African safari."
+   },
+   {
+    "title": "Charlie Chaplin Festival",
+    "year": 1938,
+    "src": "ia",
+    "id": "charlie_chaplin_film_fest",
+    "row": "Comedy",
+    "len": "1h 17m",
+    "mins": 77,
+    "d": "Four classic Chaplin comedy shorts in one show."
+   },
+   {
+    "title": "Teenagers from Outer Space",
+    "year": 1959,
+    "src": "ia",
+    "id": "teenagers_from_outerspace",
+    "row": "Sci-fi & space",
+    "len": "1h 25m",
+    "mins": 85,
+    "d": "A young alien rebels against his people's plan for Earth."
+   },
+   {
+    "title": "The Phantom Planet",
+    "year": 1961,
+    "src": "ia",
+    "id": "Phantom_Planet",
+    "row": "Sci-fi & space",
+    "len": "1h 22m",
+    "mins": 82,
+    "d": "An astronaut shrinks down and lands on a tiny wandering asteroid."
+   },
+   {
+    "title": "First Spaceship on Venus",
+    "year": 1960,
+    "src": "ia",
+    "id": "FirstSpaceshipOnVenusMPEG",
+    "row": "Sci-fi & space",
+    "len": "1h 19m",
+    "mins": 79,
+    "d": "An international crew flies to Venus after finding a mysterious message."
+   },
+   {
+    "title": "The Lost World",
+    "year": 1925,
+    "src": "ia",
+    "id": "lost_world",
+    "row": "Sci-fi & space",
+    "len": "1h 8m",
+    "mins": 68,
+    "d": "Explorers find a plateau where dinosaurs still live."
+   },
+   {
+    "title": "A Trip to the Moon",
+    "year": 1902,
+    "src": "ia",
+    "id": "ATripToTheMoon1902",
+    "row": "Sci-fi & space",
+    "len": "16m",
+    "mins": 16,
+    "d": "The first sci-fi movie ever: astronomers fly a rocket to the moon."
+   },
+   {
+    "title": "The Phantom of the Opera",
+    "year": 1925,
+    "src": "ia",
+    "id": "ThePhantomoftheOpera",
+    "row": "Spooky night",
+    "len": "1h 46m",
+    "mins": 106,
+    "d": "A masked figure haunts the Paris Opera House."
+   },
+   {
+    "title": "Nosferatu",
+    "year": 1922,
+    "src": "ia",
+    "id": "Nosferatu1922",
+    "row": "Spooky night",
+    "len": "1h 32m",
+    "mins": 92,
+    "d": "The classic silent vampire film."
+   },
+   {
+    "title": "Carnival of Souls",
+    "year": 1962,
+    "src": "ia",
+    "id": "CarnivalofSouls",
+    "row": "Spooky night",
+    "len": "1h 23m",
+    "mins": 83,
+    "d": "After an accident, a church organist is drawn to an abandoned carnival."
+   },
+   {
+    "title": "House on Haunted Hill",
+    "year": 1959,
+    "src": "ia",
+    "id": "house_on_haunted_hill_ipod",
+    "row": "Spooky night",
+    "len": "1h 15m",
+    "mins": 75,
+    "d": "Five guests are paid to spend a night in a haunted house."
+   },
+   {
+    "title": "The Little Shop of Horrors",
+    "year": 1960,
+    "src": "ia",
+    "id": "TheLittleShopOfHorrors1960",
+    "row": "Spooky night",
+    "len": "1h 13m",
+    "mins": 73,
+    "d": "A flower shop worker grows a plant that is always hungry."
+   },
+   {
+    "title": "The Cabinet of Dr. Caligari",
+    "year": 1920,
+    "src": "ia",
+    "id": "DasKabinettdesDoktorCaligariTheCabinetofDrCaligari",
+    "row": "Spooky night",
+    "len": "51m",
+    "mins": 51,
+    "d": "A strange doctor and his sleepwalker."
+   },
+   {
+    "title": "The General",
+    "year": 1926,
+    "src": "ia",
+    "id": "TheGeneral_201312",
+    "row": "Golden-age classics",
+    "len": "1h 19m",
+    "mins": 79,
+    "d": "Buster Keaton chases a stolen train in one of the greatest action comedies ever."
+   },
+   {
+    "title": "Sherlock Jr.",
+    "year": 1924,
+    "src": "ia",
+    "id": "MyMovie_20190318",
+    "row": "Golden-age classics",
+    "len": "44m",
+    "mins": 44,
+    "d": "A movie projectionist dreams himself into the film he's showing."
+   },
+   {
+    "title": "Big Buck Bunny",
+    "year": 2008,
+    "src": "yt",
+    "id": "aqz-KE-bpKQ",
+    "row": "Animated shorts",
+    "len": "10m",
+    "mins": 10,
+    "d": "A giant, gentle rabbit gets his revenge on three bullying rodents."
+   },
+   {
+    "title": "Sintel",
+    "year": 2010,
+    "src": "yt",
+    "id": "eRsGyueVLvQ",
+    "row": "Animated shorts",
+    "len": "15m",
+    "mins": 15,
+    "d": "A lonely girl searches the world for the baby dragon she raised."
+   },
+   {
+    "title": "Tears of Steel",
+    "year": 2012,
+    "src": "yt",
+    "id": "R6MlUcmOul8",
+    "row": "Animated shorts",
+    "len": "12m",
+    "mins": 12,
+    "d": "Warriors and scientists try to save the world from robots."
+   },
+   {
+    "title": "Cosmos Laundromat",
+    "year": 2015,
+    "src": "yt",
+    "id": "Y-rmzh0PI3c",
+    "row": "Animated shorts",
+    "len": "12m",
+    "mins": 12,
+    "d": "A sheep gets a chance to live a thousand different lives."
+   },
+   {
+    "title": "Sprite Fright",
+    "year": 2021,
+    "src": "yt",
+    "id": "_cMxraX_5RE",
+    "row": "Animated shorts",
+    "len": "10m",
+    "mins": 10,
+    "d": "Teenagers on a forest trip meet some very unfriendly mushroom sprites."
+   },
+   {
+    "title": "Spring",
+    "year": 2019,
+    "src": "yt",
+    "id": "WhWc3b3KhnY",
+    "row": "Animated shorts",
+    "len": "8m",
+    "mins": 8,
+    "d": "A shepherd girl and her dog face ancient spirits to bring back spring."
+   },
+   {
+    "title": "Elephants Dream",
+    "year": 2006,
+    "src": "yt",
+    "id": "TLkA0RELQ1g",
+    "row": "Animated shorts",
+    "len": "11m",
+    "mins": 11,
+    "d": "Two men explore a strange, endless machine."
+   },
+   {
+    "title": "Superman: Mechanical Monsters",
+    "year": 1941,
+    "src": "ia",
+    "id": "superman_the_mechanical_monsters",
+    "row": "Animated shorts",
+    "len": "10m",
+    "mins": 10,
+    "d": "Superman battles giant robots."
+   }
   ],
 };

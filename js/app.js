@@ -42,31 +42,7 @@
     strip.appendChild(d);
   }
 
-  /* ---------- mouse spotlight + 3D tilt ---------- */
-  const root = document.documentElement;
-  let mx = -100, my = -100, lastX = null, lastY = null, cursorOn = false, cursorPulse = 0;
-  const trail = [];
-  function onMove(x, y, fine){
-    root.style.setProperty('--mx', x+'px');
-    root.style.setProperty('--my', y+'px');
-    // fill in the gap since the last event so the trail is a smooth line glued to the pointer
-    if(lastX !== null){
-      const dx = x - lastX, dy = y - lastY, steps = Math.min(8, Math.max(1, Math.hypot(dx, dy) / 10 | 0));
-      for(let i=1;i<=steps;i++) spawn(lastX + dx*i/steps, lastY + dy*i/steps, 1);
-    }else spawn(x, y, 2);
-    lastX = x; lastY = y; mx = x; my = y; cursorOn = fine;
-    trail.push({ x, y, t: performance.now() });
-  }
-  addEventListener('pointermove', e => {
-    // use every coalesced sample for exact tracking on fast moves
-    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
-    if(evs.length > 1) evs.forEach(ev => onMove(ev.clientX, ev.clientY, e.pointerType === 'mouse'));
-    else onMove(e.clientX, e.clientY, e.pointerType === 'mouse');
-  }, { passive:true });
-  addEventListener('pointerup', e => { if(e.pointerType !== 'mouse'){ lastX = lastY = null; } }, { passive:true });
-  document.addEventListener('mouseleave', () => { cursorOn = false; lastX = lastY = null; });
-  addEventListener('pointerdown', e => burst(e.clientX, e.clientY), { passive:true });
-
+  /* ---------- 3D tilt on the home cards ---------- */
   $$('.tilt').forEach(card => {
     const inner = card.querySelector('.opt-inner');
     card.addEventListener('pointermove', e => {
@@ -78,89 +54,6 @@
     });
     card.addEventListener('pointerleave', () => card.style.transform = '');
   });
-
-  /* ---------- particle canvas (snow trail + click bursts) ---------- */
-  const cv = $('#fx'), cx = cv.getContext('2d');
-  let W, H, DPR;
-  function resize(){
-    DPR = Math.min(devicePixelRatio || 1, 2);
-    W = innerWidth; H = innerHeight;
-    cv.width = W*DPR; cv.height = H*DPR; cx.setTransform(DPR,0,0,DPR,0,0);
-  }
-  resize(); addEventListener('resize', resize);
-  const parts = [];
-  const hues = [195, 205, 270, 310, 160];
-  function spawn(x, y, n){
-    for(let i=0;i<n;i++){
-      if(parts.length > 220) parts.shift();
-      parts.push({ x, y, vx:(Math.random()-.5)*.9, vy:(Math.random()-.5)*.9 + .15, life:1,
-        s: Math.random()*3+1.5, h: hues[(Math.random()*hues.length)|0], flake: Math.random() < .35, r: Math.random()*6 });
-    }
-  }
-  const rings = [];
-  function burst(x, y){
-    cursorPulse = 1;
-    rings.push({ x, y, r:4, a:1 });
-    for(let i=0;i<18;i++){
-      const a = i/18*Math.PI*2, sp = 2+Math.random()*3;
-      parts.push({ x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:1, s:Math.random()*3+2, h:hues[i%hues.length], flake:true, r:a });
-    }
-  }
-  function drawFlake(x, y, s, rot){
-    cx.save(); cx.translate(x,y); cx.rotate(rot);
-    cx.beginPath();
-    for(let k=0;k<3;k++){ cx.rotate(Math.PI/3); cx.moveTo(-s*1.6,0); cx.lineTo(s*1.6,0); }
-    cx.stroke(); cx.restore();
-  }
-  function tick(){
-    cx.clearRect(0,0,W,H);
-    cx.globalCompositeOperation = 'lighter';
-    for(let i=parts.length-1;i>=0;i--){
-      const p = parts[i];
-      p.x += p.vx; p.y += p.vy; p.vx *= .97; p.vy = p.vy*.97 + .02; p.life -= .018; p.r += .03;
-      if(p.life <= 0){ parts.splice(i,1); continue; }
-      const col = `hsla(${p.h},100%,72%,${p.life})`;
-      if(p.flake){ cx.strokeStyle = col; cx.lineWidth = 1.2; drawFlake(p.x,p.y,p.s*p.life+1,p.r); }
-      else{
-        cx.fillStyle = col; cx.shadowColor = col; cx.shadowBlur = 10;
-        cx.beginPath(); cx.arc(p.x,p.y,p.s*p.life,0,7); cx.fill(); cx.shadowBlur = 0;
-      }
-    }
-    for(let i=rings.length-1;i>=0;i--){
-      const r = rings[i]; r.r += 4; r.a -= .035;
-      if(r.a <= 0){ rings.splice(i,1); continue; }
-      cx.strokeStyle = `rgba(127,219,255,${r.a})`; cx.lineWidth = 2;
-      cx.beginPath(); cx.arc(r.x,r.y,r.r,0,7); cx.stroke();
-    }
-    // glowing comet tail that follows the exact pointer path
-    const now = performance.now();
-    while(trail.length && now - trail[0].t > 160) trail.shift();
-    if(trail.length > 1){
-      for(let i=1;i<trail.length;i++){
-        const a = i / trail.length;
-        cx.strokeStyle = `rgba(127,219,255,${a*.8})`; cx.lineWidth = 1 + a*4; cx.lineCap = 'round';
-        cx.beginPath(); cx.moveTo(trail[i-1].x, trail[i-1].y); cx.lineTo(trail[i].x, trail[i].y); cx.stroke();
-      }
-    }
-    // exact cursor: bright core + spinning snowflake ring centred on the pointer
-    if(cursorOn){
-      cursorPulse *= .9;
-      const rr = 14 + cursorPulse*10, spin = now / 900;
-      cx.shadowColor = '#7fdbff'; cx.shadowBlur = 16;
-      cx.strokeStyle = 'rgba(127,219,255,.9)'; cx.lineWidth = 1.5;
-      cx.beginPath(); cx.arc(mx, my, rr, 0, 7); cx.stroke();
-      cx.strokeStyle = 'rgba(255,79,216,.75)';
-      for(let k=0;k<6;k++){
-        const a = spin + k*Math.PI/3;
-        cx.beginPath(); cx.moveTo(mx + Math.cos(a)*(rr+3), my + Math.sin(a)*(rr+3)); cx.lineTo(mx + Math.cos(a)*(rr+8), my + Math.sin(a)*(rr+8)); cx.stroke();
-      }
-      cx.fillStyle = '#fff'; cx.beginPath(); cx.arc(mx, my, 2.5, 0, 7); cx.fill();
-      cx.shadowBlur = 0;
-    }
-    cx.globalCompositeOperation = 'source-over';
-    requestAnimationFrame(tick);
-  }
-  if(!matchMedia('(prefers-reduced-motion: reduce)').matches) tick();
 
   /* ---------- games ---------- */
   const games = BLIZ.games;

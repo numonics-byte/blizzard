@@ -43,8 +43,8 @@ a{color:inherit}
     linear-gradient(rgba(127,219,255,.06) 1px, transparent 1px),
     linear-gradient(90deg, rgba(127,219,255,.06) 1px, transparent 1px);
   background-size:48px 48px;
-  mask-image:radial-gradient(600px 600px at var(--mx) var(--my), #000 0%, rgba(0,0,0,.25) 60%, transparent 100%);
-  -webkit-mask-image:radial-gradient(600px 600px at var(--mx) var(--my), #000 0%, rgba(0,0,0,.25) 60%, transparent 100%);
+  mask-image:linear-gradient(to bottom,#000,transparent 85%);
+  -webkit-mask-image:linear-gradient(to bottom,#000,transparent 85%);
 }
 .spotlight{
   position:fixed;inset:0;z-index:-2;pointer-events:none;
@@ -316,3 +316,11 @@ body[data-view="home"] .exit-btn{display:none}
 
 .music-slot{margin-left:auto}
 .music-slot + .nav{margin-left:8px}
+
+/* ---------- top bar fits on small screens ---------- */
+.topbar{flex-wrap:nowrap}
+.exit-btn,.nav button,#blizMusicBtn{white-space:nowrap;flex:none}
+.nav{flex:none}
+@media (max-width:900px){ .exit-btn .lbl,#blizMusicSlot #blizMusicBtn span{display:none} }
+@media (max-width:720px){ .nav .lbl{display:none} .nav button{padding:7px 10px} }
+@media (max-width:420px){ .logo span{display:none} }
