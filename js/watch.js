@@ -106,7 +106,7 @@
   const fmtDur = s => { if(!s || s < 0) return ''; const h = s/3600|0, m = (s%3600)/60|0, x = s%60|0; return (h ? h + ':' + String(m).padStart(2,'0') : m) + ':' + String(x).padStart(2,'0'); };
   const fmtViews = n => !n || n < 0 ? '' : n >= 1e9 ? (n/1e9).toFixed(1).replace(/\.0$/,'') + 'B views' : n >= 1e6 ? (n/1e6).toFixed(1).replace(/\.0$/,'') + 'M views' : n >= 1e3 ? (n/1e3|0) + 'K views' : n + ' views';
   BLIZ.yt = { piped, fromPiped, fmtDur, fmtViews }; // shared with BlizBrowse search
-  const YT_CHIPS = [['All',''],['Music','music'],['Gaming','gaming'],['Minecraft','minecraft'],['Animation','animation'],
+  const YT_CHIPS = [['All',''],['Shorts','__shorts'],['Music','music'],['Gaming','gaming'],['Minecraft','minecraft'],['Animation','animation'],
     ['Funny','funny videos'],['Sports','sports highlights'],['Science','science'],['Trailers','official trailer'],['Learn','how to']];
 
   function cardHTML(v){
@@ -123,11 +123,13 @@
       ${q ? `<div class="yt-resfor">Results for <b>${esc(q)}</b></div>` : ''}
       <div class="yt-grid"><div class="yt-msg">Loading videos…</div></div><div class="yt-morebox"></div>`;
     body.querySelectorAll('[data-c]').forEach(b => b.onclick = () => {
+      if(b.dataset.c === 'Shorts') return ytShorts(body, 'all');
       ytState.cat = b.dataset.c; ytState.q = '';
       const i = stage.querySelector('.yt-search input'); if(i) i.value = '';
       ytHome(body);
     });
     const grid = body.querySelector('.yt-grid'), moreBox = body.querySelector('.yt-morebox');
+    if(!q && ytState.cat === 'Shorts') return ytShorts(body, 'all');
     const term = q || (YT_CHIPS.find(c => c[0] === ytState.cat) || ['', ''])[1];
     let list = [], next = null, note = '';
     try{
@@ -158,6 +160,7 @@
     if(token !== ytToken) return;
     if(!list.length){ grid.innerHTML = `<div class="yt-msg" style="grid-column:1/-1">No videos found for "<b>${esc(term)}</b>". Try different words.</div>`; return; }
     grid.innerHTML = note + list.map(cardHTML).join('');
+    if(!term && !note) shortsShelf(body, token);
     const wire = () => grid.querySelectorAll('[data-id]:not([data-w])').forEach(c => { c.dataset.w = 1; c.onclick = () => ytPlay(c.dataset.id, body); });
     wire();
     // "Show more" + auto-load when you scroll to the bottom, like real YouTube
@@ -229,6 +232,173 @@
       const link = 'https://youtu.be/' + id;
       (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(() => BLIZ.toast('Link copied'), () => BLIZ.toast(link));
     };
+  }
+
+  /* ================= YouTube Shorts ================= */
+  // Real Shorts read from popular channels' Shorts tabs, played in YouTube's own embedded player.
+  const SHORTS_CHANNELS = [
+    ['UCX6OQ3DkcsbYNE6H8uQQuVA','MrBeast'], ['UCRijo3ddMTht_IHyNSNXpNQ','Dude Perfect'], ['UCq8DICunczvLuJJq414110A','Zach King'],
+    ['UCY1kMZp36IQSyNx_9h4mpCg','Mark Rober'], ['UC1sELGmy5jp5fQUugmuYlXQ','Minecraft'], ['UCLA_DiR1FfKNvjuUpBHmylQ','NASA'],
+    ['UCpVm7bg6pXKo1Pr6k5kxG9A','National Geographic'], ['UCWJ2lWNubArHWmf3FIHbfcQ','NBA'], ['UCiWLfSweyRNmLpgEHekhoAg','ESPN'],
+    ['UChGJGhZ9SOOHvBB0Y4DOO_w',"Ryan's World"], ['UCJplp5SjeGSdVdwsfb9Q7lQ','Like Nastya'], ['UCsXVk37bltHxD1rDPwtNM8Q','Kurzgesagt'],
+    ['UCHnyfMqiRRG1u-2MsSQLbXA','Veritasium'], ['UCBJycsmduvYEL83R_U4JriQ','Marques Brownlee'], ['UCAuUUnT6oDeKwE6v1NGQxug','TED'],
+    ['UC295-Dw_tDNtZXFeAPAW6Aw','5-Minute Crafts'], ['UCvjgXvBlbQiydffZU7m1_aw','The Coding Train']
+  ];
+  const shortsCache = {};   // channelId -> { items, next, tab }
+  async function channelShorts(cid, name, more){
+    let c = shortsCache[cid];
+    if(!c){
+      const ch = await piped('/channel/' + cid);
+      const tab = (ch.tabs || []).find(t => t.name === 'shorts');
+      if(!tab) throw new Error('no shorts');
+      const r = await piped('/channels/tabs?data=' + encodeURIComponent(tab.data));
+      c = shortsCache[cid] = { items:[], next:r.nextpage, tab:tab.data };
+      c.items = mapShorts(r.content, ch.name || name);
+      return c.items;
+    }
+    if(more && c.next){
+      const r = await piped('/channels/tabs?data=' + encodeURIComponent(c.tab) + '&nextpage=' + encodeURIComponent(c.next));
+      c.next = r.nextpage;
+      const add = mapShorts(r.content, name);
+      c.items = c.items.concat(add);
+      return add;
+    }
+    return more ? [] : c.items;
+  }
+  function mapShorts(list, chName){
+    return (list || []).map(it => {
+      const m = (it.url || '').match(/v=([\w-]{11})/);
+      return m && it.isShort !== false ? { id:m[1], t:it.title || 'Short', ch:it.uploaderName || chName, views:+it.views || 0 } : null;
+    }).filter(Boolean);
+  }
+  const shuffle = a => { for(let i = a.length - 1; i > 0; i--){ const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  // Shelf of Shorts on the YouTube home page
+  async function shortsShelf(body, token){
+    const host = document.createElement('div');
+    host.className = 'ys-shelf';
+    host.innerHTML = `<div class="ys-shelf-h"><span class="ys-logo">S</span> Shorts</div><div class="ys-row"><div class="yt-msg" style="padding:10px 0">Loading Shorts…</div></div>`;
+    const grid = body.querySelector('.yt-grid'); if(!grid) return;
+    body.insertBefore(host, grid);
+    try{
+      const picks = shuffle(SHORTS_CHANNELS.slice()).slice(0, 2);
+      const lists = await Promise.all(picks.map(([id, n]) => channelShorts(id, n).catch(() => [])));
+      if(token !== ytToken) return;
+      const items = shuffle([].concat(...lists.map(l => l.slice(0, 8)))).slice(0, 12);
+      if(!items.length){ host.remove(); return; }
+      host.querySelector('.ys-row').innerHTML = items.map(v => `<div class="ys-card" data-sid="${v.id}">
+        <img loading="lazy" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg" alt=""><b>${esc(v.t)}</b>${v.views ? `<small>${esc(fmtViews(v.views))}</small>` : ''}</div>`).join('');
+      host.querySelectorAll('[data-sid]').forEach(c => c.onclick = () => ytShorts(body, 'all', items, c.dataset.sid));
+    }catch(e){ host.remove(); }
+  }
+
+  let ysState = { list:[], i:0, who:'all', loading:false, used:new Set() }, ysKeys = false;
+  async function ytShorts(body, who, seed, startId){
+    ++ytToken; const token = ytToken;
+    ytState.cat = 'Shorts';
+    body.innerHTML = `<div class="yt-chips">${YT_CHIPS.map(c => `<button class="${c[0] === 'Shorts' ? 'on' : ''}" data-c="${c[0]}">${c[0]}</button>`).join('')}</div>
+      <div class="ys-chans"><button class="${who === 'all' ? 'on' : ''}" data-ch="all">🔥 For You</button>${SHORTS_CHANNELS.map(([id, n]) => `<button class="${who === id ? 'on' : ''}" data-ch="${id}">${esc(n)}</button>`).join('')}</div>
+      <div class="ys-feed"><div class="yt-msg">Loading Shorts…</div></div>`;
+    body.querySelectorAll('[data-c]').forEach(b => b.onclick = () => {
+      if(b.dataset.c === 'Shorts') return ytShorts(body, 'all');
+      ytState.cat = b.dataset.c; ytState.q = ''; ytHome(body);
+    });
+    body.querySelectorAll('[data-ch]').forEach(b => b.onclick = () => ytShorts(body, b.dataset.ch));
+    ysState = { list:[], i:0, who, loading:false, used:new Set() };
+    try{
+      let list = [];
+      if(seed && seed.length){ list = seed.slice(); }
+      else if(who === 'all'){
+        const picks = shuffle(SHORTS_CHANNELS.slice()).slice(0, 4);
+        picks.forEach(([id]) => ysState.used.add(id));
+        const lists = await Promise.all(picks.map(([id, n]) => channelShorts(id, n).catch(() => [])));
+        list = shuffle([].concat(...lists.map(l => l.slice(0, 12))));
+      }else{
+        const ch = SHORTS_CHANNELS.find(c => c[0] === who);
+        list = (await channelShorts(who, ch ? ch[1] : '')).slice();
+      }
+      if(token !== ytToken) return;
+      if(startId){ const k = list.findIndex(v => v.id === startId); if(k > 0) list.unshift(list.splice(k, 1)[0]); }
+      if(!list.length) throw new Error('empty');
+      ysState.list = list;
+      ysBuild(body);
+    }catch(e){
+      if(token !== ytToken) return;
+      body.querySelector('.ys-feed').innerHTML = `<div class="yt-msg">Shorts aren't loading right now. Try again in a minute, or pick a channel above.</div>`;
+    }
+  }
+  function ysBuild(body){
+    const feed = body.querySelector('.ys-feed');
+    feed.innerHTML = `<div class="ys-stage"><div class="ys-frame"></div>
+        <div class="ys-actions">
+          <button data-a="like" title="Like">👍<small>Like</small></button>
+          <button data-a="share" title="Copy link">↗<small>Share</small></button>
+          <button data-a="chan" title="More from this channel">▶<small>Channel</small></button>
+        </div></div>
+      <div class="ys-cap"><b class="ys-title"></b><span class="ys-ch"></span></div>
+      <div class="ys-nav"><button data-a="prev">▲ Previous</button><span class="ys-count"></span><button data-a="next">Next ▼</button></div>`;
+    const go = d => { const n = ysState.i + d; if(n < 0 || n >= ysState.list.length) return; ysState.i = n; ysShow(body); ysMaybeMore(body); };
+    feed.querySelector('[data-a=prev]').onclick = () => go(-1);
+    feed.querySelector('[data-a=next]').onclick = () => go(1);
+    feed.querySelector('[data-a=like]').onclick = e => { const b = e.currentTarget; b.classList.toggle('liked'); };
+    feed.querySelector('[data-a=share]').onclick = () => {
+      const link = 'https://youtube.com/shorts/' + ysState.list[ysState.i].id;
+      (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(() => BLIZ.toast('Link copied'), () => BLIZ.toast(link));
+    };
+    feed.querySelector('[data-a=chan]').onclick = () => {
+      const v = ysState.list[ysState.i]; const ch = SHORTS_CHANNELS.find(c => c[1] === v.ch || v.ch.startsWith(c[1]));
+      if(ch) ytShorts(body, ch[0]); else BLIZ.toast(v.ch);
+    };
+    let ty = null, lock = 0;
+    feed.addEventListener('touchstart', e => { ty = e.touches[0].clientY; }, { passive:true });
+    feed.addEventListener('touchend', e => { if(ty === null) return; const dy = e.changedTouches[0].clientY - ty; ty = null; if(Math.abs(dy) > 60) go(dy < 0 ? 1 : -1); }, { passive:true });
+    feed.addEventListener('wheel', e => { if(Math.abs(e.deltaY) < 30 || Date.now() < lock) return; e.preventDefault(); lock = Date.now() + 700; go(e.deltaY > 0 ? 1 : -1); }, { passive:false });
+    if(!ysKeys){
+      ysKeys = true;
+      addEventListener('keydown', e => {
+        if(app !== 'youtube' || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+        const f = document.querySelector('.ys-feed .ys-nav'); if(!f) return;
+        if(e.key === 'ArrowDown'){ e.preventDefault(); f.querySelector('[data-a=next]').click(); }
+        if(e.key === 'ArrowUp'){ e.preventDefault(); f.querySelector('[data-a=prev]').click(); }
+      });
+    }
+    ysShow(body);
+  }
+  function ysShow(body){
+    const v = ysState.list[ysState.i]; if(!v) return;
+    const f = body.querySelector('.ys-feed'); if(!f) return;
+    f.querySelector('.ys-frame').innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${v.id}?autoplay=1&loop=1&playlist=${v.id}&playsinline=1&rel=0&modestbranding=1" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+    f.querySelector('.ys-title').textContent = v.t;
+    f.querySelector('.ys-ch').textContent = ' · ' + v.ch + (v.views ? ' · ' + fmtViews(v.views) : '');
+    f.querySelector('.ys-count').textContent = `${ysState.i + 1} / ${ysState.list.length}`;
+    f.querySelector('[data-a=prev]').disabled = ysState.i === 0;
+    f.querySelector('[data-a=next]').disabled = ysState.i >= ysState.list.length - 1;
+    f.querySelector('[data-a=like]').classList.remove('liked');
+  }
+  // Keep the feed endless: load more Shorts when you get near the end
+  async function ysMaybeMore(body){
+    if(ysState.loading || ysState.i < ysState.list.length - 4) return;
+    ysState.loading = true;
+    const token = ytToken;
+    try{
+      let add = [];
+      if(ysState.who === 'all'){
+        const fresh = shuffle(SHORTS_CHANNELS.filter(c => !ysState.used.has(c[0]))).slice(0, 2);
+        const picks = fresh.length ? fresh : shuffle(SHORTS_CHANNELS.slice()).slice(0, 2);
+        picks.forEach(([id]) => ysState.used.add(id));
+        const lists = await Promise.all(picks.map(([id, n]) => (fresh.length ? channelShorts(id, n) : channelShorts(id, n, true)).catch(() => [])));
+        add = shuffle([].concat(...lists.map(l => l.slice(0, 12))));
+      }else{
+        const ch = SHORTS_CHANNELS.find(c => c[0] === ysState.who);
+        add = await channelShorts(ysState.who, ch ? ch[1] : '', true);
+      }
+      if(token !== ytToken) return;
+      const have = new Set(ysState.list.map(v => v.id));
+      ysState.list = ysState.list.concat(add.filter(v => !have.has(v.id)));
+      const c = body.querySelector('.ys-count'); if(c) c.textContent = `${ysState.i + 1} / ${ysState.list.length}`;
+      const n = body.querySelector('.ys-nav [data-a=next]'); if(n) n.disabled = ysState.i >= ysState.list.length - 1;
+    }catch(e){}
+    ysState.loading = false;
   }
 
   /* ================= TikTok ================= */

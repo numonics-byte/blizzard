@@ -170,3 +170,32 @@
 .tt-count{color:#888;font-size:13px;min-width:60px;text-align:center}
 .tt-main{max-height:none}
 @media (max-width:600px){.tt-actions button{width:44px;height:44px;font-size:17px}.tt-stage{gap:8px}}
+/* ---------- YouTube Shorts ---------- */
+.ys-shelf{padding:0 18px 22px}
+.ys-shelf-h{display:flex;align-items:center;gap:8px;font-weight:700;font-size:19px;margin-bottom:12px}
+.ys-logo{background:#ff0033;color:#fff;border-radius:7px;width:24px;height:24px;display:grid;place-items:center;font-size:14px;font-weight:800}
+.ys-row{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}
+.ys-card{flex:0 0 170px;cursor:pointer}
+.ys-card img{width:170px;aspect-ratio:9/16;object-fit:cover;border-radius:12px;display:block;background:#222;transition:transform .2s}
+.ys-card:hover img{transform:scale(1.03)}
+.ys-card b{display:block;font-size:14px;font-weight:600;line-height:1.3;margin-top:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ys-card small{color:#aaa;font-size:12.5px}
+.ys-chans{display:flex;gap:8px;padding:0 18px 14px;overflow-x:auto;scrollbar-width:none}
+.ys-chans button{background:#1f1f1f;color:#ddd;padding:6px 12px;border-radius:999px;font-size:13px;white-space:nowrap;border:1px solid #303030}
+.ys-chans button.on{background:#ff0033;border-color:#ff0033;color:#fff}
+.ys-feed{display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 12px 30px;user-select:none}
+.ys-stage{display:flex;align-items:flex-end;gap:14px}
+.ys-frame{position:relative;width:min(360px,calc(100vw - 110px));aspect-ratio:9/16;max-height:74vh;border-radius:16px;overflow:hidden;background:#000;box-shadow:0 0 0 1px #222,0 20px 50px -10px rgba(255,0,51,.35)}
+.ys-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.ys-actions{display:flex;flex-direction:column;gap:14px;padding-bottom:20px}
+.ys-actions button{width:52px;height:52px;border-radius:50%;background:#272727;color:#fff;font-size:19px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.ys-actions button small{font-size:10px;margin-top:3px;color:#bbb}
+.ys-actions button:hover{background:#3a3a3a}
+.ys-actions button.liked{background:#ff0033}
+.ys-cap{max-width:440px;text-align:center;font-size:14px;color:#aaa;line-height:1.4}
+.ys-cap b{color:#fff}
+.ys-nav{display:flex;align-items:center;gap:14px}
+.ys-nav button{padding:9px 18px;border-radius:999px;background:#ff0033;color:#fff;font-weight:700;font-size:13px}
+.ys-nav button:disabled{opacity:.35;cursor:default}
+.ys-count{color:#888;font-size:13px;min-width:64px;text-align:center}
+@media (max-width:600px){.ys-shelf{padding:0 12px 18px}.ys-card{flex-basis:130px}.ys-card img{width:130px}.ys-actions button{width:44px;height:44px;font-size:16px}.ys-stage{gap:8px}}
