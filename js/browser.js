@@ -26,7 +26,7 @@
   const btn = a => root.querySelector(`[data-a="${a}"]`);
 
   /* ---------- tabs & history ---------- */
-  let tabs = [], cur = null, seq = 0, navToken = 0;
+  let tabs = [], cur = null, seq = 0, navToken = 0, ddgFresh = false;
   function newTab(url='blizz://home'){
     const t = { id:++seq, hist:[], idx:-1, title:'New Tab' };
     tabs.push(t); cur = t; nav(url); renderTabs();
@@ -145,7 +145,7 @@
     const live = () => token === navToken;
     try{
       if(url === 'blizz://home') pageHome();
-      else if(url.startsWith('blizz://search')) await pageSearch(new URL(url.replace('blizz://','https://x/')).searchParams, live);
+      else if(url.startsWith('blizz://search')){ ddgFresh = fresh; await pageSearch(new URL(url.replace('blizz://','https://x/')).searchParams, live); }
       else if(url.startsWith('blizz://wiki/')) await pageWiki(decodeURIComponent(url.slice(13)), live);
       else if(url.startsWith('blizz://weather')) await pageWeather(new URL(url.replace('blizz://','https://x/')).searchParams.get('q') || '', live);
       else if(url.startsWith('blizz://dictionary')) await pageDict(new URL(url.replace('blizz://','https://x/')).searchParams.get('w') || '', live);
@@ -202,12 +202,14 @@
       ['🎬','Movies','blizz://watch/movies'], ['📰','News','blizz://search?q=technology&t=news'],
     ];
     content.innerHTML = `<div class="bb-home bb-page">
-      <div class="bb-logo">${LOGO}<small>POWERED BY BLIZZARD</small></div>
+      <div class="bb-logo">${LOGO}<small>SEARCH WITH DUCKDUCKGO</small></div>
       ${searchBox()}
       <div class="bb-btns"><button data-k="search">BlizBrowse Search</button><button data-k="lucky">I'm Feeling Snowy</button></div>
       <div class="bb-shortcuts">${sc.map(s => `<div class="bb-sc" data-u="${s[2]}"><i>${s[0]}</i>${s[1]}</div>`).join('')}</div>
       <label class="bb-toggle"><input type="checkbox" ${BLIZ.store.get('bbNewTab', true) ? 'checked' : ''}><span class="bb-sw"></span>
         Open websites in a new tab <small>(recommended: every site works this way)</small></label>
+      <label class="bb-toggle"><input type="checkbox" data-eng ${BLIZ.store.get('engine', 'ddg') === 'ddg' ? 'checked' : ''}><span class="bb-sw"></span>
+        Search with DuckDuckGo <small>(off = BlizBrowse results)</small></label>
     </div>`;
     wireSearch(content);
     content.querySelector('[data-k=search]').onclick = () => content.querySelector('.bb-sbox').requestSubmit();
@@ -216,6 +218,7 @@
       catch(e){ BLIZ.toast('Could not reach the internet'); }
     };
     content.querySelectorAll('[data-u]').forEach(el => el.onclick = () => nav(el.dataset.u));
+    content.querySelector('[data-eng]').onchange = e => { BLIZ.store.set('engine', e.target.checked ? 'ddg' : 'bliz'); BLIZ.toast(e.target.checked ? 'Searching with DuckDuckGo' : 'Searching with BlizBrowse'); };
     content.querySelector('.bb-toggle input').onchange = e => { BLIZ.store.set('bbNewTab', e.target.checked); BLIZ.toast(e.target.checked ? 'Websites will open in a new tab' : 'BlizBrowse will try to show websites inside'); };
     setTimeout(() => { const i = content.querySelector('.bb-sbox input'); if(i && matchMedia('(pointer:fine)').matches) i.focus(); }, 50);
   }
@@ -247,6 +250,21 @@
   async function pageSearch(p, live){
     const q = (p.get('q') || '').trim(), t = p.get('t') || 'all';
     setTitle(q + ' - BlizBrowse');
+    if(BLIZ.store.get('engine', 'ddg') === 'ddg' && !p.get('t')){
+      const ddg = 'https://duckduckgo.com/?q=' + encodeURIComponent(q);
+      let opened = false;
+      if(ddgFresh){ try{ opened = !!window.open(ddg, '_blank', 'noopener'); }catch(e){} }
+      content.innerHTML = `<div class="bb-err bb-page bb-noframe"><div class="big">🦆</div>
+        <h2>${opened ? 'Searching DuckDuckGo in a new tab' : 'Search DuckDuckGo for “' + esc(q) + '”'}</h2>
+        <p>DuckDuckGo results open in their own tab, so every site you click works.</p>
+        <div class="bb-nf-btns">
+          <button class="bb-more" data-k="ddg">🦆 ${opened ? 'Open DuckDuckGo again' : 'Search on DuckDuckGo'}</button>
+          <button class="bb-more" data-k="bliz">❄️ Show BlizBrowse results here instead</button>
+        </div></div>`;
+      content.querySelector('[data-k=ddg]').onclick = () => window.open(ddg, '_blank', 'noopener');
+      content.querySelector('[data-k=bliz]').onclick = () => nav('blizz://search?q=' + encodeURIComponent(q) + '&t=all');
+      return;
+    }
     const body = resultsShell(q, t);
     if(t === 'images') return searchImages(q, body, live);
     if(t === 'videos') return searchVideos(q, body, live);
