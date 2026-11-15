@@ -176,7 +176,7 @@ const CHAPTERS={
   '4':{id:'n3',name:'Torn Note',icon:'note',digit:'9',slot:2},
   '5':{id:'front',name:'Front Door Key',icon:'key',color:'#c7d2da',msg:'A heavy iron key on a red ribbon. The front door!'}},
  locks:{L:{need:'brass',what:'study door',msg:'The study door is locked. The keyhole is small and brass.',noise:3}},
- warden:{patrol:1.35,inv:1.9,chase:3.0,vision:6.5,hear:1},
+ warden:{patrol:1.5,inv:2.1,chase:3.4,vision:6.5,hear:1},
  check:.15,pressure:.25,hop:0,confiscate:false},
 2:{sub:'The Crow Upstairs',
  story:'You got out... and woke up somewhere worse. This house has two floors, a garage, and a crow with a voice like a rusty hinge. If it spots you it will scream for the Warden. Fix the old car in the garage: it needs a battery, a fuel can and its key.',
@@ -230,7 +230,7 @@ const CHAPTERS={
   Q:{need:'crowbar',what:'boards',keep:true,msg:'Boards are nailed across this door. You need something to pry them off.',done:'You rip the boards off. CRACK! That was loud...',noise:7,pry:true}},
  carParts:['battery','fuel','carkey'],
  crow:{fl:1,x:6,y:9,perches:[[1,6,9],[1,22,9],[1,14,4],[1,24,12],[1,4,15],[0,8,9],[0,24,15],[0,16,4],[0,5,6],[0,25,9]]},
- warden:{patrol:1.45,inv:2.0,chase:3.15,vision:6.8,hear:1.1},
+ warden:{patrol:1.6,inv:2.25,chase:3.55,vision:6.8,hear:1.1},
  check:.25,pressure:.3,hop:.3,confiscate:false},
 3:{sub:'The Manor Below',
  story:'A great dark manor, and a Warden that has learned to hurry. The power is dead and the only way out is the old sewer under the basement, drowned in black water. Find three fuses, bring the lights and the pumps back to life, and pry open the grate. Careful: if it catches you, it takes back what you carried.',
@@ -291,7 +291,7 @@ const CHAPTERS={
  zones:[[{fl:0,x:1,y:8,w:36,h:3},{fl:0,x:1,y:1,w:11,h:6}],
   [{fl:1,x:1,y:7,w:36,h:3},{fl:1,x:29,y:11,w:8,h:10}],
   [{fl:1,x:12,y:1,w:25,h:5},{fl:0,x:13,y:1,w:12,h:6}]],
- warden:{patrol:1.6,inv:2.3,chase:3.45,vision:7,hear:1.3},
+ warden:{patrol:1.75,inv:2.55,chase:3.85,vision:7,hear:1.3},
  check:.35,pressure:.35,hop:.3,confiscate:true}
 };
 /*MAPS_END*/
@@ -313,7 +313,7 @@ function findBase(rows,x,y){
 }
 function buildFloor(def,fi){
  const rows=def.map,h=rows.length,w=rows[0].length;
- const F={w,h,t:[],base:[],doors:new Map(),cache:null,dirty:true,def,stairs:[],hides:[],walk:[],car:null,fuse:[]};
+ const F={w,h,seen:new Uint8Array(w*h),t:[],base:[],doors:new Map(),cache:null,dirty:true,def,stairs:[],hides:[],walk:[],car:null,fuse:[]};
  for(let y=0;y<h;y++){F.t.push(rows[y].split(''));F.base.push([]);
   for(let x=0;x<w;x++){let c=F.t[y][x];
    const b=FLOORS.includes(c)?c:findBase(rows,x,y);F.base[y][x]=b;
@@ -375,7 +375,7 @@ function bfs(fl,sx,sy,goal){
 function newGame(){
  C=CHAPTERS[chN];
  G={floors:[],items:[],inv:[],nights:1,time:0,fuses:0,car:{},drainT:0,draining:false,drained:false,zones:[],rings:[],motes:[],
-  shake:0,lastPick:null,toasts:[],ambT:6,hbT:0,hbPulse:0,focus:null,won:false,wSteps:0,flick:0,escapeMsg:''};
+  shake:0,lastPick:null,guideT:0,guide:null,guidePt:null,fx:[],toasts:[],ambT:6,hbT:0,hbPulse:0,focus:null,won:false,wSteps:0,flick:0,escapeMsg:''};
  C.floors.forEach((f,i)=>G.floors.push(buildFloor(f,i)));
  P={fl:G.start.fl,x:G.start.x,y:G.start.y,r:.28,a:-PI/2,light:true,stam:1,tired:false,hidden:null,moving:false,run:false,stepAcc:0,lastTile:-1,onStairs:true,walkPh:0};
  W={fl:G.wstart.fl,x:G.wstart.x,y:G.wstart.y,a:PI,face:PI,look:PI,state:'patrol',path:null,pi:0,goal:null,wait:2,sus:0,last:null,seenT:9,repath:0,
@@ -409,6 +409,62 @@ function objective(){
  if(G.fuses<3)return 'Restore power: fuses in the basement box ('+G.fuses+'/3)';
  if(!has('crowbar'))return 'The cistern drained. Find something to pry the grate';
  return 'Pry open the sewer grate in the basement!';
+}
+
+// ---------- guidance (where to go next) ----------
+function lockOk(dr){if(!dr.lock)return true;const L=C.locks[dr.lock];if(L.power)return false;return has(L.need);}
+function pPass(fl,x,y){const c=T(fl,x,y);if(isDoorCh(c)){const d=door(fl,x,y);return d.open||lockOk(d);}return !SOLID.has(c);}
+const D4=[[1,0],[-1,0],[0,1],[0,-1]];
+function distMap(fl,seeds){
+ const F=G.floors[fl],w=F.w,N=w*F.h,d=new Int16Array(N).fill(-1),q=new Int32Array(N);let h=0,t=0;
+ for(const[x,y]of seeds){if(x<0||y<0||x>=w||y>=F.h)continue;const k=y*w+x;if(d[k]<0){d[k]=0;q[t++]=k;}}
+ while(h<t){const c=q[h++],cx=c%w,cy=(c/w)|0;
+  for(const[dx,dy]of D4){const nx=cx+dx,ny=cy+dy;if(nx<0||ny<0||nx>=w||ny>=F.h)continue;const n=ny*w+nx;if(d[n]>=0||!pPass(fl,nx,ny))continue;d[n]=d[c]+1;q[t++]=n;}}
+ return d;
+}
+function adjSeeds(fl,x,y){const s=[];for(const[dx,dy]of D4)if(pPass(fl,x+dx,y+dy))s.push([x+dx,y+dy]);return s;}
+function goalTiles(){
+ // special interactables the player should walk to right now, with a label
+ const out=[];
+ G.floors.forEach((F,fl)=>{for(let y=0;y<F.h;y++)for(let x=0;x<F.w;x++){const c=F.t[y][x];
+  if(c==='X'&&notesHave()>=3&&has('front'))out.push({fl,x,y,adj:true,label:'Front door'});
+  else if(c==='A'&&C.carParts){const miss=C.carParts.filter(p=>!G.car[p]);if(!miss.length||miss.some(p=>has(p)))out.push({fl,x,y,adj:true,label:miss.length?'Old car':'Start the car'});}
+  else if(c==='F'&&G.inv.some(i=>i.def.icon==='fuse'&&!i.used))out.push({fl,x,y,adj:true,label:'Fuse box'});
+  else if(c==='G'&&(G.drained||G.draining)&&has('crowbar'))out.push({fl,x,y,adj:true,label:'Sewer grate'});
+}});
+ return out;
+}
+function updateGuide(){
+ G.guideT=.2;
+ const fl=P.fl,F=G.floors[fl],px=P.x|0,py=P.y|0;
+ const dP=distMap(fl,[[px,py]]);
+ let dO=null,stairCost=-1;const of=1-fl;
+ if(G.floors.length>1&&F.stairs.length){for(const[sx,sy]of F.stairs){const v=dP[sy*F.w+sx];if(v>=0&&(stairCost<0||v<stairCost))stairCost=v;}
+  if(stairCost>=0)dO=distMap(of,G.floors[of].stairs);}
+ const cost=(t)=>{const Ft=G.floors[t.fl];const seeds=t.adj?adjSeeds(t.fl,t.x,t.y):[[t.x|0,t.y|0]];let best=-1;
+  const dm=t.fl===fl?dP:dO;if(!dm)return -1;
+  for(const[x,y]of seeds){const v=dm[y*Ft.w+x];if(v>=0&&(best<0||v<best))best=v;}
+  if(best<0)return -1;return t.fl===fl?best:best+stairCost+6;};
+ const cands=[];
+ for(const it of G.items)if(!it.taken)cands.push({fl:it.fl,x:it.x,y:it.y,label:it.def.name,item:it});
+ goalTiles().forEach(g=>cands.push(g));
+ let best=null,bc=1e9;
+ for(const t of cands){let c=cost(t);if(c<0)continue;if(!t.item)c-=4;if(c<bc){bc=c;best=t;}}
+ G.guide=best;G.guidePt=null;
+ if(!best)return;
+ let seeds;
+ if(best.fl===fl)seeds=best.adj?adjSeeds(fl,best.x,best.y):[[best.x|0,best.y|0]];
+ else seeds=F.stairs;
+ const dT=distMap(fl,seeds);let cx=px,cy=py,v=dT[cy*F.w+cx];
+ if(v<0){G.guidePt={x:best.fl===fl?best.x+.5*(!best.item):F.stairC[0],y:best.fl===fl?best.y+.5*(!best.item):F.stairC[1]};return;}
+ const walkLos=(x1,y1)=>{const dx=x1-P.x,dy=y1-P.y,d=Math.hypot(dx,dy),n=Math.ceil(d/.15);for(let i=1;i<=n;i++){const qx=P.x+dx*i/n,qy=P.y+dy*i/n;
+   for(const[ox,oy]of[[.22,0],[-.22,0],[0,.22],[0,-.22]])if(!pPass(fl,Math.floor(qx+ox),Math.floor(qy+oy)))return false;}return true;};
+ let gx=cx,gy=cy,first=null;
+ for(let s=0;s<6&&v>0;s++){let nx=cx,ny=cy;for(const[dx,dy]of D4){const k=(cy+dy)*F.w+cx+dx;const vv=dT[k];if(vv>=0&&vv<v){v=vv;nx=cx+dx;ny=cy+dy;}}cx=nx;cy=ny;
+  if(!first)first=[cx,cy];if(walkLos(cx+.5,cy+.5)){gx=cx;gy=cy;}else if(s>0)break;}
+ if(gx===px&&gy===py&&first){gx=first[0];gy=first[1];}
+ G.guidePt={x:gx+.5,y:gy+.5,stairs:best.fl!==fl};
+ G.guideDist=bc;
 }
 
 // ---------- noise ----------
@@ -479,7 +535,7 @@ function updatePlayer(dt){
  if(run){P.stam-=dt/4.5;if(P.stam<=0){P.stam=0;P.tired=true;toast('Out of breath...',1.6);}}
  else{P.stam=Math.min(1,P.stam+dt/(P.moving?7:4.5));if(P.tired&&P.stam>.35)P.tired=false;}
  P.run=run;
- const sp=(run?3.7:2.1)*(P.moving?Math.max(.35,iv.mag):0);
+ const sp=(run?4.3:2.6)*(P.moving?Math.max(.35,iv.mag):0);
  const ox=P.x,oy=P.y;
  if(P.moving)moveCircle(P,iv.mx*sp*dt,iv.my*sp*dt,P.fl,true);
  const moved=Math.hypot(P.x-ox,P.y-oy);
@@ -538,7 +594,7 @@ function findFocus(){
 function doAction(){
  const o=G.focus;if(!o)return;
  if(o.k==='unhide')return unhide();
- if(o.k==='item'){const it=o.it;it.taken=true;G.inv.push(it);G.lastPick=it;sfx.pick();
+ if(o.k==='item'){const it=o.it;it.taken=true;G.inv.push(it);G.lastPick=it;sfx.pick();spawnFx(it.x,it.y,'rgba(255,225,140,1)',16,'+ '+it.def.name);G.guideT=0;
   if(it.def.digit)toast('A torn note: "'+['_','_','_'].map((s,i)=>i===it.def.slot?it.def.digit:s).join(' ')+'"  Code so far: '+codeStr(),4);
   else toast(it.def.msg||('Got the '+it.def.name),3.4);return;}
  if(o.k==='hide')return hideIn(o);
@@ -745,6 +801,7 @@ function update(dt){
  G.time+=dt;
  for(const t of G.toasts)t.t+=dt;G.toasts=G.toasts.filter(t=>t.t<t.d);
  for(const r of G.rings)r.t+=dt;G.rings=G.rings.filter(r=>r.t<1);
+ for(const f of G.fx){f.t+=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.vy+=(f.g||0)*dt;}G.fx=G.fx.filter(f=>f.t<f.d);
  G.shake=Math.max(0,G.shake-dt*1.6);G.flick=Math.max(0,G.flick-dt*.8);floorFade=Math.max(0,floorFade-dt*2.2);fadeIn=Math.max(0,fadeIn-dt*.8);
  if(G.draining){G.drainT+=dt/2.6;if(G.drainT>=1){G.draining=false;G.drained=true;G.drainT=1;
   G.floors.forEach((F,fi)=>{for(let y=0;y<F.h;y++)for(let x=0;x<F.w;x++)if(F.t[y][x]==='~')F.t[y][x]=':';markDirty(fi);});
@@ -754,6 +811,7 @@ function update(dt){
  updateWarden(dt);
  updateCrow(dt);
  G.focus=findFocus();
+ G.guideT-=dt;if(G.guideT<=0)updateGuide();
  // heartbeat
  let close=0;
  if(W.fl===P.fl){const d=Math.hypot(W.x-P.x,W.y-P.y);close=clamp(1-(d-1.5)/8,0,1);if(W.state==='chase')close=Math.max(close,.65);}
@@ -1013,19 +1071,22 @@ function render(dt){
  const px=sx(P.x),py=sy(P.y);
  let cone=null;
  const titleMode=mode==='title';
- if(P.light&&!P.hidden){const half=.5,range=7.5;cone=lightPts(P.fl,P.x,P.y,P.a-half,P.a+half,range,72,.34);
+ if(mode==='play'||mode==='night')markSeen();
+ if(P.light&&!P.hidden){const half=.6,range=8.5;cone=lightPts(P.fl,P.x,P.y,P.a-half,P.a+half,range,80,.34);
   ctx.globalCompositeOperation='lighter';fillPts(ctx,cone,px,py,true,range*S,.16,.07,'rgba(255,220,160,');ctx.globalCompositeOperation='source-over';}
  const g=dctx;g.setTransform(1,0,0,1,0,0);g.globalCompositeOperation='source-over';g.clearRect(0,0,dk.width,dk.height);
  g.fillStyle=F.def.dark||'rgba(2,2,7,.965)';g.fillRect(0,0,dk.width,dk.height);
  g.setTransform(DPR,0,0,DPR,0,0);g.globalCompositeOperation='destination-out';
  for(const z of G.zones)if(z.fl===P.fl){g.fillStyle='rgba(0,0,0,'+(.82*(G.flick>0&&Math.random()<.4?.3:1))+')';g.fillRect(sx(z.x),sy(z.y),z.w*S,z.h*S);}
- if(cone)fillPts(g,cone,px,py,true,7.5*S,flick,.85*flick,'rgba(0,0,0,');
- const amb=P.hidden?2.4:P.light?1.7:1.35;
+ {g.fillStyle='rgba(0,0,0,.34)';g.beginPath();const sn=F.seen;for(let y=Math.max(0,y0);y<=Math.min(F.h-1,y1);y++)for(let x=Math.max(0,x0);x<=Math.min(F.w-1,x1);x++)if(sn[y*F.w+x])g.rect(sx(x)-.5,sy(y)-.5,S+1,S+1);g.fill();}
+ if(cone)fillPts(g,cone,px,py,true,8.5*S,flick,.85*flick,'rgba(0,0,0,');
+ const amb=P.hidden?3:P.light?2.6:2.1;
  fillPts(g,lightPts(P.fl,P.x,P.y,0,TAU,amb,40,.3),px,py,false,amb*S,P.hidden?.55:.85,.55,'rgba(0,0,0,');
  if(W.fl===P.fl&&!titleMode){const[lx,ly]=wardenPt(.52,.48);const lf=.55+Math.sin(G.time*9)*.05;
   fillPts(g,lightPts(P.fl,lx,ly,0,TAU,2.8,40,.3),sx(lx),sy(ly),false,2.8*S,lf,lf*.5,'rgba(0,0,0,');}
  g.globalCompositeOperation='source-over';
  ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(dk,0,0);ctx.setTransform(DPR,0,0,DPR,0,0);
+ if(!titleMode)drawAfterDark(F,x0,x1,y0,y1);
  // dust motes in beam
  if(cone){for(const m of G.motes){m.p+=dt;m.x+=m.vx*dt+Math.sin(m.p)*.002;m.y+=m.vy*dt;if(Math.abs(m.x)>5)m.x*=-.9;if(Math.abs(m.y)>5)m.y*=-.9;
   const wx=P.x+m.x,wy=P.y+m.y,d=Math.hypot(m.x,m.y);if(d<.5||d>6)continue;if(Math.abs(angDiff(Math.atan2(m.y,m.x),P.a))>.45)continue;
@@ -1046,11 +1107,11 @@ function render(dt){
  if(!P.hidden&&P.stam<1&&!titleMode){ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(px-S*.35,py+S*.42,S*.7,4);ctx.fillStyle=P.tired?'#c55':'#cde';ctx.fillRect(px-S*.35,py+S*.42,S*.7*P.stam,4);}
  cam.x-=shx;cam.y-=shy;
  // hidden overlay
- if(P.hidden){if(P.hidden.kind==='W'){const n=9,h=VH/n;for(let i=0;i<n;i++){ctx.fillStyle='rgba(20,12,7,.94)';ctx.fillRect(0,i*h,VW,h*.62);}
-   ctx.fillStyle='rgba(20,12,7,.94)';ctx.fillRect(0,0,VW*.08,VH);ctx.fillRect(VW*.92,0,VW*.08,VH);}
-  else{ctx.fillStyle='rgba(8,6,6,.95)';ctx.fillRect(0,0,VW,VH*.56);ctx.fillRect(0,VH*.86,VW,VH*.14);
-   ctx.fillStyle='#2a1c12';ctx.fillRect(0,VH*.54,VW,8);}
-  ctx.font='600 13px system-ui';ctx.fillStyle='rgba(220,220,210,.7)';ctx.textAlign='center';ctx.fillText('Hiding... stay quiet',VW/2,VH*.52);}
+ if(P.hidden){if(P.hidden.kind==='W'){const n=9,h=VH/n;for(let i=0;i<n;i++){ctx.fillStyle='rgba(20,12,7,.8)';ctx.fillRect(0,i*h,VW,h*.5);}
+   ctx.fillStyle='rgba(20,12,7,.85)';ctx.fillRect(0,0,VW*.08,VH);ctx.fillRect(VW*.92,0,VW*.08,VH);}
+  else{ctx.fillStyle='rgba(8,6,6,.82)';ctx.fillRect(0,0,VW,VH*.4);ctx.fillRect(0,VH*.86,VW,VH*.14);
+   ctx.fillStyle='#2a1c12';ctx.fillRect(0,VH*.4,VW,8);}
+  ctx.font='600 13px system-ui';ctx.fillStyle='rgba(220,220,210,.7)';ctx.textAlign='center';ctx.fillText('Hiding... stay quiet. Move to step out.',VW/2,VH*.34);}
  // vignette + heartbeat tint + grain
  if(!vign){vign=ctx.createRadialGradient(VW/2,VH/2,Math.min(VW,VH)*.3,VW/2,VH/2,Math.max(VW,VH)*.75);vign.addColorStop(0,'rgba(0,0,0,0)');vign.addColorStop(1,'rgba(0,0,0,.7)');}
  ctx.fillStyle=vign;ctx.fillRect(0,0,VW,VH);
@@ -1063,6 +1124,50 @@ function render(dt){
  if(mode==='night')drawNightCard();
  if(mode==='escape'){const a=Math.min(1,modeT/1.6);ctx.fillStyle='rgba(170,190,220,'+a+')';ctx.fillRect(0,0,VW,VH);}
 }
+function markSeen(){
+ const F=G.floors[P.fl],sn=F.seen,w=F.w;
+ const mark=(x,y)=>{if(x>=0&&y>=0&&x<w&&y<F.h)sn[y*w+x]=1;};
+ const ray=(a,range)=>{const c=Math.cos(a),s2=Math.sin(a);const d=castRay(P.fl,P.x,P.y,c,s2,range);for(let t=0;t<=d+.35;t+=.35)mark(Math.floor(P.x+c*t),Math.floor(P.y+s2*t));};
+ if(P.light&&!P.hidden)for(let i=0;i<=24;i++)ray(P.a-.6+1.2*i/24,8.5);
+ for(let i=0;i<20;i++)ray(i/20*TAU,2.4);
+}
+function spawnFx(x,y,col,n,text){
+ for(let i=0;i<n;i++){const a=Math.random()*TAU,v=rnd(.6,2.2);G.fx.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-.6,g:1.6,t:0,d:rnd(.5,.9),col,s:rnd(2,4)});}
+ if(text)G.fx.push({x,y:y-.4,vx:0,vy:-.7,t:0,d:1.6,text,col:'#fff2c4'});
+}
+function edgePoint(X,Y,m){const cx=VW/2,cy=VH/2,dx=X-cx,dy=Y-cy;const k=Math.min((VW/2-m)/Math.abs(dx||1e-6),(VH/2-m-30)/Math.abs(dy||1e-6));return [cx+dx*k,cy+dy*k+15];}
+function drawAfterDark(F,x0,x1,y0,y1){
+ const t=G.time;
+ ctx.save();ctx.globalCompositeOperation='lighter';
+ // vases glint when you are close, so they are fair to avoid
+ for(let y=Math.max(0,y0);y<=Math.min(F.h-1,y1);y++)for(let x=Math.max(0,x0);x<=Math.min(F.w-1,x1);x++){if(F.t[y][x]!=='v')continue;
+  const d=Math.hypot(x+.5-P.x,y+.5-P.y);if(d>4.2)continue;const a=(1-d/4.2)*(.45+.25*Math.sin(t*5+x));
+  ctx.fillStyle='rgba(150,190,255,'+a+')';ctx.beginPath();ctx.arc(sx(x+.5),sy(y+.5),S*.12,0,TAU);ctx.fill();
+  ctx.fillStyle='rgba(150,190,255,'+(a*.35)+')';ctx.beginPath();ctx.arc(sx(x+.5),sy(y+.5),S*.3,0,TAU);ctx.fill();}
+ // items twinkle through the dark
+ for(const it of G.items){if(it.taken||it.fl!==P.fl)continue;const d=Math.hypot(it.x-P.x,it.y-P.y);const tg=G.guide&&G.guide.item===it;
+  if(d>(tg?30:7))continue;const p=.5+.5*Math.sin(t*4+it.x*3);const a=(tg?.55:.35*(1-d/7))*(.5+.5*p);const X=sx(it.x),Y=sy(it.y);
+  const gr=ctx.createRadialGradient(X,Y,0,X,Y,S*.7);gr.addColorStop(0,'rgba(255,230,150,'+a+')');gr.addColorStop(1,'rgba(255,230,150,0)');ctx.fillStyle=gr;ctx.fillRect(X-S*.7,Y-S*.7,S*1.4,S*1.4);
+  ctx.strokeStyle='rgba(255,245,210,'+(a*1.2)+')';ctx.lineWidth=1.5;const r=S*(.18+.12*p);ctx.beginPath();ctx.moveTo(X-r,Y);ctx.lineTo(X+r,Y);ctx.moveTo(X,Y-r);ctx.lineTo(X,Y+r);ctx.stroke();}
+ // fx sparkles
+ for(const f of G.fx){if(f.text)continue;const k=1-f.t/f.d;ctx.fillStyle=f.col;ctx.globalAlpha=k;ctx.beginPath();ctx.arc(sx(f.x),sy(f.y),f.s*k+.5,0,TAU);ctx.fill();}
+ ctx.globalAlpha=1;ctx.restore();
+ for(const f of G.fx){if(!f.text)continue;const k=1-f.t/f.d;ctx.globalAlpha=Math.min(1,k*2);ctx.font='600 italic 16px Georgia';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillText(f.text,sx(f.x)+1,sy(f.y)+1);ctx.fillStyle=f.col;ctx.fillText(f.text,sx(f.x),sy(f.y));}
+ ctx.globalAlpha=1;
+ if(mode!=='play')return;
+ // guide arrow: a little firefly orbiting you toward the next objective
+ if(G.guidePt&&!P.hidden){const gp=G.guidePt;const a=Math.atan2(gp.y-P.y,gp.x-P.x);const near=G.guide&&G.guide.fl===P.fl&&Math.hypot((G.guide.x+(G.guide.item?0:.5))-P.x,(G.guide.y+(G.guide.item?0:.5))-P.y)<1.6;
+  if(!near){const R=S*.95+Math.sin(t*4)*S*.05,X=sx(P.x)+Math.cos(a)*R,Y=sy(P.y)+Math.sin(a)*R;
+   ctx.save();ctx.translate(X,Y);ctx.rotate(a);
+   const gr=ctx.createRadialGradient(0,0,0,0,0,S*.45);gr.addColorStop(0,'rgba(170,255,200,.45)');gr.addColorStop(1,'rgba(170,255,200,0)');ctx.fillStyle=gr;ctx.fillRect(-S*.45,-S*.45,S*.9,S*.9);
+   ctx.fillStyle='rgba(200,255,215,.95)';ctx.beginPath();ctx.moveTo(S*.2,0);ctx.lineTo(-S*.1,-S*.14);ctx.lineTo(-S*.03,0);ctx.lineTo(-S*.1,S*.14);ctx.closePath();ctx.fill();ctx.restore();}}
+ // warden off-screen warning
+ if(W.fl===P.fl){const X=sx(W.x),Y=sy(W.y),d=Math.hypot(W.x-P.x,W.y-P.y);
+  if((X<0||X>VW||Y<60||Y>VH)&&d<14){const[ex,ey]=edgePoint(X,Y,26);const chase=W.state==='chase'||W.state==='grab';const a=(1-d/14)*.7+.3;
+   ctx.save();ctx.globalAlpha=a;ctx.translate(ex,ey);ctx.fillStyle=chase?'rgba(255,90,70,.9)':'rgba(200,230,190,.75)';ctx.beginPath();ctx.ellipse(0,0,15,10,0,0,TAU);ctx.fill();
+   ctx.fillStyle='#111';ctx.beginPath();ctx.arc(0,0,5,0,TAU);ctx.fill();ctx.restore();}}
+}
 function pill(text,x,y,font,bg,fg){ctx.font=font;const w=ctx.measureText(text).width+28;ctx.fillStyle=bg;rr(ctx,x-w/2,y-17,w,34,17);ctx.fill();ctx.fillStyle=fg;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x,y+1);}
 function wrapText(text,maxW){const words=text.split(' ');const lines=[];let l='';for(const w of words){const t=l?l+' '+w:w;if(ctx.measureText(t).width>maxW&&l){lines.push(l);l=w;}else l=t;}if(l)lines.push(l);return lines;}
 function drawHUD(){
@@ -1071,12 +1176,13 @@ function drawHUD(){
  ctx.textAlign='left';ctx.textBaseline='middle';
  for(let i=0;i<5;i++){const x=20+i*20,y=top+10;ctx.fillStyle=i<G.nights-1?'#5a2a2a':i===G.nights-1?'#e8e0c0':'rgba(232,224,192,.25)';
   ctx.beginPath();ctx.arc(x,y,7,0,TAU);ctx.fill();if(i<G.nights-1){ctx.strokeStyle='#c55';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-5,y-5);ctx.lineTo(x+5,y+5);ctx.stroke();}}
- ctx.font='600 13px system-ui';ctx.fillStyle='#e8e0c0';ctx.fillText('NIGHT '+G.nights+' / 5'+(G.floors.length>1?'  ·  '+C.floors[P.fl].name:''),120,top+11);
+ ctx.font='600 13px system-ui';ctx.fillStyle='#e8e0c0';const narrow=VW<520;ctx.fillText('NIGHT '+G.nights+' / 5'+(G.floors.length>1&&!narrow?'  ·  '+C.floors[P.fl].name:''),120,top+11);
  ctx.font='13px system-ui';ctx.fillStyle='rgba(200,210,200,.85)';
  const lines=wrapText(objective(),Math.min(VW-130,360));lines.forEach((l,i)=>ctx.fillText(l,14,top+34+i*17));
+ if(G.guide){ctx.font='600 13px system-ui';ctx.fillStyle='#a8f0bd';ctx.fillText((narrow&&G.floors.length>1?C.floors[P.fl].name+'  ':'')+'✦ Next: '+G.guide.label+(G.guide.fl!==P.fl?(C.floors[P.fl].stairs==='UP'?'  (↑ stairs)':'  (↓ stairs)'):''),14,top+38+lines.length*17);}
  // inventory (top right, under the buttons)
  const inv=G.inv.filter(i=>!i.used&&!i.def.digit);const notes=notesHave();
- const slots=inv.length+(notes?1:0);const sz=40;let x=VW-12-slots*(sz+6)+6;const y=108;
+ const slots=inv.length+(notes?1:0);const sz=40;let x=VW-12-slots*(sz+6)+6;const y=VW<520?top+92:108;
  for(const it of inv){ctx.fillStyle='rgba(12,12,16,.6)';rr(ctx,x,y,sz,sz,8);ctx.fill();ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=1;ctx.stroke();drawIcon(ctx,it,x+sz/2,y+sz/2,sz*.7);x+=sz+6;}
  if(notes){ctx.fillStyle='rgba(12,12,16,.6)';rr(ctx,x,y,sz+30,sz,8);ctx.fill();ctx.fillStyle='#e8e0c8';ctx.font='bold 14px Georgia';ctx.textAlign='center';ctx.fillText(codeStr(),x+(sz+30)/2,y+sz/2+1);
   ctx.font='9px system-ui';ctx.fillStyle='#998';ctx.fillText('CODE',x+(sz+30)/2,y+8);}
@@ -1140,8 +1246,8 @@ function showTitle(){
  $('tName').innerHTML=chTitle(chN);document.title=chN===1?'Hollow House':'Hollow House '+chN;
  $('tChap').textContent='Chapter '+chN+' · '+C.sub+(save.done[chN]?'  ·  escaped ✓':'');
  $('tStory').textContent=C.story;
- $('tCtrl').innerHTML=isTouch?'<b>Left thumb</b> move (push far to run) · <b>Right button</b> take / hide / use · <b>LIGHT</b> flashlight<br>Running, creaky boards, vases and doors make noise. The Warden can\'t see you hiding... unless it watched you hide.'
-  :'<b>WASD / Arrows</b> move · <b>Shift</b> run · <b>E / Space</b> take, hide, use · <b>F</b> flashlight · <b>Mouse</b> aims the light<br>Running, creaky boards, vases and doors make noise. The Warden can\'t see you hiding... unless it watched you hide.';
+ $('tCtrl').innerHTML=isTouch?'<b>Left thumb</b> move (push far to run) · <b>Right button</b> take / hide / use · <b>LIGHT</b> flashlight<br>Running, creaky boards, vases and doors make noise. The Warden can\'t see you hiding... unless it watched you hide.<br>Lost? Follow the little <b>green arrow</b> to your next goal.'
+  :'<b>WASD / Arrows</b> move · <b>Shift</b> run · <b>E / Space</b> take, hide, use · <b>F</b> flashlight · <b>Mouse</b> aims the light<br>Running, creaky boards, vases and doors make noise. The Warden can\'t see you hiding... unless it watched you hide.<br>Lost? Follow the little <b>green arrow</b> to your next goal.';
  const chs=$('chs');chs.innerHTML='';
  for(let i=1;i<=3;i++){const b=document.createElement('button');b.className='chb'+(i===chN?' on':'');b.innerHTML='Chapter '+i+(save.done[i]?' <span class="ok">✓</span>':'');
   b.onclick=()=>{audioInit();loadChapter(i);showTitle();};chs.appendChild(b);}
@@ -1205,7 +1311,7 @@ document.addEventListener('dblclick',e=>e.preventDefault());
 function resize(){
  DPR=Math.min(window.devicePixelRatio||1,2.5);VW=innerWidth;VH=innerHeight;
  cv.width=Math.round(VW*DPR);cv.height=Math.round(VH*DPR);dk.width=cv.width;dk.height=cv.height;
- S=clamp(Math.min(VW,VH)/10.5,30,72);vign=null;layoutTouch();
+ S=clamp(Math.min(VW,VH)/9.5,34,72);vign=null;layoutTouch();
 }
 addEventListener('resize',resize);
 try{if(matchMedia('(pointer: coarse)').matches)isTouch=true;}catch(e){}
