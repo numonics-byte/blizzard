@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
+  <title>Tiny Platformer</title>
+
+  <style>
+    body            { background: #111; }
+    #platformer     { margin: 1em auto; position: relative; width: 512px; height: 384px; }
+    #canvas         { display: inline-block; width: 100%; height: 100%; }
+    #instructions   { font-style: italic; color: #999; font-size: 9pt; margin-left: 1em; margin-top: 0.5em; }
+    #instructions b { color: #DDD; }
+    @media screen and (min-width:     0px) and (min-height:    0px) { #platformer { width:  512px; height: 384px; font-size:  7pt; } } /* block = 16 */
+    @media screen and (min-width:   840px) and (min-height:  530px) { #platformer { width:  640px; height: 480px; font-size:  9pt; } } /* block = 20 */
+    @media screen and (min-width:   968px) and (min-height:  626px) { #platformer { width:  768px; height: 576px; font-size: 11pt; } } /* block = 24 */
+    @media screen and (min-width:  1096px) and (min-height:  722px) { #platformer { width:  896px; height: 672px; font-size: 13pt; } } /* block = 28 */
+    @media screen and (min-width:  1224px) and (min-height:  818px) { #platformer { width: 1024px; height: 768px; font-size: 15pt; } } /* block = 32 */
+  </style>
+
+</head>
+
+<body>
+
+  <div id="platformer">
+
+    <canvas id="canvas">
+      <div class="unsupported">
+        Sorry, this example cannot be run because your browser does not support the &lt;canvas&gt; element
+      </div>
+    </canvas>
+
+    <div id="instructions">
+      <b>LEFT/RIGHT</b> to move, <b>SPACE</b> to jump, collect gold and jump on monsters.
+    </div>
+
+  </div>
+
+  <script src="fpsmeter.min.js"></script>
+  <script src="platformer.js"></script>
+
+<script id="blizExitScript">
+/* Blizzard exit bar: shown inside every game so there is always a way out. */
+(function(){
+  // Inside the Blizzard about:blank tab or the in-site player, the parent page already shows exit buttons.
+  try{ if(window.top !== window) return; }catch(e){ return; }
+
+  var LOCAL_SITE = 'http://localhost:8642/index.html';
+  function back(view){
+    try{
+      if(window.opener && !window.opener.closed && window.opener.BLIZ){
+        window.opener.BLIZ.go(view); window.opener.focus(); window.close(); return;
+      }
+    }catch(e){}
+    if(/^(https?|file):$/.test(location.protocol)){
+      location.href = new URL('../../../index.html#' + view, location.href).href;
+      return;
+    }
+    // Page has no real address (e.g. a preview snapshot), so it can't move to another page: close it instead.
+    try{ location.href = LOCAL_SITE + '#' + view; }catch(e){}
+    setTimeout(function(){
+      try{ window.close(); }catch(e){}
+      setTimeout(showClosed, 300);
+    }, 250);
+  }
+  // Last resort if the tab can't be closed either: cover and silence the game.
+  function showClosed(){
+    try{ document.querySelectorAll('audio,video').forEach(function(m){ m.pause(); }); }catch(e){}
+    var c = document.createElement('div');
+    c.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#04060f;color:#e8f3ff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font:600 18px system-ui,sans-serif;text-align:center;padding:20px';
+    c.innerHTML = '<div style="font-size:48px">❄️</div><div>Game closed</div><div style="font-size:14px;opacity:.7">Close this tab, or open Blizzard at localhost:8642</div>';
+    ['pointerdown','touchstart','keydown','click'].forEach(function(ev){ c.addEventListener(ev, function(e){ e.stopPropagation(); }, true); });
+    addEventListener('keydown', function(e){ e.stopImmediatePropagation(); e.preventDefault(); }, true);
+    document.body.appendChild(c);
+  }
+
+  var bar = document.createElement('div');
+  bar.id = 'blizExit';
+  bar.innerHTML = '<button class="bx-x" data-v="games" title="Exit game" aria-label="Exit game">✕</button>'
+    + '<button class="bx-m" data-v="home" title="Back to Blizzard main menu">⌂ Main Menu</button>';
+  var css = document.createElement('style');
+  css.textContent = '#blizExit{position:fixed;top:12px;left:12px;z-index:2147483647;display:flex;align-items:center;gap:8px;font:700 14px system-ui,-apple-system,sans-serif;touch-action:manipulation}'
+    + '#blizExit button{cursor:pointer;font:inherit;color:#fff;border:2px solid rgba(255,255,255,.85);box-shadow:0 4px 14px rgba(0,0,0,.45)}'
+    + '#blizExit .bx-x{width:44px;height:44px;border-radius:50%;background:#ff3b5c;font-size:22px;line-height:1;padding:0;display:grid;place-items:center}'
+    + '#blizExit .bx-x:hover{background:#ff1f45;transform:scale(1.08)}'
+    + '#blizExit .bx-m{height:36px;padding:0 14px;border-radius:999px;background:rgba(4,6,15,.8)}'
+    + '#blizExit .bx-m:hover{background:#7fdbff;color:#001018}';
+  document.head.appendChild(css);
+
+  // Keep taps on the bar from also starting or steering the game underneath.
+  ['pointerdown','mousedown','touchstart','touchend','click'].forEach(function(ev){
+    bar.addEventListener(ev, function(e){ e.stopPropagation(); }, { passive:true });
+  });
+  bar.addEventListener('pointerup', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    e.stopPropagation(); back(b.dataset.v);
+  });
+  bar.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' || e.key === ' '){ var b = e.target.closest('button'); if(b){ e.preventDefault(); back(b.dataset.v); } }
+  });
+
+  function add(){ document.body.appendChild(bar); }
+  if(document.body) add(); else addEventListener('DOMContentLoaded', add);
+})();
+</script>
+<script id="blizMusicScript">
+/* BlizMusic: original background music, generated live with Web Audio.
+   Every song is composed in code (chords + melody + drums), so there is no copyrighted audio. */
+(function(){
+  if(window.BlizMusic) return;
+
+  var SCALES = { major:[0,2,4,5,7,9,11], minor:[0,2,3,5,7,8,10], dorian:[0,2,3,5,7,9,10] };
+  // prog = scale degrees (0-based) of each bar's chord; mel = melody contour seed
+  var THEMES = {
+    chill:   { name:'Snowfall Lounge', bpm:88,  root:60, scale:'major',  prog:[0,4,5,3], drums:'soft',   arp:'up',     lead:'triangle', pad:.5,  swing:.12 },
+    snow:    { name:'Powder Run',      bpm:128, root:62, scale:'major',  prog:[0,3,5,4], drums:'drive',  arp:'updown', lead:'square',   pad:.35, swing:0 },
+    puzzle:  { name:'Crystal Garden',  bpm:104, root:65, scale:'major',  prog:[0,2,3,4], drums:'bounce', arp:'pluck',  lead:'triangle', pad:.4,  swing:.18 },
+    drive:   { name:'Neon Getaway',    bpm:138, root:64, scale:'minor',  prog:[0,5,2,6], drums:'drive',  arp:'updown', lead:'sawtooth', pad:.3,  swing:0 },
+    neon:    { name:'Prism Rush',      bpm:150, root:57, scale:'minor',  prog:[0,5,6,4], drums:'drive',  arp:'up',     lead:'square',   pad:.3,  swing:0 },
+    mystery: { name:'Lantern Steps',   bpm:84,  root:62, scale:'dorian', prog:[0,3,0,6], drums:'tick',   arp:'box',    lead:'sine',     pad:.45, swing:.1 }
+  };
+  function pickTheme(){
+    var t = (document.title || '').toLowerCase();
+    if(/sled/.test(t)) return 'snow';
+    if(/frost|gem/.test(t)) return 'puzzle';
+    if(/tunnel\s*2/.test(t)) return 'neon';
+    if(/tunnel|road/.test(t)) return 'drive';
+    if(/hollow/.test(t)) return 'mystery';
+    return 'chill';
+  }
+
+  var store = {
+    get:function(k,d){ try{ var v = localStorage.getItem('blizzard_'+k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+    set:function(k,v){ try{ localStorage.setItem('blizzard_'+k, JSON.stringify(v)); }catch(e){} }
+  };
+
+  var ctx = null, master, comp, delay, delayGain, noiseBuf;
+  var on = store.get('music', true), playing = false, timer = null;
+  var theme = THEMES[pickTheme()], themeKey = pickTheme();
+  var step = 0, nextTime = 0, melody = [], seed = 1;
+
+  function rand(){ seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+  function mtof(m){ return 440 * Math.pow(2, (m - 69) / 12); }
+  function note(deg, oct){
+    var sc = SCALES[theme.scale], n = sc.length;
+    var o = Math.floor(deg / n); deg = ((deg % n) + n) % n;
+    return theme.root + sc[deg] + 12 * (o + (oct || 0));
+  }
+
+  function init(){
+    if(ctx) return true;
+    try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ return false; }
+    comp = ctx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 4;
+    master = ctx.createGain(); master.gain.value = 0;
+    delay = ctx.createDelay(1); delayGain = ctx.createGain(); delayGain.gain.value = .28;
+    var fb = ctx.createGain(); fb.gain.value = .32;
+    var lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400;
+    delay.connect(lp); lp.connect(fb); fb.connect(delay); lp.connect(delayGain); delayGain.connect(master);
+    master.connect(comp); comp.connect(ctx.destination);
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate * .5, ctx.sampleRate);
+    var d = noiseBuf.getChannelData(0); for(var i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+    return true;
+  }
+
+  // Compose a 2-bar motif per chord so the tune repeats and is catchy, not random noise
+  function compose(){
+    seed = 0; for(var i=0;i<themeKey.length;i++) seed = (seed * 31 + themeKey.charCodeAt(i)) % 2147483647; seed = seed || 7;
+    melody = [];
+    var pos = 4;
+    for(var bar=0; bar<8; bar++){
+      var chord = theme.prog[bar % 4], row = [];
+      for(var s=0; s<16; s++){
+        var strong = s % 4 === 0;
+        if(rand() < (strong ? .82 : .32)){
+          var tones = [chord, chord+2, chord+4];
+          if(strong) pos = tones[(rand()*3)|0] + 7;
+          else pos += [-1,1,-2,2,0][(rand()*5)|0];
+          pos = Math.max(4, Math.min(14, pos));
+          row.push(pos);
+        }else row.push(null);
+      }
+      melody.push(row);
+    }
+    for(var r=4;r<8;r++) melody[r] = melody[r-4].map(function(v, s){ return (s > 11 && v !== null) ? v + (r === 7 ? -1 : 1) : v; });
+  }
+
+  function tone(type, freq, t, dur, vol, dest, attack, cutoff){
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    var a = attack || .008;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + a);
+    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    if(cutoff){ var f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = cutoff; o.connect(f); f.connect(g); }
+    else o.connect(g);
+    g.connect(dest || master);
+    o.start(t); o.stop(t + dur + .05);
+    return g;
+  }
+  function noise(t, dur, vol, hp){
+    var s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    s.buffer = noiseBuf; f.type = 'highpass'; f.frequency.value = hp;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + dur + .02);
+  }
+  function kick(t, vol){
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(42, t + .14);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + .25);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + .3);
+  }
+
+  function playStep(s, t){
+    var bar = Math.floor(s / 16), st = s % 16, chord = theme.prog[bar % 4];
+    var sixteenth = 60 / theme.bpm / 4;
+    // pad: soft chord at start of each bar
+    if(st === 0 && theme.pad){
+      [chord, chord+2, chord+4].forEach(function(d){
+        tone('triangle', mtof(note(d, -1)), t, sixteenth*16, .045*theme.pad, null, .25, 1400);
+      });
+    }
+    // bass
+    var bassHits = theme.drums === 'drive' ? [0,3,6,8,11,14] : [0,8,10];
+    if(bassHits.indexOf(st) >= 0) tone('triangle', mtof(note(chord, -2)), t, sixteenth*2.6, .16, null, .01, 700);
+    // arpeggio
+    var tones = [chord, chord+2, chord+4, chord+7];
+    var arpVol = .05, d;
+    if(theme.arp === 'up' && st % 2 === 0) d = tones[(st/2) % 4];
+    else if(theme.arp === 'updown') d = [0,1,2,3,2,1,0,1][(st % 8)] !== undefined ? tones[[0,1,2,3,2,1,0,1][st % 8]] : null;
+    else if(theme.arp === 'pluck' && (st % 4 === 2 || st % 4 === 3)) d = tones[(st >> 1) % 4];
+    else if(theme.arp === 'box' && st % 4 === 0) { d = tones[(st/4) % 4] + 7; arpVol = .07; }
+    if(d !== undefined && d !== null){
+      var g = tone(theme.arp === 'box' ? 'sine' : 'square', mtof(note(d, 0)), t, sixteenth * (theme.arp === 'box' ? 6 : 1.4), arpVol, null, .005, theme.arp === 'box' ? 0 : 2200);
+      g.connect(delay);
+    }
+    // melody
+    var m = melody[bar % 8][st];
+    if(m !== null && m !== undefined){
+      var len = 1; while(st + len < 16 && melody[bar % 8][st + len] === null && len < 4) len++;
+      var lg = tone(theme.lead, mtof(note(m, 0)), t, sixteenth * len * 1.1, theme.lead === 'sawtooth' || theme.lead === 'square' ? .045 : .09, null, .01, theme.lead === 'sine' ? 0 : 3000);
+      lg.connect(delay);
+    }
+    // drums
+    var dr = theme.drums;
+    if(dr === 'drive'){
+      if(st % 4 === 0) kick(t, .5);
+      if(st === 4 || st === 12) noise(t, .14, .22, 1500);
+      if(st % 2 === 1) noise(t, .04, .07, 7000);
+    }else if(dr === 'bounce'){
+      if(st === 0 || st === 7 || st === 10) kick(t, .4);
+      if(st === 4 || st === 12) noise(t, .1, .14, 2000);
+      if(st % 2 === 0) noise(t, .03, .05, 8000);
+    }else if(dr === 'soft'){
+      if(st === 0 || st === 10) kick(t, .3);
+      if(st === 4 || st === 12) noise(t, .08, .08, 3000);
+      if(st % 4 === 2) noise(t, .03, .04, 8000);
+    }else if(dr === 'tick'){
+      if(st % 4 === 0) noise(t, .025, .05, 6000);
+      if(st === 0) kick(t, .18);
+    }
+  }
+
+  function schedule(){
+    var sixteenth = 60 / theme.bpm / 4;
+    while(nextTime < ctx.currentTime + .15){
+      var swing = (step % 2 === 1) ? sixteenth * theme.swing : 0;
+      playStep(step, nextTime + swing);
+      nextTime += sixteenth; step++;
+    }
+  }
+  function start(){
+    if(!on || playing || document.hidden || !init()) return;
+    if(ctx.state === 'suspended') ctx.resume();
+    compose();
+    playing = true; step = 0; nextTime = ctx.currentTime + .08;
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
+    master.gain.linearRampToValueAtTime(.55, ctx.currentTime + 1.2);
+    timer = setInterval(schedule, 40); schedule();
+  }
+  function stop(){
+    if(!playing) return;
+    playing = false; clearInterval(timer);
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
+    master.gain.linearRampToValueAtTime(0, ctx.currentTime + .25);
+  }
+
+  /* ---------- button ---------- */
+  var btn = document.createElement('button');
+  btn.id = 'blizMusicBtn'; btn.type = 'button';
+  function label(){
+    btn.innerHTML = on ? '🎵 <span>Music</span>' : '🔇 <span>Music</span>';
+    btn.title = (on ? 'Music on: ' : 'Music off: ') + theme.name + ' (original Blizzard track)';
+    btn.classList.toggle('off', !on);
+  }
+  function toggle(){
+    on = !on; store.set('music', on); label();
+    if(on){ start(); } else stop();
+  }
+  ['pointerdown','mousedown','touchstart','touchend','click'].forEach(function(ev){
+    btn.addEventListener(ev, function(e){ e.stopPropagation(); }, { passive:true });
+  });
+  btn.addEventListener('pointerup', function(e){ e.stopPropagation(); toggle(); });
+  btn.addEventListener('keydown', function(e){ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); e.stopPropagation(); toggle(); } });
+
+  var css = document.createElement('style');
+  css.textContent = '#blizMusicBtn{font:700 13px system-ui,-apple-system,sans-serif;height:36px;padding:0 13px;border-radius:999px;cursor:pointer;color:#fff;background:rgba(4,6,15,.8);border:2px solid rgba(255,255,255,.85);box-shadow:0 4px 14px rgba(0,0,0,.45);touch-action:manipulation;z-index:2147483646}'
+    + '#blizMusicBtn:hover{background:#59ffb0;color:#001018}'
+    + '#blizMusicBtn.off{opacity:.7}'
+    + '#blizMusicBtn.float{position:fixed;top:12px;left:12px}'
+    + '@media (max-width:420px){#blizMusicBtn span{display:none}}';
+
+  function mount(){
+    document.head.appendChild(css);
+    label();
+    var slot = document.getElementById('blizMusicSlot') || document.getElementById('blizExit');
+    if(slot) slot.appendChild(btn);
+    else { btn.classList.add('float'); document.body.appendChild(btn); }
+  }
+  if(document.body) mount(); else addEventListener('DOMContentLoaded', mount);
+
+  // Browsers only allow sound after the player interacts, so start on the first tap / key.
+  function kickoff(){ start(); }
+  ['pointerdown','keydown','touchstart'].forEach(function(ev){ addEventListener(ev, kickoff, { capture:true, passive:true }); });
+  document.addEventListener('visibilitychange', function(){ if(document.hidden) stop(); else start(); });
+
+  window.BlizMusic = {
+    setTheme:function(k){ if(!THEMES[k] || k === themeKey) return; themeKey = k; theme = THEMES[k]; label(); if(playing){ stop(); setTimeout(start, 300); } },
+    stop:stop, start:start, themes:Object.keys(THEMES)
+  };
+})();
+</script>
+</body>
+</html>
