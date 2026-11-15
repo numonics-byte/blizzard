@@ -10,23 +10,26 @@
 html,body{position:fixed;inset:0;overflow:hidden;background:#060a1f;color:#e8f7ff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
 button{font:inherit}
-#hud{position:absolute;left:0;right:0;top:0;z-index:6;padding:calc(env(safe-area-inset-top) + 8px) 12px 0;max-width:640px;margin:0 auto;pointer-events:none}
+#hud{position:absolute;left:0;right:0;top:0;z-index:6;padding:calc(env(safe-area-inset-top) + 10px) 12px 0;pointer-events:none}
+.hrow2{max-width:600px;margin-left:auto!important;margin-right:auto!important}
 body:not(.ingame) #hud .game-only{visibility:hidden}
-.hrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
-#lvlName{font-weight:900;letter-spacing:.2em;font-size:16px;color:#cdf3ff;text-shadow:0 0 12px rgba(120,210,255,.7)}
+.hrow{display:flex;align-items:center;justify-content:flex-end;gap:8px;height:44px}
+#lvlName{font-weight:900;letter-spacing:.12em;font-size:11px;color:#9fd6ff;align-self:center;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.srow .sp{flex:1}
 .ibtn{pointer-events:auto;width:42px;height:42px;border-radius:14px;border:1px solid rgba(150,220,255,.35);background:rgba(15,30,70,.6);color:#cdf3ff;display:grid;place-items:center;cursor:pointer;box-shadow:0 0 14px rgba(90,170,255,.2) inset}
 .ibtn:active{transform:scale(.93)}
 .ibtn svg{width:21px;height:21px}
-.hrow2{display:flex;align-items:stretch;gap:8px;margin-top:8px}
+.hrow2{display:flex;align-items:stretch;gap:8px;margin-top:6px}
 .box{background:linear-gradient(180deg,rgba(40,70,140,.55),rgba(12,22,55,.7));border:1px solid rgba(150,220,255,.3);border-radius:14px;padding:6px 10px;display:flex;flex-direction:column;justify-content:center;line-height:1}
 .lbl{font-size:10px;letter-spacing:.2em;font-weight:800;color:#8fd3ff}
 .movesBox{align-items:center;min-width:66px}
-#moves{font-size:28px;font-weight:900;color:#fff;text-shadow:0 0 12px rgba(120,220,255,.8);font-variant-numeric:tabular-nums}
+#moves{font-size:30px;font-weight:900;color:#fff;text-shadow:0 0 12px rgba(120,220,255,.8);font-variant-numeric:tabular-nums}
 #moves.low{color:#ff8fa8;text-shadow:0 0 12px rgba(255,90,130,.9);animation:pulse .8s infinite}
 .scoreBox{flex:1;min-width:0}
-.srow{display:flex;align-items:baseline;gap:6px}
-#score{font-size:22px;font-weight:900;color:#fff;font-variant-numeric:tabular-nums}
-.tgt{font-size:12px;color:#9fd6ff;font-weight:700}
+.srow{display:flex;align-items:baseline;gap:5px;white-space:nowrap;min-width:0}
+#score{font-size:24px;font-weight:900;color:#fff;font-variant-numeric:tabular-nums;display:inline-block;transition:transform .12s}
+#score.bump{transform:scale(1.15)}
+.tgt{font-size:11px;color:#9fd6ff;font-weight:700;flex:none}
 .bar{position:relative;height:10px;border-radius:6px;background:rgba(0,0,0,.4);margin-top:6px;overflow:visible;box-shadow:0 0 0 1px rgba(150,220,255,.2) inset}
 .fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:6px;background:linear-gradient(90deg,#3ad7ff,#9b7bff,#ff6fcf);box-shadow:0 0 10px rgba(120,200,255,.8);transition:width .3s}
 .st{position:absolute;top:50%;width:16px;height:16px;transform:translate(-50%,-50%);color:rgba(255,255,255,.25);font-style:normal;font-size:15px;line-height:16px;text-align:center;text-shadow:0 0 4px #000}
@@ -35,11 +38,13 @@ body:not(.ingame) #hud .game-only{visibility:hidden}
 #iceLeft{font-size:22px;font-weight:900;color:#c9f3ff}
 .iceBox.done #iceLeft{color:#7dffb8}
 .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(ellipse at 50% 40%,rgba(30,40,110,.6),rgba(4,6,22,.92));z-index:5;transition:opacity .3s ease;text-align:center;padding:calc(env(safe-area-inset-top) + 60px) 18px 24px}
-.overlay.hidden{opacity:0;pointer-events:none}
+.overlay.hidden{opacity:0;pointer-events:none;visibility:hidden;transition:opacity .25s ease,visibility 0s linear .25s}
+.overlay.hidden *{pointer-events:none!important}
 .logo{font-size:clamp(46px,13vw,100px);font-weight:900;line-height:.92;letter-spacing:.03em;background:linear-gradient(180deg,#fff 0%,#c4e9ff 35%,#8f7bff 70%,#ff74d4 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 20px rgba(140,140,255,.55));animation:float 3s ease-in-out infinite}
 @keyframes float{50%{transform:translateY(-6px)}}
 @keyframes pulse{50%{transform:scale(1.1)}}
 .sub{color:#a9d8ff;font-size:15px;max-width:340px;line-height:1.45}
+.tprog{color:#ffe066;font-weight:800;letter-spacing:.14em;font-size:14px;min-height:18px}
 .big-btn{pointer-events:auto;font-size:21px;font-weight:900;letter-spacing:.12em;color:#140a33;padding:15px 44px;border-radius:999px;border:none;cursor:pointer;background:linear-gradient(180deg,#ffffff,#a7e6ff 50%,#8c7bff);box-shadow:0 0 0 2px rgba(255,255,255,.35) inset,0 0 30px rgba(130,150,255,.7),0 8px 22px rgba(0,0,0,.45);transition:transform .12s}
 .big-btn:active{transform:scale(.95)}
 .ghost-btn{pointer-events:auto;font-size:15px;font-weight:800;letter-spacing:.1em;color:#cde8ff;padding:10px 24px;border-radius:999px;border:1px solid rgba(160,200,255,.45);background:rgba(20,30,70,.55);cursor:pointer}
@@ -50,6 +55,7 @@ body:not(.ingame) #hud .game-only{visibility:hidden}
 .row b{color:#fff;font-size:21px;font-variant-numeric:tabular-nums}
 .goal{font-size:17px;color:#dff2ff;margin:8px 0;line-height:1.5}
 .goal b{color:#fff}
+.stargoal{margin-top:8px;font-size:13px;color:#ffe066;letter-spacing:.04em;opacity:.9}
 .bigstars{font-size:46px;letter-spacing:6px;margin:4px 0 8px}
 .bigstars span{color:rgba(255,255,255,.18);display:inline-block}
 .bigstars span.on{color:#ffe066;text-shadow:0 0 16px #ffc933;animation:starpop .5s cubic-bezier(.3,1.8,.5,1) both}
@@ -79,13 +85,12 @@ body:not(.ingame) #hud .game-only{visibility:hidden}
 <div id="hud">
   <div class="hrow">
     <button class="ibtn game-only" id="menuBtn" aria-label="Level map"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></button>
-    <div id="lvlName" class="game-only">LEVEL 1</div>
     <button class="ibtn" id="mute" aria-label="Toggle sound"></button>
   </div>
   <div class="hrow2 game-only">
     <div class="box movesBox"><span class="lbl">MOVES</span><span id="moves">0</span></div>
     <div class="box scoreBox">
-      <div class="srow"><span id="score">0</span><span class="tgt" id="target">/ 0</span></div>
+      <div class="srow"><span id="lvlName">LEVEL 1</span><span class="sp"></span><span id="score">0</span><span class="tgt" id="target">/ 0</span></div>
       <div class="bar"><div class="fill" id="fill"></div><i class="st" id="st1">&#9733;</i><i class="st" id="st2">&#9733;</i><i class="st" id="st3">&#9733;</i></div>
     </div>
     <div class="box iceBox" id="iceBox"><span class="lbl">ICE</span><span id="iceLeft">0</span></div>
@@ -94,7 +99,8 @@ body:not(.ingame) #hud .game-only{visibility:hidden}
 
 <div class="overlay" id="title">
   <div class="logo">GEM<br>FREEZE</div>
-  <div class="sub">Swap frozen gems to line up three or more. Make big matches for power gems and thaw the ice!</div>
+  <div class="sub">Swap frozen gems to line up three or more. Match 4 or 5 for power gems, and thaw every ice tile!</div>
+  <div class="tprog" id="titleProg"></div>
   <button class="big-btn" id="playBtn">PLAY</button>
 </div>
 
@@ -123,6 +129,7 @@ body:not(.ingame) #hud .game-only{visibility:hidden}
   <div class="panel">
     <h2>LEVEL CLEAR!</h2>
     <div class="bigstars" id="winStars"></div>
+    <div class="row"><span>Moves bonus</span><b id="winBonus">0</b></div>
     <div class="row"><span>Score</span><b id="winScore">0</b></div>
     <div class="row"><span>Best</span><b id="winBest">0</b></div>
     <div id="winNew"></div>
@@ -156,7 +163,9 @@ const $ = id => document.getElementById(id);
 
 /* ================= LOGIC (DOM-free) ================= */
 /*LOGIC-START*/
-const R = 8, C = 8, NT = 6;
+const R = 8, C = 8;
+let NT = 6; // colours in play this level (5 on the first levels, 6 after)
+function setColors(n) { NT = n; }
 const SP_H = 1, SP_V = 2, SP_BOMB = 3, SP_COLOR = 4;
 const PTS_GEM = 20, PTS_ICE = 40;
 let gemId = 1;
@@ -247,12 +256,12 @@ function findMove(g) {
   }
   return null;
 }
-function mostCommonType(g) {
+function typesByCount(g) {
   const cnt = new Array(NT).fill(0);
-  for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) { const gm = g[r][c]; if (gm && gm.sp !== SP_COLOR) cnt[gm.t]++; }
-  let best = 0; for (let i = 1; i < NT; i++) if (cnt[i] > cnt[best]) best = i;
-  return best;
+  for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) { const gm = g[r][c]; if (gm && gm.sp !== SP_COLOR && gm.t < NT) cnt[gm.t]++; }
+  return cnt.map((n, t) => [n, t]).sort((a, b) => b[0] - a[0]).map(x => x[1]);
 }
+function mostCommonType(g) { return typesByCount(g)[0]; }
 // expand special-gem detonations inside a clear set
 function expand(g, clear, effects, triggered) {
   const queue = [...clear.values()];
@@ -309,20 +318,23 @@ function planCombo(g, pa, pb) {
   const add = (r, c) => { if (inB(r, c)) clear.set(key(r, c), [r, c]); };
   add(pa[0], pa[1]); add(pb[0], pb[1]);
   const ca = A.sp === SP_COLOR, cb = B.sp === SP_COLOR;
-  let convert = false;
   if (ca && cb) {
-    effects.push({ k: 'nova', r: pa[0], c: pa[1] });
-    for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) add(r, c);
+    // Two snow orbs: wipe the most common colour plus a 3x3 burst where they meet
+    // (about a third of the board). It used to clear everything.
+    const t = mostCommonType(g), targets = [];
+    for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) { const o = g[r][c]; if (o && o.sp !== SP_COLOR && o.t === t) targets.push([r, c]); }
+    effects.push({ k: 'color', r: pa[0], c: pa[1], targets }, { k: 'blast', r: pa[0], c: pa[1], rad: 1 });
+    targets.forEach(([r, c]) => add(r, c));
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) add(pa[0] + dr, pa[1] + dc);
   } else if (ca || cb) {
+    // Orb + gem: clears that gem's colour. If the gem is special it also fires once where it stands
+    // (no converting every gem of the colour into specials, which used to clear most of the board).
     const other = ca ? B : A, cpos = ca ? pa : pb, t = other.t, targets = [];
     for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) { const o = g[r][c]; if (o && o !== other && o.sp !== SP_COLOR && o.t === t) targets.push([r, c]); }
     effects.push({ k: 'color', r: cpos[0], c: cpos[1], targets });
-    if (other.sp) {
-      convert = true;
-      targets.forEach(([r, c]) => { const o = g[r][c]; if (!o.sp) o.sp = other.sp === SP_BOMB ? SP_BOMB : (Math.random() < 0.5 ? SP_H : SP_V); });
-      triggered.delete(other.id);
-    }
-    targets.forEach(([r, c]) => add(r, c));
+    if (other.sp) triggered.delete(other.id);
+    // specials of that colour caught in the sweep are cleared without firing, to keep it contained
+    targets.forEach(([r, c]) => { const o = g[r][c]; if (o.sp) triggered.add(o.id); add(r, c); });
   } else {
     const bombs = (A.sp === SP_BOMB) + (B.sp === SP_BOMB);
     const [r0, c0] = pa;
@@ -341,7 +353,7 @@ function planCombo(g, pa, pb) {
     }
   }
   expand(g, clear, effects, triggered);
-  return { clear, creations: [], effects, convert };
+  return { clear, creations: [], effects };
 }
 function applyClear(g, ice, plan, mult) {
   const removed = [], iceBroken = [];
@@ -390,6 +402,7 @@ function iceCount(ice) { let n = 0; for (let r = 0; r < R; r++) for (let c = 0; 
 
 /* ---------- levels ---------- */
 const ICE_PATTERNS = {
+  intro: (r, c) => (r >= 3 && r <= 4 && c >= 2 && c <= 5) ? 1 : 0,
   center: (r, c) => (r >= 2 && r <= 5 && c >= 2 && c <= 5) ? 1 : 0,
   bottom: (r, c) => (r >= 4 && r <= 6) ? 1 : 0,
   cross: (r, c) => (r >= 1 && r <= 6 && (r === c || r + c === 7)) ? 1 : 0,
@@ -405,19 +418,42 @@ const ICE_PATTERNS = {
   bars: (r, c) => (r === 2 || r === 5) ? 2 : 0,
   heart: (r, c) => ([[1, 1], [1, 2], [1, 5], [1, 6], [2, 0], [2, 3], [2, 4], [2, 7], [3, 0], [3, 7], [4, 1], [4, 6], [5, 2], [5, 5], [6, 3], [6, 4]].some(([a, b]) => a === r && b === c)) ? 2 : 0
 };
-const ICE_SCHEDULE = [null, null, null, null, null, 'center', null, 'bottom', 'cross', null, 'ring', 'diamond', 'checker', 'center2', null,
-  'pillars', 'cross2', 'bottom2', 'ring2', 'full', 'heart', 'bars', 'checker', 'full'];
-const LEVEL_COUNT = ICE_SCHEDULE.length;
+// [ice pattern, colours, moves, score target, 2-star score, 3-star score]
+// Tuned with a simulated greedy player so the curve climbs steadily; stars count the end-of-level move bonus.
+const LEVELS = [
+  [null, 5, 16, 4000, 6200, 7600],
+  [null, 6, 18, 2800, 4600, 5300],
+  ['intro', 6, 18, 1200, 4200, 5800],
+  [null, 6, 20, 3000, 5000, 5800],
+  ['center', 6, 24, 1500, 6400, 8100],
+  ['ring', 6, 30, 2000, 8400, 11000],
+  [null, 6, 18, 3200, 4900, 5500],
+  ['diamond', 6, 26, 2000, 7900, 10500],
+  ['cross', 6, 24, 1800, 7000, 9500],
+  ['center2', 6, 22, 2200, 6100, 8600],
+  [null, 6, 20, 3900, 5600, 6600],
+  ['ring2', 6, 28, 2800, 9200, 11600],
+  ['cross2', 6, 26, 2400, 8000, 10800],
+  ['pillars', 6, 32, 2400, 9900, 13000],
+  [null, 6, 18, 3900, 5300, 6100],
+  ['bottom', 6, 32, 2400, 9900, 11900],
+  ['checker', 6, 34, 2400, 10400, 13000],
+  ['heart', 6, 36, 2600, 12000, 14600],
+  [null, 6, 16, 3800, 5100, 5900],
+  ['bars', 6, 34, 2800, 11000, 14000],
+  ['checker', 6, 30, 2800, 10800, 13500],
+  ['bottom2', 6, 42, 3000, 15500, 19300],
+  ['full', 6, 46, 3000, 16600, 19700],
+  ['full', 6, 44, 3200, 16300, 20400]
+];
+const ICE_SCHEDULE = LEVELS.map(l => l[0]);
+const LEVEL_COUNT = LEVELS.length;
+const MOVE_BONUS = 150; // points per unused move once the goal is met
 function levelDef(L) { // L: 1-based
-  const pat = ICE_SCHEDULE[L - 1];
+  const [pat, colors, moves, target, s2, s3] = LEVELS[L - 1];
   const ice = [];
   for (let r = 0; r < R; r++) { const row = []; for (let c = 0; c < C; c++) row.push(pat ? ICE_PATTERNS[pat](r, c) : 0); ice.push(row); }
-  let layers = 0; ice.forEach(row => row.forEach(v => { layers += v; }));
-  const moves = Math.min(45, 16 + Math.floor(L / 4) + Math.round(layers * 0.55));
-  let target = 1000 + (L - 1) * 250;
-  if (pat) target = target * 0.5;
-  target = Math.round(target / 50) * 50;
-  return { L, ice, moves, target, pattern: pat };
+  return { L, ice, moves, target, pattern: pat, colors, stars: [target, s2, s3] };
 }
 /*LOGIC-END*/
 
@@ -467,21 +503,27 @@ function noise(dur, vol, when, freq, type) {
     s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + dur + 0.05);
   } catch (e) {}
 }
-const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+// Major-pentatonic steps, so every cascade climbs and nothing ever clashes
+const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28];
+const nt = n => 523.25 * Math.pow(2, n / 12);
 const sfx = {
-  select() { tone(990, 0.06, 'sine', 0.1); },
-  swap() { tone(500, 0.12, 'triangle', 0.08, 0, 800); },
-  bad() { tone(220, 0.1, 'square', 0.05); tone(180, 0.12, 'square', 0.05, 0.1); },
-  match(cascade) { const n = SCALE[Math.min(cascade - 1, SCALE.length - 1)]; const f = 523 * Math.pow(2, n / 12); tone(f, 0.22, 'triangle', 0.14); tone(f * 1.5, 0.25, 'sine', 0.07, 0.04); noise(0.15, 0.05, 0, 6000); },
-  special() { [1, 1.25, 1.5, 2].forEach((m, i) => tone(880 * m, 0.18, 'sine', 0.08, i * 0.04)); },
-  line() { tone(1400, 0.3, 'sawtooth', 0.06, 0, 200); noise(0.25, 0.08, 0, 2000); },
-  bomb() { tone(120, 0.45, 'sine', 0.35, 0, 40); noise(0.4, 0.25, 0, 600, 'lowpass'); },
-  color() { for (let i = 0; i < 8; i++) tone(1200 + i * 180, 0.12, 'sine', 0.05, i * 0.03); },
-  ice() { noise(0.12, 0.12, 0, 5000); tone(2400, 0.08, 'sine', 0.04); },
-  win() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.35, 'triangle', 0.13, i * 0.1)); },
-  fail() { [440, 392, 330, 262].forEach((f, i) => tone(f, 0.4, 'triangle', 0.12, i * 0.16)); },
-  star(i) { tone(880 * Math.pow(1.26, i), 0.3, 'sine', 0.14); },
-  click() { tone(700, 0.05, 'sine', 0.08); }
+  select() { tone(nt(12), 0.07, 'sine', 0.08); },
+  swap() { tone(nt(4), 0.09, 'triangle', 0.07); tone(nt(9), 0.09, 'triangle', 0.05, 0.04); },
+  bad() { tone(nt(-5), 0.1, 'triangle', 0.08); tone(nt(-8), 0.13, 'triangle', 0.07, 0.08); },
+  match(cascade) {
+    const n = SCALE[Math.min(cascade - 1, SCALE.length - 1)], f = nt(n);
+    tone(f, 0.22, 'triangle', 0.13); tone(f * 1.5, 0.24, 'sine', 0.06, 0.035); tone(f * 2, 0.16, 'sine', 0.03, 0.07);
+  },
+  special() { [0, 4, 7, 12].forEach((k, i) => tone(nt(k + 12), 0.18, 'sine', 0.07, i * 0.045)); },
+  line() { for (let i = 0; i < 6; i++) tone(nt(SCALE[i + 2]), 0.12, 'triangle', 0.06, i * 0.025); },
+  bomb() { tone(nt(-12), 0.45, 'sine', 0.22); tone(nt(-5), 0.35, 'sine', 0.1, 0.02); [0, 4, 7].forEach((k, i) => tone(nt(k + 12), 0.25, 'triangle', 0.05, 0.05 + i * 0.04)); },
+  color() { for (let i = 0; i < 8; i++) tone(nt(SCALE[i + 3]), 0.14, 'sine', 0.05, i * 0.035); },
+  ice() { tone(nt(28), 0.12, 'sine', 0.05); tone(nt(31), 0.1, 'sine', 0.035, 0.03); },
+  bonus(i) { tone(nt(SCALE[Math.min(i, 9) + 2]), 0.12, 'triangle', 0.07); },
+  win() { [0, 4, 7, 12, 16].forEach((k, i) => tone(nt(k), 0.35, 'triangle', 0.12, i * 0.1)); },
+  fail() { [7, 4, 2, 0].forEach((k, i) => tone(nt(k), 0.4, 'triangle', 0.1, i * 0.16)); tone(nt(-12), 0.9, 'sine', 0.08, 0.64); },
+  star(i) { tone(nt([12, 16, 19][i] || 12), 0.35, 'sine', 0.13); tone(nt(([12, 16, 19][i] || 12) + 12), 0.25, 'sine', 0.04, 0.03); },
+  click() { tone(nt(7), 0.05, 'sine', 0.07); }
 };
 const ICON_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>';
 const ICON_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
@@ -604,7 +646,7 @@ let sel = null, down = null, hint = null, lastAct = 0, rushing = false, skipRush
 let dying = [], parts = [], pops = [], effects = [], shards = [], shake = 0, now = 0;
 let waiters = [];
 let flakes = [];
-let runToken = 0;
+let runToken = 0, bonusPts = 0;
 
 function wait(s) { const tok = runToken; return new Promise(res => waiters.push({ t: now + s, res, tok })); }
 function settle() { const tok = runToken; return new Promise(res => waiters.push({ cond: true, res, tok })); }
@@ -619,11 +661,11 @@ function layout() {
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
   const hb = $('hud').getBoundingClientRect().bottom + 10;
   const avail = H - hb - 14;
-  S = Math.min(W - 16, avail, 680);
+  S = Math.min(W - 16, avail / 1.05, 680); // leave room for the board frame
   S = Math.max(160, Math.floor(S / 8) * 8);
   cell = S / 8;
   bx = Math.round((W - S) / 2);
-  by = Math.round(hb + Math.max(0, (avail - S) / 2));
+  by = Math.round(hb + Math.max(0, (avail - S) * 0.4));
   spriteCache.clear();
   if (!flakes.length) for (let i = 0; i < 60; i++) flakes.push({ x: Math.random(), y: Math.random(), r: Math.random() * 1.7 + 0.4, s: Math.random() * 0.03 + 0.01, d: Math.random() * 6.28 });
 }
@@ -631,16 +673,15 @@ window.addEventListener('resize', layout);
 window.addEventListener('orientationchange', () => setTimeout(layout, 200));
 
 /* ================= HUD ================= */
-const STAR_MULT = [1, 1.8, 2.6];
-function starsFor(sc) { let n = 0; STAR_MULT.forEach(m => { if (sc >= def.target * m) n++; }); return n; }
+function starsFor(sc) { let n = 0; def.stars.forEach(t => { if (sc >= t) n++; }); return n; }
 function updateHud() {
   $('lvlName').textContent = 'LEVEL ' + level;
   $('moves').textContent = movesLeft;
   $('moves').classList.toggle('low', movesLeft <= 5 && state === 'play' && !rushing);
   $('target').textContent = '/ ' + def.target;
-  const max = def.target * STAR_MULT[2];
+  const max = def.stars[2];
   $('fill').style.width = Math.min(100, shownScore / max * 100) + '%';
-  STAR_MULT.forEach((m, i) => { const el = $('st' + (i + 1)); el.style.left = (m / STAR_MULT[2] * 100) + '%'; el.classList.toggle('on', shownScore >= def.target * m); });
+  def.stars.forEach((t, i) => { const el = $('st' + (i + 1)); el.style.left = Math.min(96, t / max * 100) + '%'; el.classList.toggle('on', shownScore >= t); });
   const ic = iceCount(ice);
   $('iceBox').style.display = def.pattern ? '' : 'none';
   $('iceLeft').textContent = ic;
@@ -653,6 +694,7 @@ function startLevel(L) {
   runToken++;
   waiters = [];
   level = L; def = levelDef(L);
+  setColors(def.colors);
   ice = def.ice.map(r => r.slice());
   grid = makeBoard();
   for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) { const g = grid[r][c]; g.x = c; g.y = r - R - 1 - (R - r) * 0.3; g.vy = 0; }
@@ -676,22 +718,21 @@ async function trySwap(a, b) {
   const A = grid[a[0]][a[1]], B = grid[b[0]][b[1]];
   if (!A || !B) { phase = 'idle'; return; }
   sfx.swap();
-  tweenTo(A, b[1], b[0], 0.16); tweenTo(B, a[1], a[0], 0.16);
+  tweenTo(A, b[1], b[0], 0.13); tweenTo(B, a[1], a[0], 0.13);
   swapCells(grid, a, b);
-  await wait(0.17); if (tok !== runToken) return;
+  await wait(0.14); if (tok !== runToken) return;
   const combo = planCombo(grid, b, a);
   if (!combo && !hasMatchAt(grid, a[0], a[1]) && !hasMatchAt(grid, b[0], b[1])) {
     sfx.bad();
-    tweenTo(A, a[1], a[0], 0.16); tweenTo(B, b[1], b[0], 0.16);
+    tweenTo(A, a[1], a[0], 0.15); tweenTo(B, b[1], b[0], 0.15);
     swapCells(grid, a, b);
-    await wait(0.17);
+    await wait(0.16);
     phase = 'idle'; lastAct = now;
     return;
   }
   movesLeft--; updateHud();
   cascade = 1;
   if (combo) {
-    if (combo.convert) { sfx.color(); effects.push(...combo.effects.filter(e => e.k === 'color').map(e => Object.assign({}, e, { t0: now }))); await wait(0.45); if (tok !== runToken) return; combo.effects = combo.effects.filter(e => e.k !== 'color'); }
     await playPlan(combo); if (tok !== runToken) return;
     await dropAndSettle(); if (tok !== runToken) return;
     cascade++;
@@ -741,8 +782,11 @@ async function playPlan(plan) {
   addPop('+' + res.pts, bx + (sx / n + 0.5) * cell, by + (sy / n + 0.5) * cell, cascade > 1 ? '#ffe066' : '#ffffff', 0.8 + Math.min(0.6, res.pts / 2000));
   if (cascade >= 2) addPop(CASCADE_WORDS[Math.min(cascade, 7)] + ' x' + cascade, W / 2, by + S * 0.45, '#ff9be6', 1.25, 0.05);
   updateHud();
-  await wait(plan.effects.length ? 0.34 : 0.24);
+  bumpScore();
+  await wait(plan.effects.length ? 0.3 : 0.2);
 }
+let bumpT = 0;
+function bumpScore() { const el = $('score'); el.classList.add('bump'); clearTimeout(bumpT); bumpT = setTimeout(() => el.classList.remove('bump'), 140); }
 async function dropAndSettle() { gravity(grid); await settle(); }
 async function afterTurn() {
   const tok = runToken;
@@ -762,29 +806,22 @@ async function afterTurn() {
 }
 async function winSequence() {
   const tok = runToken;
-  rushing = true; skipRush = false;
+  rushing = true; skipRush = false; bonusPts = movesLeft * MOVE_BONUS;
   sfx.win();
   addPop('GOAL REACHED!', W / 2, by + S * 0.4, '#7dffb8', 1.5);
-  await wait(1.0); if (tok !== runToken) return;
-  if (movesLeft > 0) addPop('FROST RUSH!', W / 2, by + S * 0.5, '#9fe8ff', 1.4);
+  await wait(0.9); if (tok !== runToken) return;
+  // Unused moves are banked as bonus points, counted off one by one (the board is left alone).
+  let i = 0;
   while (movesLeft > 0 && tok === runToken) {
-    if (skipRush) { score += movesLeft * 250; movesLeft = 0; updateHud(); break; }
-    movesLeft--;
-    const cands = [];
-    for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) if (grid[r][c] && !grid[r][c].sp) cands.push([r, c]);
-    if (!cands.length) break;
-    const [r, c] = cands[(Math.random() * cands.length) | 0];
-    const gm = grid[r][c]; gm.sp = Math.random() < 0.5 ? SP_H : SP_V; gm.born = now;
-    sfx.special(); updateHud();
-    await wait(0.18); if (tok !== runToken) return;
-    const plan = { clear: new Map([[key(r, c), [r, c]]]), effects: [], creations: [] };
-    expand(grid, plan.clear, plan.effects, new Set());
-    cascade = 1;
-    await playPlan(plan); if (tok !== runToken) return;
-    await dropAndSettle(); if (tok !== runToken) return;
-    await cascadeLoop(null); if (tok !== runToken) return;
+    if (skipRush) { score += movesLeft * MOVE_BONUS; movesLeft = 0; updateHud(); break; }
+    movesLeft--; score += MOVE_BONUS; updateHud();
+    const r = (Math.random() * R) | 0, c = (Math.random() * C) | 0;
+    burst(c, r, '#ffe066', 6);
+    addPop('+' + MOVE_BONUS, bx + (c + 0.5) * cell, by + (r + 0.5) * cell, '#ffe066', 0.75);
+    sfx.bonus(i++);
+    await wait(Math.max(0.07, 0.16 - i * 0.008)); if (tok !== runToken) return;
   }
-  await wait(0.5); if (tok !== runToken) return;
+  await wait(0.6); if (tok !== runToken) return;
   rushing = false;
   winLevel();
 }
@@ -796,7 +833,8 @@ function winLevel() {
   progress.stars[level] = Math.max(progress.stars[level] || 0, st);
   if (level < LEVEL_COUNT) progress.unlocked = Math.max(progress.unlocked, level + 1);
   saveProgress();
-  $('winScore').textContent = score;
+  $('winBonus').textContent = '+' + bonusPts;
+  rollUp($('winScore'), score, 0.9);
   $('winBest').textContent = progress.best[level];
   $('winNew').innerHTML = score > prevBest && prevBest > 0 ? '<span class="newbest">NEW BEST!</span>' : '';
   const ws = $('winStars'); ws.innerHTML = '';
@@ -807,6 +845,18 @@ function winLevel() {
   }
   $('winNext').style.display = level < LEVEL_COUNT ? '' : 'none';
   show('win');
+}
+// Count a number up on a panel (score roll-up), with soft ticks
+function rollUp(el, to, dur) {
+  const t0 = performance.now(); let lastTick = 0;
+  el.textContent = '0';
+  function step(ts) {
+    const k = Math.min(1, (ts - t0) / (dur * 1000)), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = Math.round(to * e);
+    if (ts - lastTick > 70 && k < 1) { lastTick = ts; tone(nt(19 + Math.round(e * 9)), 0.04, 'sine', 0.03); }
+    if (k < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
 }
 function failLevel() {
   state = 'fail';
@@ -853,12 +903,20 @@ function openIntro(L) {
   $('introTitle').textContent = 'LEVEL ' + L;
   let g = 'Score <b>' + def.target + '</b> points<br>in <b>' + def.moves + '</b> moves';
   if (def.pattern) g += '<br>and thaw <b>all ' + iceCount(def.ice) + '</b> ice layers ❄';
+  g += '<div class="stargoal">\u2605 ' + def.stars[0] + ' &nbsp; \u2605\u2605 ' + def.stars[1] + ' &nbsp; \u2605\u2605\u2605 ' + def.stars[2] + '</div>';
   $('introGoal').innerHTML = g;
   $('introBest').textContent = progress.best[L] ? progress.best[L] : '-';
   show('intro');
 }
+function showTitle() {
+  state = 'title'; document.body.classList.remove('ingame');
+  let tot = 0; for (const k in progress.stars) tot += progress.stars[k] | 0;
+  const done = Object.keys(progress.stars).length;
+  $('titleProg').textContent = done ? '\u2605 ' + tot + ' / ' + LEVEL_COUNT * 3 + '   \u00b7   LEVEL ' + progress.unlocked : '';
+  show('title');
+}
 $('playBtn').addEventListener('click', () => { ensureAudio(); sfx.click(); openMap(); });
-$('mapBack').addEventListener('click', () => { sfx.click(); state = 'title'; show('title'); });
+$('mapBack').addEventListener('click', () => { sfx.click(); showTitle(); });
 $('introBack').addEventListener('click', () => { sfx.click(); openMap(); });
 $('introGo').addEventListener('click', () => { sfx.click(); startLevel(level); });
 $('winMap').addEventListener('click', () => { sfx.click(); openMap(); });
@@ -1015,7 +1073,7 @@ function updateGems(dt) {
     }
     if (g.x !== c) { g.x += (c - g.x) * Math.min(1, dt * 16); if (Math.abs(g.x - c) < 0.01) g.x = c; }
     if (g.y < r) {
-      g.vy += 38 * dt; g.y += g.vy * dt;
+      g.vy += 52 * dt; g.y += g.vy * dt;
       if (g.y >= r) { g.y = r; if (g.vy > 3) g.land = now; g.vy = 0; }
     } else if (g.y > r) { g.y += (r - g.y) * Math.min(1, dt * 16); if (Math.abs(g.y - r) < 0.01) g.y = r; }
   }
@@ -1035,7 +1093,7 @@ function drawGems() {
     if (hintOn && ((hint[0][0] === r && hint[0][1] === c) || (hint[1][0] === r && hint[1][1] === c))) {
       rot = Math.sin(now * 22) * 0.18 * Math.max(0, Math.sin(now * 2.4)); sx *= 1.06; sy *= 1.06;
     }
-    const isSel = sel && sel.r === r && sel.c === c;
+    const isSel = (sel && sel.r === r && sel.c === c) || (down && down.r === r && down.c === c && phase === 'idle');
     if (isSel) { const s = 1.08 + Math.sin(now * 9) * 0.04; sx *= s; sy *= s; }
     const px = bx + g.x * cell, py = by + g.y * cell + (lt < 0.22 ? Math.sin(lt / 0.22 * Math.PI) * cell * 0.05 : 0);
     if (isSel) {
@@ -1059,6 +1117,37 @@ function drawGems() {
     ctx.globalAlpha = 1;
   }
   ctx.restore();
+}
+// Frosted glass over iced cells, drawn above the gems so the goal is always readable.
+// Double ice gets a thicker frame and corner flakes; the last few tiles pulse so they're easy to find.
+function drawIceTop() {
+  if (!ice) return;
+  const left = iceCount(ice), pulse = left <= 4 && state === 'play' ? 0.5 + 0.5 * Math.sin(now * 5) : 0;
+  const m = cell * 0.05, rad = cell * 0.16;
+  for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
+    const lv = ice[r][c]; if (!lv) continue;
+    const x = bx + c * cell + m, y = by + r * cell + m, w = cell - 2 * m;
+    ctx.save();
+    rr(ctx, x, y, w, w, rad);
+    ctx.fillStyle = lv >= 2 ? 'rgba(215,242,255,0.30)' : 'rgba(200,236,255,0.16)'; ctx.fill();
+    if (pulse) { ctx.shadowColor = '#bff0ff'; ctx.shadowBlur = cell * 0.4 * pulse; }
+    ctx.strokeStyle = 'rgba(235,250,255,' + (0.75 + pulse * 0.25) + ')';
+    ctx.lineWidth = lv >= 2 ? Math.max(2.5, cell * 0.075) : Math.max(1.5, cell * 0.04); ctx.stroke();
+    ctx.shadowBlur = 0;
+    // frost sheen on the top-left
+    const g = ctx.createLinearGradient(x, y, x + w * 0.6, y + w * 0.6);
+    g.addColorStop(0, 'rgba(255,255,255,0.38)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    rr(ctx, x, y, w, w, rad); ctx.fillStyle = g; ctx.fill();
+    if (lv >= 2) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = Math.max(1, cell * 0.025);
+      for (const [fx, fy] of [[x + w * 0.16, y + w * 0.16], [x + w * 0.84, y + w * 0.84]]) {
+        const k = w * 0.08; ctx.beginPath();
+        for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3; ctx.moveTo(fx - Math.cos(a) * k, fy - Math.sin(a) * k); ctx.lineTo(fx + Math.cos(a) * k, fy + Math.sin(a) * k); }
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
 }
 function drawEffects() {
   for (let i = effects.length - 1; i >= 0; i--) {
@@ -1171,7 +1260,7 @@ function frame(ts) {
     }
   }
   // hint
-  if (state === 'play' && phase === 'idle' && !hint && now - lastAct > 5) { hint = findMove(grid); }
+  if (state === 'play' && phase === 'idle' && !hint && now - lastAct > 7) { hint = findMove(grid); }
   // score count-up
   if (shownScore !== score && def) {
     shownScore += Math.max(1, Math.ceil((score - shownScore) * Math.min(1, dt * 8)));
@@ -1187,6 +1276,7 @@ function frame(ts) {
     if (shake) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
     drawBoard();
     drawGems();
+    drawIceTop();
     drawEffects();
     ctx.restore();
     drawParts(dt);
@@ -1204,10 +1294,13 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('contextmenu', e => e.preventDefault());
 
 layout();
-show('title');
+showTitle();
 requestAnimationFrame(frame);
 })();
 </script>
+<script id="blizPinScript">/* keep the game pinned to the screen: hidden menus can otherwise make the page scroll */
+(function(){function pin(){var b=document.body,h=document.documentElement;if(b&&b.scrollTop)b.scrollTop=0;if(h.scrollTop)h.scrollTop=0;if(window.scrollY||window.scrollX)window.scrollTo(0,0);}
+document.addEventListener('scroll',pin,true);addEventListener('resize',pin);addEventListener('focusin',function(){setTimeout(pin,0)});setInterval(pin,400);pin();})();</script>
 <script id="blizExitScript">
 /* Blizzard exit bar: shown inside every game so there is always a way out. */
 (function(){

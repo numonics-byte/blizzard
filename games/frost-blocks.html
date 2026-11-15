@@ -9,18 +9,23 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{position:fixed;inset:0;overflow:hidden;background:#050b1e;color:#e8f7ff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
-#hud{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 14px 0;pointer-events:none;z-index:6;max-width:640px;margin:0 auto}
-.stat{display:flex;flex-direction:column;line-height:1}
-.stat .lbl{font-size:11px;letter-spacing:.22em;color:#7fcfff;opacity:.85;font-weight:700}
-.stat .val{font-size:30px;font-weight:900;color:#fff;text-shadow:0 0 12px rgba(90,210,255,.75);font-variant-numeric:tabular-nums}
+#hud{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 10px) 12px 0;pointer-events:none;z-index:6}
+#muteWrap{display:flex;justify-content:flex-end;height:44px}
+#scoreRow{position:relative;display:flex;align-items:flex-end;justify-content:center;gap:18px;margin-top:6px;max-width:560px;margin-left:auto;margin-right:auto}
+.stat{display:flex;flex-direction:column;align-items:center;line-height:1}
+.stat .lbl{font-size:11px;letter-spacing:.22em;color:#7fcfff;opacity:.85;font-weight:700;margin-bottom:3px}
+.stat .val{font-size:40px;font-weight:900;color:#fff;text-shadow:0 0 14px rgba(90,210,255,.75);font-variant-numeric:tabular-nums;transition:transform .12s}
+.stat .val.bump{transform:scale(1.14)}
+.stat.best{position:absolute;right:12px;align-items:flex-end}
 .stat.best .val{font-size:20px;color:#bfefff}
-.spacer{flex:1}
-body.intitle #hud .stat{visibility:hidden}
+.stat.best .val::before{content:"\2605 ";color:#ffe27a;font-size:15px}
+body.intitle #scoreRow{visibility:hidden}
 .ibtn{pointer-events:auto;width:44px;height:44px;border-radius:14px;border:1px solid rgba(127,233,255,.35);background:rgba(10,30,60,.55);color:#bff4ff;display:grid;place-items:center;cursor:pointer;box-shadow:0 0 14px rgba(60,180,255,.2) inset}
 .ibtn:active{transform:scale(.94)}
 .ibtn svg{width:22px;height:22px}
 .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(ellipse at 50% 40%,rgba(20,50,100,.55),rgba(3,8,22,.9));z-index:5;transition:opacity .35s ease;text-align:center;padding:24px}
-.overlay.hidden{opacity:0;pointer-events:none}
+.overlay.hidden{opacity:0;pointer-events:none;visibility:hidden;transition:opacity .25s ease,visibility 0s linear .25s}
+.overlay.hidden *{pointer-events:none!important}
 .logo{font-size:clamp(46px,13vw,96px);font-weight:900;letter-spacing:.03em;line-height:.92;background:linear-gradient(180deg,#ffffff 0%,#b5f5ff 40%,#3fb2ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 20px rgba(80,200,255,.55));animation:float 3.2s ease-in-out infinite}
 @keyframes float{50%{transform:translateY(-6px)}}
 .sub{color:#9fdcff;font-size:15px;max-width:340px;line-height:1.45;opacity:.9}
@@ -42,16 +47,18 @@ body.intitle #hud .stat{visibility:hidden}
 <canvas id="c"></canvas>
 
 <div id="hud">
-  <div class="stat"><span class="lbl">SCORE</span><span class="val" id="score">0</span></div>
-  <div class="spacer"></div>
-  <div class="stat best" style="align-items:flex-end"><span class="lbl">BEST</span><span class="val" id="best">0</span></div>
-  <button class="ibtn" id="mute" aria-label="Toggle sound"></button>
+  <div id="muteWrap"><button class="ibtn" id="mute" aria-label="Toggle sound"></button></div>
+  <div id="scoreRow">
+    <div class="stat"><span class="lbl">SCORE</span><span class="val" id="score">0</span></div>
+    <div class="stat best"><span class="lbl">BEST</span><span class="val" id="best">0</span></div>
+  </div>
 </div>
 
 <div class="overlay" id="title">
   <div class="logo">FROST<br>BLOCKS</div>
   <div class="sub">Drag ice pieces onto the board. Fill a row or column to shatter it. Chain clears for combos!</div>
   <div class="titlebest" id="titleBest"></div>
+  <button class="big-btn" id="contBtn" style="display:none">CONTINUE</button>
   <button class="big-btn" id="playBtn">PLAY</button>
 </div>
 
@@ -130,20 +137,23 @@ function noise(dur, vol, when, freq) {
     s.start(t); s.stop(t + dur + 0.05);
   } catch (e) {}
 }
+// C-major pentatonic ladder (Hz) for bright, always-consonant feedback
+const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51, 1567.98, 1760, 2093];
 const sfx = {
-  pick() { tone(880, 0.08, 'triangle', 0.12, 0, 1320); },
-  drop() { tone(220, 0.12, 'sine', 0.25, 0, 110); noise(0.06, 0.08, 0, 5000); },
-  bad() { tone(160, 0.15, 'square', 0.06, 0, 120); },
+  pick() { tone(784, 0.07, 'sine', 0.09); tone(1175, 0.06, 'sine', 0.05, 0.03); },
+  drop(n) { const f = PENTA[Math.max(0, 4 - Math.min(4, n - 1))] / 2; tone(f, 0.16, 'triangle', 0.2); tone(f * 2, 0.08, 'sine', 0.06); },
+  bad() { tone(392, 0.09, 'triangle', 0.08); tone(330, 0.12, 'triangle', 0.07, 0.07); },
   clear(n, streak) {
-    const base = 520 * Math.pow(1.06, Math.min(streak, 10));
-    const notes = [1, 1.25, 1.5, 2, 2.5, 3];
-    for (let i = 0; i < Math.min(3 + n, 6); i++) tone(base * notes[i], 0.28, 'triangle', 0.13, i * 0.055);
-    noise(0.45, 0.12, 0, 4000);
-    tone(base * 4, 0.5, 'sine', 0.05, 0.12);
+    const s = Math.min(streak - 1, 5);
+    const notes = Math.min(3 + n, 6);
+    for (let i = 0; i < notes; i++) tone(PENTA[Math.min(PENTA.length - 1, s + i)], 0.3, 'triangle', 0.12, i * 0.05);
+    for (let i = 0; i < 4; i++) tone(PENTA[Math.min(PENTA.length - 1, s + 5 + (i % 3))] * 2, 0.12, 'sine', 0.025, 0.08 + i * 0.045);
+    tone(PENTA[s] / 2, 0.5, 'sine', 0.12);
   },
-  allclear() { [1, 1.25, 1.5, 2, 2.5, 3, 4].forEach((m, i) => tone(660 * m, 0.4, 'sine', 0.12, i * 0.07)); },
-  newTray() { tone(1200, 0.06, 'sine', 0.06); tone(1600, 0.08, 'sine', 0.05, 0.05); },
-  over() { [660, 520, 400, 300, 220].forEach((f, i) => tone(f, 0.35, 'triangle', 0.12, i * 0.13)); }
+  allclear() { [0, 2, 4, 5, 7, 9, 10].forEach((k, i) => tone(PENTA[k], 0.45, 'sine', 0.12, i * 0.07)); },
+  newTray() { tone(1319, 0.06, 'sine', 0.05); tone(1568, 0.08, 'sine', 0.045, 0.05); },
+  best() { [0, 2, 4, 5].forEach((k, i) => tone(PENTA[k + 2], 0.25, 'triangle', 0.1, i * 0.08)); },
+  over() { [783.99, 659.25, 523.25, 392, 523.25].forEach((f, i) => tone(f, i === 4 ? 0.8 : 0.32, 'triangle', 0.11, i * 0.14)); }
 };
 const ICON_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>';
 const ICON_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
@@ -202,57 +212,144 @@ function variants(cells) {
   return [...out.values()];
 }
 const POOL = [];
-BASE.forEach(([w, cells]) => { const vs = variants(cells); vs.forEach(v => POOL.push({ cells: v, w: w / vs.length })); });
-const POOL_W = POOL.reduce((s, p) => s + p.w, 0);
-function randomShape() {
-  let r = Math.random() * POOL_W;
-  for (const p of POOL) { r -= p.w; if (r <= 0) return p.cells; }
-  return POOL[0].cells;
+BASE.forEach(([w, cells], bi) => {
+  const vs = variants(cells);
+  // "big" = 5+ cells; these get more common as the score climbs
+  vs.forEach(v => POOL.push({ cells: v, w: w / vs.length, base: bi, n: cells.length }));
+});
+function shapeWeight(p, diff) {
+  if (p.n >= 5) return p.w * (0.55 + 0.9 * diff);
+  if (p.n <= 2) return p.w * (1.15 - 0.5 * diff);
+  return p.w;
 }
-function makePiece(cells) {
+function randomShape(diff, avoid) {
+  let tot = 0;
+  for (const p of POOL) if (!avoid.has(p.base)) tot += shapeWeight(p, diff);
+  let r = Math.random() * tot;
+  for (const p of POOL) { if (avoid.has(p.base)) continue; r -= shapeWeight(p, diff); if (r <= 0) return p; }
+  return POOL[0];
+}
+function makePiece(sh) {
+  const cells = sh.cells;
   let w = 0, h = 0;
   cells.forEach(([r, c]) => { h = Math.max(h, r + 1); w = Math.max(w, c + 1); });
-  return { cells, w, h, ci: (Math.random() * COLORS.length) | 0, used: false, appear: now, ret: null };
+  return { cells, w, h, base: sh.base, ci: (Math.random() * COLORS.length) | 0, used: false, appear: now, ret: null };
 }
 
 /* ---------- state ---------- */
 let grid, placeAnim, tray = [], score = 0, shownScore = 0, best = store.get('best', 0) | 0;
-let bestAtStart = 0, streak = 0, sinceClear = 0, lines = 0, state = 'title', drag = null, endT = 0;
+let bestAtStart = 0, streak = 0, sinceClear = 0, lines = 0, state = 'title', drag = null, endT = 0, bestPopped = false;
+let lineFx = [];
 let clears = [], parts = [], pops = [], shake = 0, now = 0, boardFlash = 0;
 let W = 0, H = 0, dpr = 1, cell = 40, bx = 0, by = 0, S = 320, trayRects = [], trayCell = 20, sideLayout = false;
 let flakes = [];
 
-function canPlace(p, r, c) {
+function canPlaceOn(g, p, r, c) {
   for (const [dr, dc] of p.cells) {
     const rr = r + dr, cc = c + dc;
-    if (rr < 0 || cc < 0 || rr >= N || cc >= N || grid[rr][cc]) return false;
+    if (rr < 0 || cc < 0 || rr >= N || cc >= N || g[rr][cc]) return false;
   }
   return true;
 }
+function canPlace(p, r, c) { return canPlaceOn(grid, p, r, c); }
 function fits(p) {
   for (let r = 0; r <= N - p.h; r++) for (let c = 0; c <= N - p.w; c++) if (canPlace(p, r, c)) return true;
   return false;
 }
-function newTray() {
-  let t;
-  for (let tries = 0; tries < 30; tries++) {
-    t = [makePiece(randomShape()), makePiece(randomShape()), makePiece(randomShape())];
-    if (t.some(fits)) break;
+// Put p on a copy of g, clear full lines, return the new grid and how many lines cleared.
+function simPlace(g, p, r, c) {
+  const t = g.map(row => row.slice());
+  p.cells.forEach(([dr, dc]) => { t[r + dr][c + dc] = 1; });
+  const rows = [], cols = [];
+  for (let i = 0; i < N; i++) {
+    if (t[i].every(v => v)) rows.push(i);
+    let full = true; for (let j = 0; j < N; j++) if (!t[j][i]) { full = false; break; }
+    if (full) cols.push(i);
   }
+  rows.forEach(i => t[i].fill(0));
+  cols.forEach(i => { for (let j = 0; j < N; j++) t[j][i] = 0; });
+  return { g: t, n: rows.length + cols.length };
+}
+// Can these pieces all be placed in some order (letting clears happen)? Greedy per order, cheap enough per tray.
+function traySolvable(g, ps) {
+  const orders = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]].map(o => o.filter(i => i < ps.length));
+  for (const ord of orders) {
+    let cur = g, ok = true;
+    for (const i of ord) {
+      const p = ps[i];
+      let bestS = -1, bestG = null;
+      for (let r = 0; r <= N - p.h; r++) for (let c = 0; c <= N - p.w; c++) {
+        if (!canPlaceOn(cur, p, r, c)) continue;
+        const res = simPlace(cur, p, r, c);
+        let touch = 0;
+        p.cells.forEach(([dr, dc]) => {
+          const a = r + dr, b = c + dc;
+          if (a === 0 || a === N - 1 || cur[a - 1] && cur[a - 1][b] || cur[a + 1] && cur[a + 1][b]) touch++;
+          if (b === 0 || b === N - 1 || cur[a][b - 1] || cur[a][b + 1]) touch++;
+        });
+        const s = res.n * 100 + touch;
+        if (s > bestS) { bestS = s; bestG = res.g; }
+      }
+      if (!bestG) { ok = false; break; }
+      cur = bestG;
+    }
+    if (ok) return true;
+  }
+  return false;
+}
+function newTray() {
+  // Difficulty ramps with score: more big pieces later. Every tray is checked so it can always
+  // be fully placed from the current board with good play; losing comes from your own placements.
+  const diff = Math.min(1, score / 12000);
+  let t = null, fallback = null;
+  for (let tries = 0; tries < 60 && !t; tries++) {
+    const avoid = new Set(), cand = [];
+    for (let i = 0; i < 3; i++) { const sh = randomShape(diff, avoid); avoid.add(sh.base); cand.push(makePiece(sh)); }
+    if (!fallback && cand.some(fits)) fallback = cand;
+    if (traySolvable(grid, cand)) t = cand;
+  }
+  // Rare: nothing solvable found. Prefer a tray with at least one fitting piece, else game over follows.
+  if (!t) t = fallback || [0, 1, 2].map(() => makePiece(randomShape(diff, new Set())));
   // distinct colours for variety
   const used = new Set();
-  t.forEach((p, i) => { p.appear = now + i * 0.07; while (used.has(p.ci)) p.ci = (p.ci + 1) % COLORS.length; used.add(p.ci); });
+  t.forEach((p, i) => { p.appear = now + i * 0.06; while (used.has(p.ci)) p.ci = (p.ci + 1) % COLORS.length; used.add(p.ci); });
   tray = t;
+  sizeTray();
   sfx.newTray();
 }
 function resetGame() {
   grid = Array.from({ length: N }, () => new Array(N).fill(0));
   placeAnim = Array.from({ length: N }, () => new Array(N).fill(-9));
-  bestAtStart = best; score = 0; shownScore = 0; streak = 0; sinceClear = 0; lines = 0;
-  clears = []; parts = []; pops = []; drag = null;
+  bestAtStart = best; score = 0; shownScore = 0; streak = 0; sinceClear = 0; lines = 0; bestPopped = false;
+  clears = []; parts = []; pops = []; lineFx = []; drag = null;
   newTray();
   state = 'play';
+  saveGame();
   updateHud(true);
+}
+/* ---------- resume an unfinished game ---------- */
+function saveGame() {
+  if (state !== 'play') { store.set('save', null); return; }
+  store.set('save', { grid, score, streak, sinceClear, lines, bestAtStart, bestPopped,
+    tray: tray.map(p => ({ cells: p.cells, base: p.base, ci: p.ci, used: p.used })) });
+}
+function loadGame() {
+  const s = store.get('save', null);
+  try {
+    if (!s || !Array.isArray(s.grid) || s.grid.length !== N || !Array.isArray(s.tray) || s.tray.length !== 3) return false;
+    grid = s.grid.map(row => row.map(v => (v | 0) > 0 && (v | 0) <= COLORS.length ? v | 0 : 0));
+    placeAnim = Array.from({ length: N }, () => new Array(N).fill(-9));
+    tray = s.tray.map(q => { const p = makePiece({ cells: q.cells, base: q.base | 0 }); p.ci = (q.ci | 0) % COLORS.length; p.used = !!q.used; return p; });
+    score = s.score | 0; shownScore = score; streak = s.streak | 0; sinceClear = s.sinceClear | 0; lines = s.lines | 0;
+    bestAtStart = s.bestAtStart | 0; bestPopped = !!s.bestPopped;
+    clears = []; parts = []; pops = []; drag = null;
+    if (tray.every(p => p.used)) newTray();
+    sizeTray();
+    if (!tray.some(p => !p.used && fits(p))) return false;
+    state = 'play';
+    updateHud(true);
+    return true;
+  } catch (e) { return false; }
 }
 
 /* ---------- layout ---------- */
@@ -261,31 +358,43 @@ function layout() {
   dpr = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth; H = window.innerHeight;
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-  const top = $('hud').getBoundingClientRect().bottom + 12;
-  const availH = H - top - 16, availW = W - 24;
   sideLayout = W > H * 1.15;
+  const sr = $('scoreRow').getBoundingClientRect();
+  // In landscape the score sits above the board; the exit bar lives top-left, so keep 64px clear up there.
+  const top = Math.max(sr.bottom + 14, 64);
+  const bottomPad = 14;
+  const availH = H - top - bottomPad, availW = W - 16;
   if (sideLayout) {
-    S = Math.min(availH, availW / 1.48);
+    S = Math.min(availH * 0.93, (availW - 24) / 1.55, 640);
   } else {
-    S = Math.min(availW, availH / 1.46, 560);
+    S = Math.min(availW, (availH - 12) / 1.36, 600);
   }
   S = Math.max(160, Math.floor(S / 8) * 8);
   cell = S / 8;
   trayRects = [];
   if (sideLayout) {
-    const tw = S * 0.42, gap = S * 0.06, total = S + gap + tw;
+    const tw = S * 0.5, gap = S * 0.06, total = S + gap + tw;
     bx = Math.round((W - total) / 2); by = Math.round(top + (availH - S) / 2);
     for (let i = 0; i < 3; i++) trayRects.push({ x: bx + S + gap, y: by + i * S / 3, w: tw, h: S / 3 });
   } else {
-    const th = S * 0.4, gap = S * 0.06, total = S + gap + th;
+    const gap = Math.max(12, S * 0.04);
+    const th = Math.min(S * 0.44, availH - S - gap);
+    const total = S + gap + th;
     bx = Math.round((W - S) / 2); by = Math.round(top + Math.max(0, (availH - total) / 2));
-    const tw = Math.min(W - 8, S * 1.08), tx = (W - tw) / 2;
+    const tw = Math.min(W - 8, S * 1.06), tx = (W - tw) / 2;
     for (let i = 0; i < 3; i++) trayRects.push({ x: tx + i * tw / 3, y: by + S + gap, w: tw / 3, h: th });
   }
-  const r0 = trayRects[0];
-  trayCell = Math.min(r0.w / 5.6, r0.h / 5.6, cell * 0.6);
+  sizeTray();
   spriteCache.clear();
   if (!flakes.length) for (let i = 0; i < 70; i++) flakes.push({ x: Math.random(), y: Math.random(), r: Math.random() * 1.8 + 0.4, s: Math.random() * 0.03 + 0.01, d: Math.random() * 6.28 });
+}
+// Tray pieces share one cell size (so shapes compare at a glance), as big as the slots allow.
+function sizeTray() {
+  if (!trayRects.length) return;
+  const r0 = trayRects[0];
+  let maxW = 3, maxH = 3;
+  tray.forEach(p => { if (p && !p.used) { maxW = Math.max(maxW, p.w); maxH = Math.max(maxH, p.h); } });
+  trayCell = Math.min((r0.w - 16) / maxW, (r0.h - 16) / maxH, cell * 0.62);
 }
 window.addEventListener('resize', layout);
 window.addEventListener('orientationchange', () => setTimeout(layout, 200));
@@ -356,8 +465,8 @@ cv.addEventListener('pointerdown', e => {
   for (let i = 0; i < 3; i++) {
     const p = tray[i]; if (!p || p.used) continue;
     const r = trayRects[i];
-    const pad = 8;
-    if (q.x >= r.x - pad && q.x <= r.x + r.w + pad && q.y >= r.y - pad && q.y <= r.y + r.h + pad) {
+    const pad = 6, padB = 40;
+    if (q.x >= r.x - pad && q.x <= r.x + r.w + pad && q.y >= r.y - pad && q.y <= r.y + r.h + padB) {
       const pp = trayPiecePos(i, p);
       const d = Math.hypot(q.x - (pp.x + p.w * trayCell / 2), q.y - (pp.y + p.h * trayCell / 2));
       if (d < bd) { bd = d; best_i = i; }
@@ -412,8 +521,17 @@ function updateTarget() {
   if (!drag) return;
   const p = tray[drag.i];
   const x0 = drag.x - p.w * cell / 2, y0 = drag.y - p.h * cell / 2 - liftFor(p, cell);
-  const c = Math.round((x0 - bx) / cell), r = Math.round((y0 - by) / cell);
-  const valid = canPlace(p, r, c);
+  const fc = (x0 - bx) / cell, fr = (y0 - by) / cell;
+  let r = Math.round(fr), c = Math.round(fc), valid = canPlace(p, r, c);
+  if (!valid) {
+    // Forgiving snap: if the exact cell is blocked, use the nearest free spot within ~3/4 of a cell.
+    let bd = 0.78;
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      const rr2 = Math.round(fr) + dr, cc2 = Math.round(fc) + dc;
+      const d = Math.hypot(rr2 - fr, cc2 - fc);
+      if (d < bd && canPlace(p, rr2, cc2)) { bd = d; r = rr2; c = cc2; valid = true; }
+    }
+  }
   if (r !== drag.tr || c !== drag.tc || valid !== drag.valid) {
     drag.tr = r; drag.tc = c; drag.valid = valid;
     drag.preview = valid ? previewLines(p, r, c) : null;
@@ -438,7 +556,7 @@ function place(i, r, c) {
   p.used = true;
   p.cells.forEach(([dr, dc]) => { grid[r + dr][c + dc] = p.ci + 1; placeAnim[r + dr][c + dc] = now; });
   let gained = p.cells.length;
-  sfx.drop();
+  sfx.drop(p.cells.length);
   const rows = [], cols = [];
   for (let a = 0; a < N; a++) {
     if (grid[a].every(v => v)) rows.push(a);
@@ -458,6 +576,9 @@ function place(i, r, c) {
       clears.push({ r: a, c: b, ci: grid[a][b] - 1, t0: now + dist * 0.035, spawned: false });
     });
     set.forEach(([a, b]) => { grid[a][b] = 0; });
+    rows.forEach(a => lineFx.push({ k: 'r', i: a, t0: now, ci: p.ci }));
+    cols.forEach(b => lineFx.push({ k: 'c', i: b, t0: now, ci: p.ci }));
+    // 1 line 100, 2 lines 300, 3 lines 600 ... and each consecutive clearing turn adds +50%
     const pts = Math.round(50 * n * (n + 1) * (1 + 0.5 * (streak - 1)));
     gained += pts;
     shake = Math.min(14, 4 + n * 3 + streak);
@@ -477,16 +598,32 @@ function place(i, r, c) {
     addPop('+' + gained, sx, sy, 'rgba(200,240,255,.9)', 0.75);
   }
   score += gained;
-  if (score > best) { best = score; store.set('best', best); }
+  if (score > best) {
+    best = score; store.set('best', best);
+    if (!bestPopped && bestAtStart > 0) {
+      bestPopped = true;
+      addPop('NEW BEST!', bx + S / 2, by + S * 0.22, '#ffe27a', 1.3, 0.25);
+      setTimeout(sfx.best, 250);
+    }
+  }
+  bumpScore();
   updateHud();
   if (tray.every(t => t.used)) newTray();
   if (!tray.some(t => !t.used && fits(t))) {
     state = 'ending'; endT = now;
-    setTimeout(gameOver, 1500);
-  }
+    store.set('save', null);
+    setTimeout(gameOver, 1300);
+  } else saveGame();
+}
+let bumpT = 0;
+function bumpScore() {
+  const el = $('score'); el.classList.add('bump');
+  clearTimeout(bumpT); bumpT = setTimeout(() => el.classList.remove('bump'), 140);
 }
 function gameOver() {
+  if (state !== 'ending') return;
   state = 'over';
+  store.set('played', (store.get('played', 0) | 0) + 1);
   sfx.over();
   $('oScore').textContent = score;
   $('oBest').textContent = best;
@@ -607,6 +744,24 @@ function drawGrid() {
     drawBlock(4, x, y, cell, 1 - k, 1 + k * 0.35);
     ctx.fillStyle = 'rgba(255,255,255,' + (0.8 * (1 - k)) + ')';
     rr(ctx, x + cell * 0.1, y + cell * 0.1, cell * 0.8, cell * 0.8, cell * 0.15); ctx.fill();
+  }
+  // bright sweep along each cleared line
+  for (let i = lineFx.length - 1; i >= 0; i--) {
+    const f = lineFx[i], k = (now - f.t0) / 0.45;
+    if (k >= 1) { lineFx.splice(i, 1); continue; }
+    const a = 1 - k, th = cell * (1 + k * 0.5);
+    ctx.save();
+    ctx.globalAlpha = a * 0.9;
+    ctx.shadowColor = COLORS[f.ci]; ctx.shadowBlur = cell * 0.6;
+    const g = f.k === 'r'
+      ? ctx.createLinearGradient(0, by + (f.i + 0.5) * cell - th / 2, 0, by + (f.i + 0.5) * cell + th / 2)
+      : ctx.createLinearGradient(bx + (f.i + 0.5) * cell - th / 2, 0, bx + (f.i + 0.5) * cell + th / 2, 0);
+    g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,0.95)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    const grow = ease(k * 3);
+    if (f.k === 'r') ctx.fillRect(bx + S / 2 - S / 2 * grow, by + (f.i + 0.5) * cell - th / 2, S * grow, th);
+    else ctx.fillRect(bx + (f.i + 0.5) * cell - th / 2, by + S / 2 - S / 2 * grow, th, S * grow);
+    ctx.restore();
   }
 }
 function drawPiece(p, x, y, cs, alpha, grey) {
@@ -738,6 +893,10 @@ function showTitle() {
   state = 'title';
   document.body.classList.add('intitle');
   $('titleBest').textContent = best ? 'BEST  ' + best : '';
+  const sv = store.get('save', null);
+  $('contBtn').style.display = sv && sv.score > 0 ? '' : 'none';
+  $('playBtn').textContent = sv && sv.score > 0 ? 'NEW GAME' : 'PLAY';
+  $('playBtn').className = sv && sv.score > 0 ? 'ghost-btn' : 'big-btn';
   $('title').classList.remove('hidden');
   $('over').classList.add('hidden');
 }
@@ -749,6 +908,12 @@ function start() {
   resetGame();
 }
 $('playBtn').addEventListener('click', start);
+$('contBtn').addEventListener('click', () => {
+  ensureAudio();
+  $('title').classList.add('hidden');
+  document.body.classList.remove('intitle');
+  if (!loadGame()) resetGame();
+});
 $('againBtn').addEventListener('click', start);
 $('homeBtn').addEventListener('click', showTitle);
 document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
@@ -770,6 +935,9 @@ showTitle();
 requestAnimationFrame(frame);
 })();
 </script>
+<script id="blizPinScript">/* keep the game pinned to the screen: hidden menus can otherwise make the page scroll */
+(function(){function pin(){var b=document.body,h=document.documentElement;if(b&&b.scrollTop)b.scrollTop=0;if(h.scrollTop)h.scrollTop=0;if(window.scrollY||window.scrollX)window.scrollTo(0,0);}
+document.addEventListener('scroll',pin,true);addEventListener('resize',pin);addEventListener('focusin',function(){setTimeout(pin,0)});setInterval(pin,400);pin();})();</script>
 <script id="blizExitScript">
 /* Blizzard exit bar: shown inside every game so there is always a way out. */
 (function(){
