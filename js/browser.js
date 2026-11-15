@@ -55,7 +55,12 @@
   btn('fwd').onclick = () => { if(cur.idx < cur.hist.length-1){ cur.idx++; load(cur.hist[cur.idx], false); } };
   btn('reload').onclick = () => load(cur.hist[cur.idx], false);
   btn('home').onclick = () => nav('blizz://home');
-  urlForm.onsubmit = e => { e.preventDefault(); nav(resolveInput(urlIn.value)); urlIn.blur(); };
+  urlForm.onsubmit = e => {
+    const v = urlIn.value.trim(), dest = resolveInput(v);
+    urlIn.blur();
+    if(v && ddgOn() && dest.startsWith('blizz://search')){ toDDG(urlForm, urlIn, v); return; }   // let the browser submit it
+    e.preventDefault(); nav(dest);
+  };
   urlIn.addEventListener('focus', () => urlIn.select());
 
   function nav(url){
@@ -64,6 +69,27 @@
   }
   function setTitle(t){ cur.title = t; renderTabs(); }
   function busy(on){ loader.classList.toggle('on', on); }
+
+
+  /* DuckDuckGo search: submitted like a normal form into a new tab, so pop-up blockers don't stop it */
+  const ddgOn = () => BLIZ.store.get('engine', 'ddg') === 'ddg';
+  function toDDG(form, input, q){
+    form.action = 'https://duckduckgo.com/'; form.method = 'get'; form.target = '_blank';
+    input.name = 'q'; input.value = q;
+    ddgCard(q, true);
+  }
+  function ddgCard(q, sent){
+    setTitle(q + ' - DuckDuckGo');
+    const href = 'https://duckduckgo.com/?q=' + encodeURIComponent(q);
+    content.innerHTML = `<div class="bb-err bb-page bb-noframe"><div class="big">🦆</div>
+      <h2>${sent ? 'DuckDuckGo results opened in a new tab' : 'Search DuckDuckGo for “' + esc(q) + '”'}</h2>
+      <p>${sent ? 'Look for the new tab at the top of your browser. Every site you click there works.' : 'Results open in their own tab so every site works.'}</p>
+      <div class="bb-nf-btns">
+        <a class="bb-more" href="${esc(href)}" target="_blank" rel="noopener">🦆 ${sent ? 'Open the results again' : 'Search on DuckDuckGo'}</a>
+        <button class="bb-more" data-k="bliz">❄️ Show BlizBrowse results here instead</button>
+      </div></div>`;
+    content.querySelector('[data-k=bliz]').onclick = () => nav('blizz://search?q=' + encodeURIComponent(q) + '&t=all');
+  }
 
   /* ---------- turning typed text into a destination ---------- */
   function resolveInput(raw){
@@ -173,7 +199,12 @@
     const f = scope.querySelector('.bb-sbox'); if(!f) return;
     const inp = f.querySelector('input'), sug = f.querySelector('.bb-sugg');
     let t;
-    f.onsubmit = e => { e.preventDefault(); if(inp.value.trim()) nav(resolveInput(inp.value)); };
+    f.onsubmit = e => {
+      const v = inp.value.trim(); if(!v){ e.preventDefault(); return; }
+      const dest = resolveInput(v);
+      if(ddgOn() && dest.startsWith('blizz://search')){ toDDG(f, inp, v); return; }   // let the browser submit it
+      e.preventDefault(); nav(dest);
+    };
     inp.addEventListener('input', () => {
       clearTimeout(t);
       const q = inp.value.trim();
@@ -250,21 +281,7 @@
   async function pageSearch(p, live){
     const q = (p.get('q') || '').trim(), t = p.get('t') || 'all';
     setTitle(q + ' - BlizBrowse');
-    if(BLIZ.store.get('engine', 'ddg') === 'ddg' && !p.get('t')){
-      const ddg = 'https://duckduckgo.com/?q=' + encodeURIComponent(q);
-      let opened = false;
-      if(ddgFresh){ try{ opened = !!window.open(ddg, '_blank', 'noopener'); }catch(e){} }
-      content.innerHTML = `<div class="bb-err bb-page bb-noframe"><div class="big">🦆</div>
-        <h2>${opened ? 'Searching DuckDuckGo in a new tab' : 'Search DuckDuckGo for “' + esc(q) + '”'}</h2>
-        <p>DuckDuckGo results open in their own tab, so every site you click works.</p>
-        <div class="bb-nf-btns">
-          <button class="bb-more" data-k="ddg">🦆 ${opened ? 'Open DuckDuckGo again' : 'Search on DuckDuckGo'}</button>
-          <button class="bb-more" data-k="bliz">❄️ Show BlizBrowse results here instead</button>
-        </div></div>`;
-      content.querySelector('[data-k=ddg]').onclick = () => window.open(ddg, '_blank', 'noopener');
-      content.querySelector('[data-k=bliz]').onclick = () => nav('blizz://search?q=' + encodeURIComponent(q) + '&t=all');
-      return;
-    }
+    if(ddgOn() && !p.get('t')){ ddgCard(q, false); return; }
     const body = resultsShell(q, t);
     if(t === 'images') return searchImages(q, body, live);
     if(t === 'videos') return searchVideos(q, body, live);
@@ -631,16 +648,15 @@
     if(!isEmbed && BLIZ.store.get('bbNewTab', true)){
       setTitle(host.replace(/^www\./, ''));
       let opened = false;
-      if(fresh){ try{ opened = !!window.open(u.href, '_blank', 'noopener'); }catch(e){} }
+      if(fresh){ try{ const w = window.open(u.href, '_blank'); if(w){ w.opener = null; opened = true; } }catch(e){} }
       content.innerHTML = `<div class="bb-err bb-page bb-noframe"><div class="big">${opened ? '🚀' : '🌐'}</div>
         <h2>${opened ? 'Opened ' + esc(host.replace(/^www\./, '')) + ' in a new tab' : esc(host.replace(/^www\./, ''))}</h2>
         <p>${opened ? 'The site is open in its own tab, so everything on it works. Come back to this tab any time.' : 'Websites open in their own tab so everything on them works.'}</p>
         <div class="bb-nf-btns">
-          <button class="bb-more" data-k="open">↗ ${opened ? 'Open it again' : 'Open ' + esc(host.replace(/^www\./, ''))}</button>
+          <a class="bb-more" href="${esc(u.href)}" target="_blank" rel="noopener">↗ ${opened ? 'Open it again' : 'Open ' + esc(host.replace(/^www\./, ''))}</a>
           <button class="bb-more" data-k="inside">Try showing it inside BlizBrowse</button>
           <button class="bb-more" data-k="home">⌂ Back to BlizBrowse</button>
         </div></div>`;
-      content.querySelector('[data-k=open]').onclick = () => window.open(u.href, '_blank', 'noopener');
       content.querySelector('[data-k=inside]').onclick = () => showInside(u, host);
       content.querySelector('[data-k=home]').onclick = () => nav('blizz://home');
       return;
