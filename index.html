@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Blizzard</title>
+<meta name="theme-color" content="#04060f">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg stroke='%237fdbff' stroke-width='5' stroke-linecap='round'%3E%3Cpath d='M32 4v56M8 18l48 28M8 46l48-28'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=4">
+<link rel="stylesheet" href="css/browser.css?v=4">
+<link rel="stylesheet" href="css/watch.css?v=4">
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="spotlight"></div>
+<canvas id="fx"></canvas>
+
+<header class="topbar">
+  <div class="logo" data-go="home">
+    <svg viewBox="0 0 64 64" fill="none" stroke="#7fdbff" stroke-width="4" stroke-linecap="round"><path d="M32 4v56M8 18l48 28M8 46l48-28M32 12l-6-6M32 12l6-6M32 52l-6 6M32 52l6 6"/></svg>
+    <span>BLIZZARD</span>
+  </div>
+  <button class="exit-btn" data-go="home" title="Exit to main menu (Esc)">✕ <span class="lbl">Exit to menu</span></button>
+  <span id="blizMusicSlot" class="music-slot"></span>
+  <nav class="nav">
+    <button data-go="games">🎮 <span class="lbl">Games</span></button>
+    <button data-go="browser">🌐 <span class="lbl">Browser</span></button>
+    <button data-go="watch">📺 <span class="lbl">Watch</span></button>
+    <button data-go="credits">📜 <span class="lbl">Credits</span></button>
+  </nav>
+</header>
+
+<!-- HOME -->
+<main id="v-home" class="view">
+  <section class="hero">
+    <div class="led-strip" id="ledStrip"></div>
+    <h1 class="title">BLIZZARD</h1>
+    <p class="tagline">Games, browsing and videos — <b>all in one storm.</b></p>
+    <div class="options">
+      <div class="opt o-games tilt" data-go="games">
+        <div class="opt-inner">
+          <div class="leds"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i></div>
+          <div class="opt-icon">🎮</div>
+          <div><h2>GAMES</h2><p>Original Blizzard games. Racing, puzzles, horror &amp; more. Opens in its own tab.</p></div>
+          <span class="go">Play now →</span>
+        </div>
+      </div>
+      <div class="opt o-browser tilt" data-go="browser">
+        <div class="opt-inner">
+          <div class="leds"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i></div>
+          <div class="opt-icon">🌐</div>
+          <div><h2>BROWSER</h2><p>BlizBrowse: search the web, read anything, check the weather, all without leaving Blizzard.</p></div>
+          <span class="go">Start browsing →</span>
+        </div>
+      </div>
+      <div class="opt o-watch tilt" data-go="watch">
+        <div class="opt-inner">
+          <div class="leds"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i></div>
+          <div class="opt-icon">📺</div>
+          <div><h2>WATCH</h2><p>YouTube, TikTok and BlizzardMovies. No sign-in needed.</p></div>
+          <span class="go">Start watching →</span>
+        </div>
+      </div>
+    </div>
+    <div class="stats">
+      <div><b id="statGames">10</b>games</div>
+      <div><b>3</b>watch apps</div>
+      <div><b>0</b>sign-ins</div>
+    </div>
+  </section>
+</main>
+
+<!-- GAMES -->
+<main id="v-games" class="view">
+  <div class="wrap">
+    <div class="sec-head">
+      <h1>BLIZZARD <em>GAMES</em></h1>
+      <label class="search">🔍<input id="gameSearch" placeholder="Search games…" autocomplete="off"></label>
+    </div>
+    <div class="chips" id="gameChips"></div>
+    <div class="grid" id="gameGrid"></div>
+    <p class="note">Games open in a new <b>about:blank</b> tab. If your browser blocks pop-ups, the game opens full-screen right here instead. Every game works with <b>keyboard, mouse and touch</b>.</p>
+  </div>
+</main>
+
+<!-- BROWSER -->
+<main id="v-browser" class="view">
+  <div class="wrap">
+    <div id="bb"></div>
+  </div>
+</main>
+
+<!-- WATCH -->
+<main id="v-watch" class="view">
+  <div class="wrap">
+    <div id="watch"></div>
+  </div>
+</main>
+
+<!-- CREDITS -->
+<main id="v-credits" class="view">
+  <div class="wrap credits">
+    <div class="sec-head"><h1>CREDITS &amp; <em>SOURCES</em></h1><p>Who made what, and where everything on Blizzard comes from.</p></div>
+
+    <section class="cr">
+      <h2>🎮 Games</h2>
+      <p>All Blizzard games are <b>original</b>, made for this site: the code, names, characters and art. Each one takes ideas from a popular <i>type</i> of game. They are not copies of any company's game, and no company endorses them.</p>
+      <table>
+        <tr><th>Blizzard game</th><th>Type of game</th><th>Made with</th></tr>
+        <tr><td>Sled Storm 3D</td><td>Endless downhill sledding</td><td rowspan="6">HTML5 Canvas + Web Audio, written for Blizzard</td></tr>
+        <tr><td>Frost Blocks</td><td>8×8 block-placement puzzle</td></tr>
+        <tr><td>Hollow House 1–3</td><td>Stealth-horror escape</td></tr>
+        <tr><td>Gem Freeze</td><td>Match-3 puzzle</td></tr>
+        <tr><td>Ice Tunnel 1–2</td><td>Tunnel runner</td></tr>
+        <tr><td>Road Escape 1–3</td><td>Top-down car chase</td></tr>
+      </table>
+    </section>
+
+    <section class="cr">
+      <h2>🌐 BlizBrowse</h2>
+      <ul>
+        <li><b>Search results &amp; articles:</b> <a href="https://www.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a> (CC BY-SA 4.0), via the MediaWiki API</li>
+        <li><b>Image search:</b> <a href="https://commons.wikimedia.org" target="_blank" rel="noopener">Wikimedia Commons</a>. Each image keeps its own license.</li>
+        <li><b>Weather:</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0)</li>
+        <li><b>Dictionary:</b> <a href="https://dictionaryapi.dev" target="_blank" rel="noopener">Free Dictionary API</a> (Wiktionary data, CC BY-SA)</li>
+        <li><b>News:</b> <a href="https://hn.algolia.com/api" target="_blank" rel="noopener">Hacker News Search API</a> by Algolia</li>
+      </ul>
+    </section>
+
+    <section class="cr">
+      <h2>📺 Watch</h2>
+      <ul>
+        <li><b>YouTube:</b> played with YouTube's official embedded player. Videos belong to their creators.</li>
+        <li><b>TikTok:</b> played with TikTok's official embed player. Videos belong to their creators.</li>
+        <li><b>BlizzardMovies:</b> open movies by <a href="https://studio.blender.org" target="_blank" rel="noopener">Blender Studio</a> (CC BY) and public-domain films from the <a href="https://archive.org" target="_blank" rel="noopener">Internet Archive</a>.</li>
+      </ul>
+    </section>
+
+    <section class="cr">
+      <h2>✨ Site</h2>
+      <ul>
+        <li>Fonts: <a href="https://fonts.google.com/specimen/Orbitron" target="_blank" rel="noopener">Orbitron</a> and <a href="https://fonts.google.com/specimen/Outfit" target="_blank" rel="noopener">Outfit</a> from Google Fonts (SIL Open Font License)</li>
+        <li>Design &amp; code: the Blizzard team, built with help from Claude (Anthropic)</li>
+        <li>YouTube and TikTok are trademarks of their owners. Blizzard is a fan project and is not affiliated with them.</li>
+      </ul>
+    </section>
+  </div>
+</main>
+
+<div class="overlay" id="gameOverlay">
+  <div class="obar"><b id="ovTitle">BLIZZARD</b><button id="ovMenu">⌂ Main Menu</button><button id="ovClose" style="margin-left:6px">✕ Exit game</button></div>
+  <iframe id="ovFrame" allow="autoplay; fullscreen; gamepad" allowfullscreen></iframe>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="js/data.js?v=4"></script>
+<script src="js/app.js?v=4"></script>
+<script src="js/browser.js?v=4"></script>
+<script src="js/watch.js?v=4"></script>
+<script src="games/music.js?v=4"></script>
+</body>
+</html>
