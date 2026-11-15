@@ -145,3 +145,28 @@
 .bm-hero::after{z-index:0}
 .bm-hero > div:not(.bm-hero-bg){z-index:1}
 .bm-hero > .bm-hero-bg{position:absolute;max-width:none;z-index:0}
+.yt-dur{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.8);color:#fff;font-size:12px;font-weight:600;padding:2px 5px;border-radius:4px}
+.yt-mthumb{position:relative;flex:none}
+.yt-mthumb img{display:block}
+.yt-resfor{padding:0 18px 12px;color:#aaa;font-size:14px}
+.yt-resfor b{color:#fff}
+.yt-morebox{display:flex;justify-content:center;padding:0 0 30px}
+.yt-more{background:#272727;color:#fff;padding:10px 26px;border-radius:999px;font-weight:600}
+.yt-more:hover{background:#3a3a3a}
+.yt-meta p + p{margin-top:2px}
+/* TikTok For You feed */
+.tt-feed{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;user-select:none}
+.tt-stage{display:flex;align-items:flex-end;gap:14px}
+.tt-feed .tt-frame{width:min(360px,calc(100vw - 110px));aspect-ratio:9/16;max-height:72vh;border-radius:16px;box-shadow:0 0 0 1px #222,0 20px 50px -10px rgba(254,44,85,.35)}
+.tt-actions{display:flex;flex-direction:column;gap:14px;padding-bottom:20px}
+.tt-actions button{width:52px;height:52px;border-radius:50%;background:#1f1f1f;color:#fff;font-size:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.tt-actions button small{font-size:10px;margin-top:3px;color:#bbb}
+.tt-actions button:hover{background:#2f2f2f}
+.tt-cap{max-width:420px;text-align:center;font-size:14px;color:#ddd;line-height:1.4}
+.tt-cap b{color:#fff}
+.tt-nav{display:flex;align-items:center;gap:14px}
+.tt-nav button{padding:9px 18px;border-radius:999px;background:#fe2c55;color:#fff;font-weight:700;font-size:13px}
+.tt-nav button:disabled{opacity:.35;cursor:default}
+.tt-count{color:#888;font-size:13px;min-width:60px;text-align:center}
+.tt-main{max-height:none}
+@media (max-width:600px){.tt-actions button{width:44px;height:44px;font-size:17px}.tt-stage{gap:8px}}

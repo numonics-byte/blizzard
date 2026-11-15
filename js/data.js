@@ -65,24 +65,287 @@ window.BLIZ = {
     { u:'sciencemuseum', n:'Science Museum', d:'Cool science' },
   ],
 
-  /* BlizzardMovies: full-length public-domain & Creative Commons films (all checked playable) */
+  /* TikTok feed: real videos read from each creator's official embed page */
+  tiktoks: [{"id": "7704740944427388191", "u": "khaby.lame", "n": "Khaby Lame", "t": "Proud to represent Senegal as an Ambassador for the Dakar 2026…"}, {"id": "7697307919943060767", "u": "khaby.lame", "n": "Khaby Lame", "t": "I guess is time to retire 🥊"}, {"id": "7694335322922044703", "u": "khaby.lame", "n": "Khaby Lame", "t": "Was the ball out, or was it just my imagination? 🤨"}, {"id": "7691740195418377502", "u": "khaby.lame", "n": "Khaby Lame", "t": "Just give me 5 more minutes 😭"}, {"id": "7689510970292489502", "u": "khaby.lame", "n": "Khaby Lame", "t": "Ye… I’m gonna mind my business"}, {"id": "7707741942771191054", "u": "mrbeast", "n": "MrBeast", "t": "Will the odds be in my favor?"}, {"id": "7707342481465036062", "u": "mrbeast", "n": "MrBeast", "t": "Go support Juan and check out JuanStopShop.com today! @Shopify"}, {"id": "7705603633437527327", "u": "mrbeast", "n": "MrBeast", "t": "Who will win 😳@Tareq"}, {"id": "7703595535009156383", "u": "mrbeast", "n": "MrBeast", "t": "Bro really juan that challenge"}, {"id": "7703204609497550110", "u": "mrbeast", "n": "MrBeast", "t": "@Caitlin Clark do i have a shot in the NBA?"}, {"id": "7665075736742530317", "u": "nasa", "n": "NASA", "t": "Something big just landed on TikTok."}, {"id": "7707774305056083213", "u": "nasa", "n": "NASA", "t": "From MAX POWER to Mars, it was a week to remember at NASA! 🇺🇸 MAX…"}, {"id": "7706264639297850637", "u": "nasa", "n": "NASA", "t": "This is what American ambition looks like. 🇺🇸🚀"}, {"id": "7705995616794561805", "u": "nasa", "n": "NASA", "t": "Team meatball or team worm? 🚀 NASA’s “meatball” logo debuted in…"}, {"id": "7705574810113314061", "u": "nasa", "n": "NASA", "t": "Special delivery: the Moon. 📦🌕 Building a Moon Base takes a steady…"}, {"id": "7683891628230315295", "u": "natgeo", "n": "National Geographic", "t": "Presented by @ROLEX. Welcome to Africa 🌍 Africa Earth's Wild Home…"}, {"id": "7708135854308379918", "u": "natgeo", "n": "National Geographic", "t": "There’s more than slime hiding in this tar pit! Unearth the woolly…"}, {"id": "7708103916789058830", "u": "natgeo", "n": "National Geographic", "t": "Presented by National Geographic Society in partnership with…"}, {"id": "7708075800054025486", "u": "natgeo", "n": "National Geographic", "t": "Presented by National Geographic Society in partnership with…"}, {"id": "7708033638755044621", "u": "natgeo", "n": "National Geographic", "t": "Puerto Rico's mountainous interior offers dense tropical greenery…"}, {"id": "7702956518437702942", "u": "nba", "n": "NBA", "t": "… wait for the cape drop 👀 WEMBY THE WITCHER 🎃 🍬"}, {"id": "7702677121671597342", "u": "nba", "n": "NBA", "t": "🏆 CAN YOU BELIEVE CHEF CURRY 👨‍🍳 😱🤯 🏆"}, {"id": "7699659604275334431", "u": "nba", "n": "NBA", "t": "Philly crowd was loving the LeBron jam 😮‍💨"}, {"id": "7708215044609248543", "u": "nba", "n": "NBA", "t": "What a talent to discover you have 👏🤣"}, {"id": "7708214665611873550", "u": "nba", "n": "NBA", "t": "Replying to @NBA Giannis literally hiked it to Klay 😭🔥"}, {"id": "7707504865601260814", "u": "nfl", "n": "NFL", "t": "never change, 😂😂"}, {"id": "7707499751666715918", "u": "nfl", "n": "NFL", "t": "got two feet down 😂"}, {"id": "7705900048537718029", "u": "nfl", "n": "NFL", "t": "right place, right time for 🔥"}, {"id": "7708148320107105550", "u": "nfl", "n": "NFL", "t": "one of the most iconic catches in history 🔥"}, {"id": "7708093836823743758", "u": "nfl", "n": "NFL", "t": "was moving different 😮‍💨"}, {"id": "7514320905909194030", "u": "duolingo", "n": "Duolingo", "t": "Rook-ies welcome!♟️ Chess lessons are here on iOS!"}, {"id": "7707704685519490335", "u": "duolingo", "n": "Duolingo", "t": "whole comment section mad 💀"}, {"id": "7707022192655060237", "u": "duolingo", "n": "Duolingo", "t": "the birthday girl is muy bonita"}, {"id": "7706649678514801951", "u": "duolingo", "n": "Duolingo", "t": "wow wasn’t expecting that ending"}, {"id": "7706609392841461005", "u": "duolingo", "n": "Duolingo", "t": "you're hooked on me i'm hooked on sakura mochi 🍡 🎨:@brerbo"}, {"id": "7708215737894178078", "u": "espn", "n": "ESPN", "t": "back where it all started 🤞"}, {"id": "7708214616370793759", "u": "espn", "n": "ESPN", "t": ""}, {"id": "7708211634065427743", "u": "espn", "n": "ESPN", "t": "(via tisonstayfit/IG)"}, {"id": "7708210584231202079", "u": "espn", "n": "ESPN", "t": ""}, {"id": "7708208505374723359", "u": "espn", "n": "ESPN", "t": ""}, {"id": "7689897804969430302", "u": "minecraft", "n": "Minecraft", "t": "Here's EVERYTHING you might have missed during 🎬"}, {"id": "7708151029807729950", "u": "minecraft", "n": "Minecraft", "t": "CATCH! 🥏 The throwing disc is Minecraft’s newest weapon coming…"}, {"id": "7707469353431731487", "u": "minecraft", "n": "Minecraft", "t": "A new threat is creeping & crawling into Minecraft Dungeons II.…"}, {"id": "7706638147639102751", "u": "minecraft", "n": "Minecraft", "t": "Claim the FREE Toying Around Add-On made with @Tubbo during…"}, {"id": "7706605128723254559", "u": "minecraft", "n": "Minecraft", "t": "What’s that? 👂 New Sound Effects Packs are coming to Minecraft!…"}, {"id": "7705112805971610893", "u": "spongebob", "n": "SpongeBob", "t": "The holiday season comes to Bikini Bottom in the all new hour-long…"}, {"id": "7705113331740216589", "u": "spongebob", "n": "SpongeBob", "t": "The holiday season comes to Bikini Bottom in the all new hour-long…"}, {"id": "7662550423303195918", "u": "spongebob", "n": "SpongeBob", "t": "How did they know a NEW Christmas special was on our wish list…"}, {"id": "7707808408405052685", "u": "spongebob", "n": "SpongeBob", "t": "we’re in the big leagues now with these big guys catch the Kids’…"}, {"id": "7707673669945855245", "u": "spongebob", "n": "SpongeBob", "t": "So let it be written, so let it be done."}, {"id": "7707466012572028191", "u": "mlb", "n": "MLB", "t": "Yordan Alvarez’s son was so excited to celebrate his dad he just…"}, {"id": "7704841275035454750", "u": "mlb", "n": "MLB", "t": "The reactions from both Shohei Ohtani and Francisco Alvarez 😂 You…"}, {"id": "7702232786211540238", "u": "mlb", "n": "MLB", "t": "He waited so long for this very moment to see his Brewers win the…"}, {"id": "7707761772907728142", "u": "mlb", "n": "MLB", "t": "Baseball fans have repeatedly told us they have two issues with…"}, {"id": "7707520553732541727", "u": "mlb", "n": "MLB", "t": "Yordan Alvarez is an absolute unit 💪 @Houston Astros"}, {"id": "7701703269873175822", "u": "therock", "n": "The Rock", "t": "Our world. New rules. One final game. Watch the new trailer for…"}, {"id": "7707447649431031053", "u": "therock", "n": "The Rock", "t": "Dwanta’s sleigh is in the shop this year so we’re going with PLAN…"}, {"id": "7707446795558767885", "u": "therock", "n": "The Rock", "t": "Wow you did the thing! 🚀🥇 THANK YOU for making @Papatui and award…"}, {"id": "7705492382397025549", "u": "therock", "n": "The Rock", "t": "Put your little head on my chest, @Kevin Hart 👶🏾❤️ Daddy's got…"}, {"id": "7704740922474368269", "u": "therock", "n": "The Rock", "t": "The art that lives and dies with us. An honor for @Papatui with…"}, {"id": "7706647638271151390", "u": "jimmyfallon", "n": "Jimmy Fallon", "t": "Thank you, Jamaica, for the sun, the blue water, the coffee, the…"}, {"id": "7705871414930230559", "u": "jimmyfallon", "n": "Jimmy Fallon", "t": "Grab your Cuccos and fly with me. 🐔✨ Back in Hyrule on Switch 2.…"}, {"id": "7704888742753881358", "u": "jimmyfallon", "n": "Jimmy Fallon", "t": "Here with @ashe 🎶"}, {"id": "7702499419081542942", "u": "jimmyfallon", "n": "Jimmy Fallon", "t": "’Tis the season."}, {"id": "7701115129206820127", "u": "jimmyfallon", "n": "Jimmy Fallon", "t": "Chip-or-treat! 🎃👻 New Xochitl Halloween colors are available now!"}, {"id": "7655004069190192398", "u": "zachking", "n": "Zach King", "t": "a message to all AI"}, {"id": "6768504823336815877", "u": "zachking", "n": "Zach King", "t": "They rejected my application to Hogwarts but I still found a way…"}, {"id": "7706928709504208142", "u": "zachking", "n": "Zach King", "t": "Cake or fake? 🍰 With Hailee Steinfeld from @Walt Disney Animation…"}, {"id": "7705455237988879629", "u": "zachking", "n": "Zach King", "t": "Both of these tricks have no Visual Effects in them. No editing.…"}, {"id": "7702834585830231310", "u": "zachking", "n": "Zach King", "t": "Can I do extreme yoga? 🧘"}, {"id": "7708126250111388942", "u": "brentrivera", "n": "Brent Rivera", "t": "They act like strangers lol"}, {"id": "7707189639521586446", "u": "brentrivera", "n": "Brent Rivera", "t": "Whatever you fit in the mini cart! @Monako🫧"}, {"id": "7705665264167292173", "u": "brentrivera", "n": "Brent Rivera", "t": "American vs Japanese part 2😂 @Monako🫧"}, {"id": "7704673201334308109", "u": "brentrivera", "n": "Brent Rivera", "t": "❤️ @Monako🫧"}, {"id": "7703751650330070286", "u": "brentrivera", "n": "Brent Rivera", "t": "13 hours flight for my love❤️ @Monako🫧"}, {"id": "7499577327450623278", "u": "dudeperfect", "n": "Dude Perfect", "t": "CRAZIEST IMPOSSIBLE SHOT YET 🤯🏒 @Zac Bell"}, {"id": "7491728228093152558", "u": "dudeperfect", "n": "Dude Perfect", "t": "NO WAY he actually made it 🤯 @Garrett Clark"}, {"id": "7462812252538817835", "u": "dudeperfect", "n": "Dude Perfect", "t": "bro was doing his routine 😭🙏🏻"}, {"id": "7708089834493054221", "u": "dudeperfect", "n": "Dude Perfect", "t": "Blindfolded Basketball 🤣"}, {"id": "7707794055186353421", "u": "dudeperfect", "n": "Dude Perfect", "t": "still don’t need a cart thanks @Best Buy"}, {"id": "7708134865685794061", "u": "wwe", "n": "WWE", "t": "dance break 🕺🕺"}, {"id": "7708111610014993694", "u": "wwe", "n": "WWE", "t": "who does he have in mind for team usa? 🤔"}, {"id": "7708072977241296159", "u": "wwe", "n": "WWE", "t": "is RUTHLESS 😮‍💨"}, {"id": "7707860512897273119", "u": "wwe", "n": "WWE", "t": "bro had to play dirty to get the w 🙄"}, {"id": "7707859254970977567", "u": "wwe", "n": "WWE", "t": "“I TOLD YOU HE’S PAST HIS PRIME” adding insult to injury tonight… 😒"}],
+
+  /* BlizzardMovies: free, legal full movies: official FilmRise / Popcornflix uploads, Creative Commons and public-domain films (all checked playable) */
   movies: [
+   {
+    "title": "A Christmas Karen",
+    "year": 2022,
+    "src": "yt",
+    "id": "6nJ8n3MIiZY",
+    "row": "New releases",
+    "len": "1h 37m",
+    "mins": 97,
+    "d": "A grumpy woman gets a magical holiday wake-up call."
+   },
+   {
+    "title": "Marvelous and the Black Hole",
+    "year": 2021,
+    "src": "yt",
+    "id": "3Eh7dVNKWNU",
+    "row": "New releases",
+    "len": "1h 21m",
+    "mins": 81,
+    "d": "A rebellious teen finds an unlikely mentor in a magician who teaches her tricks."
+   },
+   {
+    "title": "The Scrapper",
+    "year": 2021,
+    "src": "yt",
+    "id": "OJXp6kMcmvo",
+    "row": "New releases",
+    "len": "1h 26m",
+    "mins": 86,
+    "d": "A former fighter is pulled back into danger to protect someone he cares about."
+   },
+   {
+    "title": "The Coming",
+    "year": 2020,
+    "src": "yt",
+    "id": "zcvpZ1Kuta8",
+    "row": "New releases",
+    "len": "1h 32m",
+    "mins": 92,
+    "d": "A sci-fi action thriller about a mysterious threat arriving on Earth."
+   },
+   {
+    "title": "Operation Neighborhood Watch",
+    "year": 2015,
+    "src": "yt",
+    "id": "4z7iUWs-Ox4",
+    "row": "New releases",
+    "len": "1h 30m",
+    "mins": 90,
+    "d": "A group of neighbors team up to catch a thief in their quiet suburb."
+   },
+   {
+    "title": "Adventure Scouts",
+    "year": 2010,
+    "src": "yt",
+    "id": "g1Y0RxRNpHk",
+    "row": "Family & kids",
+    "len": "1h 24m",
+    "mins": 84,
+    "d": "A scout troop goes on a wild treasure hunt."
+   },
+   {
+    "title": "Raspberry Magic",
+    "year": 2010,
+    "src": "yt",
+    "id": "_z9Cb5yZboo",
+    "row": "Family & kids",
+    "len": "1h 22m",
+    "mins": 82,
+    "d": "A girl tries to save her family with a science-fair project."
+   },
+   {
+    "title": "Stone of Destiny",
+    "year": 2008,
+    "src": "yt",
+    "id": "RhnJ-TsMaWw",
+    "row": "Family & kids",
+    "len": "1h 36m",
+    "mins": 96,
+    "d": "College students plan a daring heist to bring home a famous stone."
+   },
+   {
+    "title": "Mee-Shee: The Water Giant",
+    "year": 2005,
+    "src": "yt",
+    "id": "jAYtNYu5pp4",
+    "row": "Family & kids",
+    "len": "1h 34m",
+    "mins": 94,
+    "d": "A boy discovers a friendly giant creature living in a Canadian lake."
+   },
+   {
+    "title": "Miracle Dogs",
+    "year": 2003,
+    "src": "yt",
+    "id": "hZf6pQbm028",
+    "row": "Family & kids",
+    "len": "1h 34m",
+    "mins": 94,
+    "d": "A boy and his dog help sick kids at a hospital."
+   },
+   {
+    "title": "Alice in Wonderland",
+    "year": 1999,
+    "src": "yt",
+    "id": "76aSjLj_Qqc",
+    "row": "Family & kids",
+    "len": "2h 13m",
+    "mins": 133,
+    "d": "Alice falls down the rabbit hole into a world of wonder."
+   },
+   {
+    "title": "Grizzly Falls",
+    "year": 1999,
+    "src": "yt",
+    "id": "FvSMfrIYnxk",
+    "row": "Family & kids",
+    "len": "1h 30m",
+    "mins": 90,
+    "d": "A boy is caught up in an adventure with a mother grizzly bear."
+   },
+   {
+    "title": "Invisible Dad",
+    "year": 1997,
+    "src": "yt",
+    "id": "F5WNUYarQzI",
+    "row": "Family & kids",
+    "len": "1h 30m",
+    "mins": 90,
+    "d": "A kid's dad accidentally turns invisible."
+   },
+   {
+    "title": "The Canterville Ghost",
+    "year": 1996,
+    "src": "yt",
+    "id": "oWMJSl_ARSA",
+    "row": "Family & kids",
+    "len": "1h 31m",
+    "mins": 91,
+    "d": "A family moves into a castle with a very old, very tired ghost."
+   },
+   {
+    "title": "Call of the Wild",
+    "year": 1993,
+    "src": "yt",
+    "id": "qDd3Wuliw3E",
+    "row": "Family & kids",
+    "len": "1h 37m",
+    "mins": 97,
+    "d": "A sled dog's adventures during the Klondike Gold Rush."
+   },
+   {
+    "title": "Halo 4: Forward Unto Dawn",
+    "year": 2012,
+    "src": "yt",
+    "id": "eXPFCTYqCag",
+    "row": "Action & sci-fi",
+    "len": "1h 31m",
+    "mins": 91,
+    "d": "Cadets at a military academy face an alien attack in this live-action Halo film."
+   },
+   {
+    "title": "Beyond",
+    "year": 2012,
+    "src": "yt",
+    "id": "-TYC01fN1d4",
+    "row": "Action & sci-fi",
+    "len": "1h 23m",
+    "mins": 83,
+    "d": "A couple fights to survive after a strange event changes the world."
+   },
+   {
+    "title": "Behemoth",
+    "year": 2011,
+    "src": "yt",
+    "id": "UTCQHKLleAc",
+    "row": "Action & sci-fi",
+    "len": "1h 30m",
+    "mins": 90,
+    "d": "A giant creature awakens beneath a mountain town."
+   },
+   {
+    "title": "Red Dirt Rising",
+    "year": 2010,
+    "src": "yt",
+    "id": "-arEWlUVkJo",
+    "row": "Action & sci-fi",
+    "len": "1h 33m",
+    "mins": 93,
+    "d": "A young driver chases his dream in the world of dirt-track racing."
+   },
    {
     "title": "Star Wreck: In the Pirkining",
     "year": 2005,
     "src": "ia",
     "id": "StarWreckInThePirkining",
-    "row": "Newest free movies",
+    "row": "Action & sci-fi",
     "len": "1h 44m",
     "mins": 104,
     "d": "A space-fleet captain gets stranded in the past and decides to conquer Earth. A fan-made sci-fi comedy epic."
+   },
+   {
+    "title": "20,000 Leagues Under the Sea",
+    "year": 1997,
+    "src": "yt",
+    "id": "vAnDh2U0_80",
+    "row": "Action & sci-fi",
+    "len": "1h 34m",
+    "mins": 94,
+    "d": "Captain Nemo and his amazing submarine, in color."
+   },
+   {
+    "title": "A Christmas Hero",
+    "year": 2020,
+    "src": "yt",
+    "id": "ixSUguTtviw",
+    "row": "Holiday movies",
+    "len": "1h 30m",
+    "mins": 90,
+    "d": "A holiday story about kindness and second chances."
+   },
+   {
+    "title": "The Santa Trap",
+    "year": 2002,
+    "src": "yt",
+    "id": "GJytAtSuEew",
+    "row": "Holiday movies",
+    "len": "1h 29m",
+    "mins": 89,
+    "d": "A girl sets a trap to prove Santa is real, and catches more than she expected."
+   },
+   {
+    "title": "The Boy Who Saved Christmas",
+    "year": 1998,
+    "src": "yt",
+    "id": "oPCVA7WUEyU",
+    "row": "Holiday movies",
+    "len": "1h 34m",
+    "mins": 94,
+    "d": "A boy sets out to rescue the holidays."
+   },
+   {
+    "title": "Secret Santa",
+    "year": null,
+    "src": "yt",
+    "id": "m6JDLim9Aus",
+    "row": "Holiday movies",
+    "len": "1h 26m",
+    "mins": 86,
+    "d": "A cozy holiday mix-up comedy."
+   },
+   {
+    "title": "A Birder's Guide to Everything",
+    "year": 2013,
+    "src": "yt",
+    "id": "bopJV_Xk_Ls",
+    "row": "Comedy & drama",
+    "len": "1h 26m",
+    "mins": 86,
+    "d": "A teen bird-watcher goes on a road trip to find a rare duck."
+   },
+   {
+    "title": "Northern Borders",
+    "year": 2013,
+    "src": "yt",
+    "id": "b5DaNJQBOKI",
+    "row": "Comedy & drama",
+    "len": "1h 49m",
+    "mins": 109,
+    "d": "A boy spends a life-changing summer with his grandparents in Vermont."
    },
    {
     "title": "Valkaama",
     "year": 2010,
     "src": "ia",
     "id": "valkaama",
-    "row": "Newest free movies",
+    "row": "Comedy & drama",
     "len": "1h 33m",
     "mins": 93,
     "d": "Two friends set off on a road trip to find a lake that may only exist in legend. A Creative Commons open movie."
@@ -92,197 +355,67 @@ window.BLIZ = {
     "year": 2008,
     "src": "ia",
     "id": "Sita_Sings_the_Blues",
-    "row": "Newest free movies",
+    "row": "Comedy & drama",
     "len": "1h 22m",
     "mins": 82,
     "d": "An animated retelling of the Ramayana set to 1920s jazz."
    },
    {
-    "title": "McLintock!",
-    "year": 1963,
-    "src": "ia",
-    "id": "mclintok_widescreen",
-    "row": "Family & adventure",
-    "len": "2h 7m",
-    "mins": 127,
-    "d": "A cattle baron's chaotic family reunion in the Old West, starring John Wayne."
-   },
-   {
-    "title": "Jungle Book",
-    "year": 1942,
-    "src": "ia",
-    "id": "JungleBook",
-    "row": "Family & adventure",
-    "len": "1h 45m",
-    "mins": 105,
-    "d": "Mowgli, raised by wolves, returns to the human village."
-   },
-   {
-    "title": "20,000 Leagues Under the Sea",
-    "year": 1916,
-    "src": "ia",
-    "id": "20000LeaguesUndertheSea",
-    "row": "Family & adventure",
-    "len": "1h 39m",
-    "mins": 99,
-    "d": "Captain Nemo and his submarine, the Nautilus."
-   },
-   {
-    "title": "Hercules Unchained",
-    "year": 1959,
-    "src": "ia",
-    "id": "HerculesUnchained",
-    "row": "Family & adventure",
+    "title": "The Long Walk Home",
+    "year": 1990,
+    "src": "yt",
+    "id": "OsuY1bDCMe8",
+    "row": "Comedy & drama",
     "len": "1h 36m",
     "mins": 96,
-    "d": "The mighty Hercules must stop a war between two brothers."
+    "d": "Two women's lives change during the Montgomery bus boycott."
    },
    {
-    "title": "Mr. Bug Goes to Town",
-    "year": 1941,
-    "src": "ia",
-    "id": "hoppity-goes-to-town-nta-reprint",
-    "row": "Family & adventure",
-    "len": "1h 18m",
-    "mins": 78,
-    "d": "An animated feature about a grasshopper trying to save his bug neighborhood."
-   },
-   {
-    "title": "Daniel Boone, Trail Blazer",
-    "year": 1956,
-    "src": "ia",
-    "id": "Daniel_Boone_-_Trail_Blazer",
-    "row": "Family & adventure",
-    "len": "1h 16m",
-    "mins": 76,
-    "d": "The frontier hero leads settlers through the wilderness to Kentucky."
-   },
-   {
-    "title": "Jack and the Beanstalk",
-    "year": 1952,
-    "src": "ia",
-    "id": "jackandthebeanstalk1952_202001",
-    "row": "Family & adventure",
-    "len": "1h 14m",
-    "mins": 74,
-    "d": "Abbott and Costello climb the beanstalk into a giant's castle."
-   },
-   {
-    "title": "Gulliver's Travels",
-    "year": 1939,
-    "src": "ia",
-    "id": "gullivers_travels1939",
-    "row": "Family & adventure",
-    "len": "1h 13m",
-    "mins": 73,
-    "d": "A shipwrecked sailor wakes up in the land of tiny people."
-   },
-   {
-    "title": "Meet John Doe",
-    "year": 1941,
-    "src": "ia",
-    "id": "meet_john_doe",
-    "row": "Comedy",
-    "len": "2h 3m",
-    "mins": 123,
-    "d": "A made-up letter turns an ordinary man into a national hero."
-   },
-   {
-    "title": "My Man Godfrey",
-    "year": 1936,
-    "src": "ia",
-    "id": "MyManGodfrey1936",
-    "row": "Comedy",
-    "len": "1h 35m",
-    "mins": 95,
-    "d": "A rich, wacky family hires a forgotten man as their butler."
-   },
-   {
-    "title": "Royal Wedding",
-    "year": 1951,
-    "src": "ia",
-    "id": "royalwedding1951film",
-    "row": "Comedy",
-    "len": "1h 33m",
-    "mins": 93,
-    "d": "A brother-and-sister dance team in London. Fred Astaire dances on the ceiling!"
-   },
-   {
-    "title": "His Girl Friday",
-    "year": 1940,
-    "src": "ia",
-    "id": "his_girl_friday",
-    "row": "Comedy",
-    "len": "1h 32m",
-    "mins": 92,
-    "d": "A fast-talking newspaper editor tries to win back his star reporter."
-   },
-   {
-    "title": "At War with the Army",
-    "year": 1950,
-    "src": "ia",
-    "id": "AtWarWithTheArmy",
-    "row": "Comedy",
-    "len": "1h 31m",
-    "mins": 91,
-    "d": "Martin and Lewis cause chaos at an army training camp."
-   },
-   {
-    "title": "Topper Returns",
-    "year": 1941,
-    "src": "ia",
-    "id": "Topper_Returns_41",
-    "row": "Comedy",
-    "len": "1h 28m",
-    "mins": 88,
-    "d": "A friendly ghost needs help solving her own mystery."
+    "title": "Country Remedy",
+    "year": null,
+    "src": "yt",
+    "id": "MJtHaJfDdKM",
+    "row": "Comedy & drama",
+    "len": "1h 42m",
+    "mins": 102,
+    "d": "A city doctor learns life lessons in a small country town."
    },
    {
     "title": "Santa Claus Conquers the Martians",
     "year": 1964,
     "src": "ia",
     "id": "SantaClausConquerstheMartians1964",
-    "row": "Comedy",
+    "row": "Old-school classics",
     "len": "1h 21m",
     "mins": 81,
     "d": "Martians kidnap Santa so their kids can have Christmas too."
    },
    {
-    "title": "Africa Screams",
-    "year": 1949,
+    "title": "McLintock!",
+    "year": 1963,
     "src": "ia",
-    "id": "AfricaScreams",
-    "row": "Comedy",
-    "len": "1h 19m",
-    "mins": 79,
-    "d": "Abbott and Costello bluff their way onto an African safari."
+    "id": "mclintok_widescreen",
+    "row": "Old-school classics",
+    "len": "2h 7m",
+    "mins": 127,
+    "d": "A cattle baron's chaotic family reunion in the Old West, starring John Wayne."
    },
    {
-    "title": "Charlie Chaplin Festival",
-    "year": 1938,
+    "title": "Carnival of Souls",
+    "year": 1962,
     "src": "ia",
-    "id": "charlie_chaplin_film_fest",
-    "row": "Comedy",
-    "len": "1h 17m",
-    "mins": 77,
-    "d": "Four classic Chaplin comedy shorts in one show."
-   },
-   {
-    "title": "Teenagers from Outer Space",
-    "year": 1959,
-    "src": "ia",
-    "id": "teenagers_from_outerspace",
-    "row": "Sci-fi & space",
-    "len": "1h 25m",
-    "mins": 85,
-    "d": "A young alien rebels against his people's plan for Earth."
+    "id": "CarnivalofSouls",
+    "row": "Old-school classics",
+    "len": "1h 23m",
+    "mins": 83,
+    "d": "After an accident, a church organist is drawn to an abandoned carnival."
    },
    {
     "title": "The Phantom Planet",
     "year": 1961,
     "src": "ia",
     "id": "Phantom_Planet",
-    "row": "Sci-fi & space",
+    "row": "Old-school classics",
     "len": "1h 22m",
     "mins": 82,
     "d": "An astronaut shrinks down and lands on a tiny wandering asteroid."
@@ -292,150 +425,180 @@ window.BLIZ = {
     "year": 1960,
     "src": "ia",
     "id": "FirstSpaceshipOnVenusMPEG",
-    "row": "Sci-fi & space",
+    "row": "Old-school classics",
     "len": "1h 19m",
     "mins": 79,
     "d": "An international crew flies to Venus after finding a mysterious message."
-   },
-   {
-    "title": "The Lost World",
-    "year": 1925,
-    "src": "ia",
-    "id": "lost_world",
-    "row": "Sci-fi & space",
-    "len": "1h 8m",
-    "mins": 68,
-    "d": "Explorers find a plateau where dinosaurs still live."
-   },
-   {
-    "title": "A Trip to the Moon",
-    "year": 1902,
-    "src": "ia",
-    "id": "ATripToTheMoon1902",
-    "row": "Sci-fi & space",
-    "len": "16m",
-    "mins": 16,
-    "d": "The first sci-fi movie ever: astronomers fly a rocket to the moon."
-   },
-   {
-    "title": "The Phantom of the Opera",
-    "year": 1925,
-    "src": "ia",
-    "id": "ThePhantomoftheOpera",
-    "row": "Spooky night",
-    "len": "1h 46m",
-    "mins": 106,
-    "d": "A masked figure haunts the Paris Opera House."
-   },
-   {
-    "title": "Nosferatu",
-    "year": 1922,
-    "src": "ia",
-    "id": "Nosferatu1922",
-    "row": "Spooky night",
-    "len": "1h 32m",
-    "mins": 92,
-    "d": "The classic silent vampire film."
-   },
-   {
-    "title": "Carnival of Souls",
-    "year": 1962,
-    "src": "ia",
-    "id": "CarnivalofSouls",
-    "row": "Spooky night",
-    "len": "1h 23m",
-    "mins": 83,
-    "d": "After an accident, a church organist is drawn to an abandoned carnival."
-   },
-   {
-    "title": "House on Haunted Hill",
-    "year": 1959,
-    "src": "ia",
-    "id": "house_on_haunted_hill_ipod",
-    "row": "Spooky night",
-    "len": "1h 15m",
-    "mins": 75,
-    "d": "Five guests are paid to spend a night in a haunted house."
    },
    {
     "title": "The Little Shop of Horrors",
     "year": 1960,
     "src": "ia",
     "id": "TheLittleShopOfHorrors1960",
-    "row": "Spooky night",
+    "row": "Old-school classics",
     "len": "1h 13m",
     "mins": 73,
     "d": "A flower shop worker grows a plant that is always hungry."
    },
    {
-    "title": "The Cabinet of Dr. Caligari",
-    "year": 1920,
+    "title": "Hercules Unchained",
+    "year": 1959,
     "src": "ia",
-    "id": "DasKabinettdesDoktorCaligariTheCabinetofDrCaligari",
-    "row": "Spooky night",
-    "len": "51m",
-    "mins": 51,
-    "d": "A strange doctor and his sleepwalker."
+    "id": "HerculesUnchained",
+    "row": "Old-school classics",
+    "len": "1h 36m",
+    "mins": 96,
+    "d": "The mighty Hercules must stop a war between two brothers."
    },
    {
-    "title": "The General",
-    "year": 1926,
+    "title": "Teenagers from Outer Space",
+    "year": 1959,
     "src": "ia",
-    "id": "TheGeneral_201312",
-    "row": "Golden-age classics",
+    "id": "teenagers_from_outerspace",
+    "row": "Old-school classics",
+    "len": "1h 25m",
+    "mins": 85,
+    "d": "A young alien rebels against his people's plan for Earth."
+   },
+   {
+    "title": "House on Haunted Hill",
+    "year": 1959,
+    "src": "ia",
+    "id": "house_on_haunted_hill_ipod",
+    "row": "Old-school classics",
+    "len": "1h 15m",
+    "mins": 75,
+    "d": "Five guests are paid to spend a night in a haunted house."
+   },
+   {
+    "title": "Daniel Boone, Trail Blazer",
+    "year": 1956,
+    "src": "ia",
+    "id": "Daniel_Boone_-_Trail_Blazer",
+    "row": "Old-school classics",
+    "len": "1h 16m",
+    "mins": 76,
+    "d": "The frontier hero leads settlers through the wilderness to Kentucky."
+   },
+   {
+    "title": "Jack and the Beanstalk",
+    "year": 1952,
+    "src": "ia",
+    "id": "jackandthebeanstalk1952_202001",
+    "row": "Old-school classics",
+    "len": "1h 14m",
+    "mins": 74,
+    "d": "Abbott and Costello climb the beanstalk into a giant's castle."
+   },
+   {
+    "title": "Royal Wedding",
+    "year": 1951,
+    "src": "ia",
+    "id": "royalwedding1951film",
+    "row": "Old-school classics",
+    "len": "1h 33m",
+    "mins": 93,
+    "d": "A brother-and-sister dance team in London. Fred Astaire dances on the ceiling!"
+   },
+   {
+    "title": "At War with the Army",
+    "year": 1950,
+    "src": "ia",
+    "id": "AtWarWithTheArmy",
+    "row": "Old-school classics",
+    "len": "1h 31m",
+    "mins": 91,
+    "d": "Martin and Lewis cause chaos at an army training camp."
+   },
+   {
+    "title": "Africa Screams",
+    "year": 1949,
+    "src": "ia",
+    "id": "AfricaScreams",
+    "row": "Old-school classics",
     "len": "1h 19m",
     "mins": 79,
-    "d": "Buster Keaton chases a stolen train in one of the greatest action comedies ever."
+    "d": "Abbott and Costello bluff their way onto an African safari."
    },
    {
-    "title": "Sherlock Jr.",
-    "year": 1924,
+    "title": "Jungle Book",
+    "year": 1942,
     "src": "ia",
-    "id": "MyMovie_20190318",
-    "row": "Golden-age classics",
-    "len": "44m",
-    "mins": 44,
-    "d": "A movie projectionist dreams himself into the film he's showing."
+    "id": "JungleBook",
+    "row": "Old-school classics",
+    "len": "1h 45m",
+    "mins": 105,
+    "d": "Mowgli, raised by wolves, returns to the human village."
    },
    {
-    "title": "Big Buck Bunny",
-    "year": 2008,
-    "src": "yt",
-    "id": "aqz-KE-bpKQ",
-    "row": "Animated shorts",
-    "len": "10m",
-    "mins": 10,
-    "d": "A giant, gentle rabbit gets his revenge on three bullying rodents."
+    "title": "Mr. Bug Goes to Town",
+    "year": 1941,
+    "src": "ia",
+    "id": "hoppity-goes-to-town-nta-reprint",
+    "row": "Old-school classics",
+    "len": "1h 18m",
+    "mins": 78,
+    "d": "An animated feature about a grasshopper trying to save his bug neighborhood."
    },
    {
-    "title": "Sintel",
-    "year": 2010,
-    "src": "yt",
-    "id": "eRsGyueVLvQ",
-    "row": "Animated shorts",
-    "len": "15m",
-    "mins": 15,
-    "d": "A lonely girl searches the world for the baby dragon she raised."
+    "title": "Meet John Doe",
+    "year": 1941,
+    "src": "ia",
+    "id": "meet_john_doe",
+    "row": "Old-school classics",
+    "len": "2h 3m",
+    "mins": 123,
+    "d": "A made-up letter turns an ordinary man into a national hero."
    },
    {
-    "title": "Tears of Steel",
-    "year": 2012,
-    "src": "yt",
-    "id": "R6MlUcmOul8",
-    "row": "Animated shorts",
-    "len": "12m",
-    "mins": 12,
-    "d": "Warriors and scientists try to save the world from robots."
+    "title": "Topper Returns",
+    "year": 1941,
+    "src": "ia",
+    "id": "Topper_Returns_41",
+    "row": "Old-school classics",
+    "len": "1h 28m",
+    "mins": 88,
+    "d": "A friendly ghost needs help solving her own mystery."
    },
    {
-    "title": "Cosmos Laundromat",
-    "year": 2015,
-    "src": "yt",
-    "id": "Y-rmzh0PI3c",
-    "row": "Animated shorts",
-    "len": "12m",
-    "mins": 12,
-    "d": "A sheep gets a chance to live a thousand different lives."
+    "title": "His Girl Friday",
+    "year": 1940,
+    "src": "ia",
+    "id": "his_girl_friday",
+    "row": "Old-school classics",
+    "len": "1h 32m",
+    "mins": 92,
+    "d": "A fast-talking newspaper editor tries to win back his star reporter."
+   },
+   {
+    "title": "Gulliver's Travels",
+    "year": 1939,
+    "src": "ia",
+    "id": "gullivers_travels1939",
+    "row": "Old-school classics",
+    "len": "1h 13m",
+    "mins": 73,
+    "d": "A shipwrecked sailor wakes up in the land of tiny people."
+   },
+   {
+    "title": "Charlie Chaplin Festival",
+    "year": 1938,
+    "src": "ia",
+    "id": "charlie_chaplin_film_fest",
+    "row": "Old-school classics",
+    "len": "1h 17m",
+    "mins": 77,
+    "d": "Four classic Chaplin comedy shorts in one show."
+   },
+   {
+    "title": "My Man Godfrey",
+    "year": 1936,
+    "src": "ia",
+    "id": "MyManGodfrey1936",
+    "row": "Old-school classics",
+    "len": "1h 35m",
+    "mins": 95,
+    "d": "A rich, wacky family hires a forgotten man as their butler."
    },
    {
     "title": "Sprite Fright",
@@ -456,6 +619,46 @@ window.BLIZ = {
     "len": "8m",
     "mins": 8,
     "d": "A shepherd girl and her dog face ancient spirits to bring back spring."
+   },
+   {
+    "title": "Cosmos Laundromat",
+    "year": 2015,
+    "src": "yt",
+    "id": "Y-rmzh0PI3c",
+    "row": "Animated shorts",
+    "len": "12m",
+    "mins": 12,
+    "d": "A sheep gets a chance to live a thousand different lives."
+   },
+   {
+    "title": "Tears of Steel",
+    "year": 2012,
+    "src": "yt",
+    "id": "R6MlUcmOul8",
+    "row": "Animated shorts",
+    "len": "12m",
+    "mins": 12,
+    "d": "Warriors and scientists try to save the world from robots."
+   },
+   {
+    "title": "Sintel",
+    "year": 2010,
+    "src": "yt",
+    "id": "eRsGyueVLvQ",
+    "row": "Animated shorts",
+    "len": "15m",
+    "mins": 15,
+    "d": "A lonely girl searches the world for the baby dragon she raised."
+   },
+   {
+    "title": "Big Buck Bunny",
+    "year": 2008,
+    "src": "yt",
+    "id": "aqz-KE-bpKQ",
+    "row": "Animated shorts",
+    "len": "10m",
+    "mins": 10,
+    "d": "A giant, gentle rabbit gets his revenge on three bullying rodents."
    },
    {
     "title": "Elephants Dream",

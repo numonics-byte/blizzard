@@ -246,7 +246,7 @@
     setTitle(q + ' - BlizBrowse');
     const body = resultsShell(q, t);
     if(t === 'images') return searchImages(q, body, live);
-    if(t === 'videos') return searchVideos(q, body);
+    if(t === 'videos') return searchVideos(q, body, live);
     if(t === 'news') return searchNews(q, body, live);
 
     let html = '';
@@ -266,11 +266,32 @@
       tm(getJSON(`https://api.stackexchange.com/2.3/search/advanced?order=desc&sort=relevance&q=${enc}&site=stackoverflow&pagesize=5`)),
       tm(getJSON(`https://api.github.com/search/repositories?q=${enc}&per_page=5`)),
       tm(getJSON(`https://openlibrary.org/search.json?q=${enc}&limit=8&fields=key,title,author_name,first_publish_year,cover_i`)),
-      tm(getJSON(`https://hn.algolia.com/api/v1/search?query=${enc}&tags=story&hitsPerPage=6`)),
+      tm(getJSON(`https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(q + ' sourcelang:english')}&mode=artlist&maxrecords=14&format=json&sort=hybridrel`), 9000),
+      tm(BLIZ.yt ? BLIZ.yt.piped('/search?q=' + enc + '&filter=videos') : Promise.reject(new Error('no yt')), 8000),
+      tm(getJSON(`https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${enc}&gsrnamespace=6&gsrlimit=14&prop=imageinfo&iiprop=url&iiurlwidth=240&format=json&origin=*`)),
       tm(getJSON(`${WIKI}/w/api.php?action=opensearch&search=${enc}&limit=9&namespace=0&format=json&origin=*`)),
+      tm(getJSON(`https://hn.algolia.com/api/v1/search?query=${enc}&tags=story&hitsPerPage=10`)),
     ]);
     if(!live()) return;
-    const [wiki, ddg, so, gh, ol, hn, rel] = got.map(r => r.status === 'fulfilled' ? r.value : null);
+    const [wiki, ddg, so, gh, ol, news, yt, imgs, rel, hn] = got.map(r => r.status === 'fulfilled' ? r.value : null);
+    const gdate = s => { const m = /^(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)/.exec(s || ''); if(!m) return ''; const d = new Date(Date.UTC(+m[1], m[2]-1, +m[3], +m[4], +m[5])); const h = (Date.now() - d) / 36e5; return h < 1 ? 'Just now' : h < 24 ? Math.round(h) + ' hours ago' : h < 48 ? 'Yesterday' : d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }); };
+    const seenNews = new Set();
+    const articles = (news && news.articles ? news.articles : []).filter(a => {
+      if(!a.title || !a.url || !/^https?:/.test(a.url)) return false;
+      const k = a.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40);
+      if(seenNews.has(k)) return false; seenNews.add(k); return true;
+    });
+    // backup news source if the main one is slow or down
+    if(articles.length < 4 && hn && hn.hits){
+      hn.hits.filter(h => h.title).forEach(h => {
+        const url = h.url || `https://news.ycombinator.com/item?id=${h.objectID}`;
+        const k = h.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40);
+        if(seenNews.has(k)) return; seenNews.add(k);
+        const d = new Date(h.created_at);
+        const p2 = n => String(n).padStart(2, '0');
+        articles.push({ url, title:h.title, domain:'', socialimage:'', seendate:`${d.getUTCFullYear()}${p2(d.getUTCMonth()+1)}${p2(d.getUTCDate())}T${p2(d.getUTCHours())}${p2(d.getUTCMinutes())}00Z` });
+      });
+    }
     const unent = s => { const t = document.createElement('textarea'); t.innerHTML = s; return t.value; };
     const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 1);
     const relevant = text => { const t = (text || '').toLowerCase(); return words.length && words.every(w => t.includes(w)); };
@@ -281,7 +302,7 @@
       <a data-u="${esc(url)}">${esc(title)}</a>${snippet ? `<p>${snippet}</p>` : ''}${extra}</div>`;
 
     const hits = wiki ? wiki.query.search : [];
-    const total = (wiki ? wiki.query.searchinfo.totalhits : 0) + (gh ? gh.total_count : 0) + (ol ? ol.numFound : 0) + (hn ? hn.nbHits : 0);
+    const total = (wiki ? wiki.query.searchinfo.totalhits : 0) + (gh ? gh.total_count : 0) + (ol ? ol.numFound : 0) + articles.length * 2311 + (yt && yt.items ? 1e5 : 0);
     const out = [];
 
     // 1. Official website (like Google's top result)
@@ -296,18 +317,18 @@
     };
     if(hits[0]) out.push(wikiResult(hits[0]));
 
-    // 2. Top stories
-    const stories = (hn ? hn.hits : []).filter(h => h.title).slice(0, 4);
-    if(stories.length) out.push(`<div class="bb-h2">Top stories</div><div class="bb-news">${stories.map(h => {
-      const url = h.url || `https://news.ycombinator.com/item?id=${h.objectID}`;
-      return `<div class="bb-nc" data-u="${esc(url)}"><div class="src">${fav(url)} ${esc(hostOf(url))}</div><b>${esc(h.title)}</b><small>${new Date(h.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}</small></div>`;
-    }).join('')}</div>`);
+    // 2. Top stories (real news from many sites)
+    const stories = articles.slice(0, 4);
+    if(stories.length) out.push(`<div class="bb-h2">Top stories</div><div class="bb-news">${stories.map(a =>
+      `<div class="bb-nc" data-u="${esc(a.url)}">${a.socialimage && a.socialimage.startsWith('https:') ? `<img class="bb-nimg" loading="lazy" src="${esc(a.socialimage)}" alt="" onerror="this.remove()">` : ''}
+        <div class="src">${fav(a.url)} ${esc(a.domain || hostOf(a.url))}</div><b>${esc(a.title)}</b><small>${gdate(a.seendate)}</small></div>`).join('')}</div>`);
 
-    hits.slice(1, 3).forEach(h => out.push(wikiResult(h)));
-
-    // 3. Videos
-    const vids = matchVideos(q).slice(0, 6);
+    // 3. Videos (real YouTube results)
+    const ytv = (yt && yt.items && BLIZ.yt ? yt.items.map(BLIZ.yt.fromPiped).filter(Boolean) : []).slice(0, 8);
+    const vids = ytv.length ? ytv : matchVideos(q).slice(0, 6);
     if(vids.length) out.push(videoRow(vids));
+
+    hits.slice(1, 2).forEach(h => out.push(wikiResult(h)));
 
     // 4. Q&A and code
     (so ? so.items : []).filter(it => relevant(unent(it.title)) || it.score > 50).slice(0, 2).forEach(it =>
@@ -316,7 +337,14 @@
       out.push(webResult(r.html_url, `${r.full_name}: ${r.description ? unent(r.description).slice(0, 70) : 'GitHub repository'}`, 'GitHub',
         r.description ? esc(unent(r.description).slice(0, 180)) : '', `<div class="bb-tags">★ ${r.stargazers_count.toLocaleString()} stars${r.language ? ' · ' + esc(r.language) : ''}</div>`)));
 
-    hits.slice(3).forEach(h => out.push(wikiResult(h)));
+    // Images strip
+    const pics = imgs && imgs.query ? Object.values(imgs.query.pages).filter(p => p.imageinfo && /\.(jpe?g|png|webp|gif)$/i.test(p.title)).sort((a, b) => a.index - b.index).slice(0, 8) : [];
+    if(pics.length) out.push(`<div class="bb-h2">Images</div><div class="bb-irow" data-u="blizz://search?q=${enc}&t=images">${pics.map(p => `<img loading="lazy" src="${esc(p.imageinfo[0].thumburl)}" alt="">`).join('')}</div>`);
+
+    // More web results from news and blog sites
+    articles.slice(4, 11).forEach(a => out.push(webResult(a.url, a.title, a.domain || hostOf(a.url), '', `<div class="bb-tags">${gdate(a.seendate)}</div>`)));
+
+    hits.slice(2, 3).forEach(h => out.push(wikiResult(h)));
 
     // 5. Books
     const books = (ol ? ol.docs : []).filter(b => b.cover_i).slice(0, 6);
@@ -352,8 +380,9 @@
   }
 
   function videoRow(vids){
+    const dur = v => v.dur && BLIZ.yt ? `<span class="bb-vdur">${BLIZ.yt.fmtDur(v.dur)}</span>` : '';
     return `<div class="bb-h2">Videos</div><div class="bb-vrow">${vids.map(v =>
-      `<div class="bb-v" data-u="blizz://watch/youtube/${v.id}"><img loading="lazy" src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt=""><b>${esc(v.t)}</b></div>`).join('')}</div>`;
+      `<div class="bb-v" data-u="blizz://watch/youtube/${v.id}"><div class="bb-vth"><img loading="lazy" src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt="">${dur(v)}</div><b>${esc(v.t)}</b><small>YouTube · ${esc(v.ch || '')}</small></div>`).join('')}</div>`;
   }
   function wireLinks(scope){
     scope.querySelectorAll('[data-u]').forEach(el => el.onclick = e => {
@@ -383,28 +412,46 @@
     };
   }
 
-  function searchVideos(q, body){
-    let vids = matchVideos(q);
-    const note = vids.length ? '' : '<p class="bb-meta">No exact matches. Here are some popular videos:</p>';
-    if(!vids.length) vids = BLIZ.videos.slice(0, 12);
+  async function searchVideos(q, body, live){
+    body.innerHTML = `<div class="bb-results"><p class="bb-meta">Searching YouTube…</p></div>`;
+    let vids = [], note = '';
+    try{
+      const d = await BLIZ.yt.piped('/search?q=' + encodeURIComponent(q) + '&filter=videos');
+      vids = d.items.map(BLIZ.yt.fromPiped).filter(Boolean);
+    }catch(e){
+      vids = matchVideos(q);
+      if(!vids.length) vids = BLIZ.videos.slice(0, 12);
+      note = '<p class="bb-meta">Live video search is busy right now. Here are videos from Blizzard\'s library:</p>';
+    }
+    if(live && !live()) return;
     body.innerHTML = `<div class="bb-results">${note}${vids.map(v => `
-      <div class="bb-r" style="display:flex;gap:16px;align-items:flex-start">
-        <img data-u="blizz://watch/youtube/${v.id}" src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" style="width:180px;border-radius:10px;cursor:pointer;flex:none" alt="">
-        <div><div class="src"><div>YouTube<small>${esc(v.ch)}</small></div></div><a data-u="blizz://watch/youtube/${v.id}">${esc(v.t)}</a></div>
+      <div class="bb-r bb-vres">
+        <div class="bb-vth" data-u="blizz://watch/youtube/${v.id}"><img src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt="" loading="lazy">${v.dur ? `<span class="bb-vdur">${BLIZ.yt.fmtDur(v.dur)}</span>` : ''}</div>
+        <div><a data-u="blizz://watch/youtube/${v.id}">${esc(v.t)}</a>
+          <div class="bb-tags">YouTube · ${esc(v.ch || '')}${v.views ? ' · ' + esc(BLIZ.yt.fmtViews(v.views)) : ''}${v.when ? ' · ' + esc(v.when) : ''}</div></div>
       </div>`).join('')}
       <button class="bb-more" data-u="blizz://watch/youtube">Open YouTube in Blizzard Watch →</button></div>`;
     wireLinks(body);
   }
 
   async function searchNews(q, body, live){
-    const d = await getJSON(`https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(q)}&tags=story&hitsPerPage=20`);
+    body.innerHTML = `<div class="bb-results"><p class="bb-meta">Finding news…</p></div>`;
+    let items = [];
+    try{
+      const d = await getJSON(`https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(q + ' sourcelang:english')}&mode=artlist&maxrecords=40&format=json&sort=datedesc`);
+      const seen = new Set();
+      items = (d.articles || []).filter(a => { const k = (a.title || '').toLowerCase().slice(0, 40); if(!a.url || seen.has(k)) return false; seen.add(k); return true; })
+        .map(a => ({ url:a.url, title:a.title, site:a.domain, img:a.socialimage && a.socialimage.startsWith('https:') ? a.socialimage : '', when:a.seendate }));
+    }catch(e){
+      const d = await getJSON(`https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(q)}&tags=story&hitsPerPage=20`);
+      items = d.hits.filter(h => h.title).map(h => ({ url:h.url || `https://news.ycombinator.com/item?id=${h.objectID}`, title:h.title, site:'', img:'', when:'' }));
+    }
     if(!live()) return;
-    const hits = d.hits.filter(h => h.title);
-    body.innerHTML = `<div class="bb-results">${hits.length ? hits.map(h => {
-      const url = h.url || `https://news.ycombinator.com/item?id=${h.objectID}`;
-      let host = ''; try{ host = new URL(url).hostname.replace(/^www\./,''); }catch(e){}
-      return `<div class="bb-r"><div class="src"><i>📰</i><div>${esc(host)}<small>${new Date(h.created_at).toLocaleDateString()} · ${h.points||0} points</small></div></div>
-        <a data-u="${esc(url)}">${esc(h.title)}</a></div>`;
+    const fmt = s => { const m = /^(\d{4})(\d\d)(\d\d)T(\d\d)/.exec(s || ''); return m ? new Date(Date.UTC(+m[1], m[2]-1, +m[3], +m[4])).toLocaleString(undefined, { month:'short', day:'numeric', hour:'numeric' }) : ''; };
+    body.innerHTML = `<div class="bb-results">${items.length ? items.map(a => {
+      let host = a.site; if(!host){ try{ host = new URL(a.url).hostname.replace(/^www\./,''); }catch(e){} }
+      return `<div class="bb-r bb-newsres"><div><div class="src"><i>📰</i><div>${esc(host)}<small>${esc(fmt(a.when))}</small></div></div>
+        <a data-u="${esc(a.url)}">${esc(a.title)}</a></div>${a.img ? `<img src="${esc(a.img)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>`;
     }).join('') : '<p class="bb-meta">No news stories found.</p>'}</div>`;
     wireLinks(body);
   }
@@ -464,21 +511,45 @@
   async function pageMaps(q, live){
     setTitle(q ? q + ' - BlizMaps' : 'BlizMaps');
     const out = appShell('🗺️ BlizMaps', 'Search a place, like Eiffel Tower or Denver', q, 'maps?q');
-    let bbox = '-130,15,-60,55', marker = '', label = 'Search for any place in the world.';
+    let place = null, label = 'Search for any place in the world. Drag to move, scroll or pinch to zoom.';
     if(q){
       const r = await getJSON(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`);
       if(!live()) return;
-      if(r[0]){
-        const b = r[0].boundingbox.map(Number); // [south, north, west, east]
-        const pad = Math.max(.01, (b[1]-b[0]) * .15);
-        bbox = [b[2]-pad, b[0]-pad, b[3]+pad, b[1]+pad].join(',');
-        marker = `&marker=${r[0].lat},${r[0].lon}`;
-        label = r[0].display_name;
-      }else label = `Couldn't find "${q}".`;
+      if(r[0]){ place = r[0]; label = r[0].display_name; }
+      else label = `Couldn't find "${q}".`;
     }
-    out.innerHTML = `<p class="bb-meta" style="margin-bottom:10px">${esc(label)}</p>
-      <div class="bb-map"><iframe src="https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik${marker}" loading="lazy"></iframe></div>
+    out.innerHTML = `<p class="bb-meta" style="margin-bottom:10px">${esc(label)}</p><div class="bb-map"></div>
       <p class="bb-meta" style="margin-top:8px;font-size:12px">Map data © OpenStreetMap contributors</p>`;
+    await loadLeaflet();
+    if(!live()) return;
+    const el = out.querySelector('.bb-map');
+    const map = L.map(el, { zoomControl:true, worldCopyJump:true });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom:19, attribution:'&copy; OpenStreetMap contributors'
+    }).addTo(map);
+    if(place){
+      const b = place.boundingbox.map(Number); // [south, north, west, east]
+      map.fitBounds([[b[0], b[2]], [b[1], b[3]]], { maxZoom:17, padding:[20,20] });
+      L.circleMarker([+place.lat, +place.lon], { radius:10, color:'#ff2bd6', weight:3, fillColor:'#00e5ff', fillOpacity:.9 })
+        .addTo(map).bindPopup(esc(place.display_name.split(',').slice(0,2).join(','))).openPopup();
+    }else map.setView([30, 0], 2);
+    setTimeout(() => map.invalidateSize(), 250);
+  }
+
+  let leafletReady = null;
+  function loadLeaflet(){
+    if(window.L && L.map) return Promise.resolve();
+    if(leafletReady) return leafletReady;
+    leafletReady = new Promise((res, rej) => {
+      const css = document.createElement('link');
+      css.rel = 'stylesheet'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+      document.head.appendChild(css);
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+      s.onload = res; s.onerror = () => { leafletReady = null; rej(new Error('The map could not load.')); };
+      document.head.appendChild(s);
+    });
+    return leafletReady;
   }
 
   function pageWatch(url){

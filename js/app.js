@@ -150,3 +150,30 @@ document.addEventListener('bliz:view', function(e){
   if(!window.BlizMusic) return;
   if(e.detail === 'watch') BlizMusic.stop(); else BlizMusic.start();
 });
+
+/* Lightweight neon cursor: two small elements moved with GPU transforms only (no canvas, no repaints) */
+(function(){
+  if(!matchMedia('(pointer:fine)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const dot = document.createElement('div'), ring = document.createElement('div');
+  dot.className = 'bz-dot'; ring.className = 'bz-ring';
+  document.body.append(ring, dot);
+  let x = -100, y = -100, rx = -100, ry = -100, shown = false, raf = 0;
+  const HOT = 'a,button,input,select,textarea,label,[data-go],[data-u],[data-id],[data-play],.gcard,.opt,.chip,.bb-tab,.bm-card,.yt-card,.tt-acc';
+  function frame(){
+    rx += (x - rx) * .22; ry += (y - ry) * .22;
+    dot.style.transform = `translate3d(${x}px,${y}px,0)`;
+    ring.style.transform = `translate3d(${rx}px,${ry}px,0)`;
+    raf = (Math.abs(x - rx) > .3 || Math.abs(y - ry) > .3) ? requestAnimationFrame(frame) : 0;
+  }
+  addEventListener('pointermove', e => {
+    if(e.pointerType !== 'mouse') return;
+    x = e.clientX; y = e.clientY;
+    if(!shown){ shown = true; rx = x; ry = y; document.documentElement.classList.add('bz-on'); }
+    if(!raf) raf = requestAnimationFrame(frame);
+  }, { passive:true });
+  document.addEventListener('pointerover', e => { ring.classList.toggle('hot', !!(e.target.closest && e.target.closest(HOT))); }, { passive:true });
+  addEventListener('pointerdown', () => { ring.classList.add('press'); }, { passive:true });
+  addEventListener('pointerup', () => { ring.classList.remove('press'); }, { passive:true });
+  document.addEventListener('mouseleave', () => document.documentElement.classList.remove('bz-on'));
+  document.addEventListener('mouseenter', () => { if(shown) document.documentElement.classList.add('bz-on'); });
+})();

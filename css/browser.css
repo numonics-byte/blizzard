@@ -273,3 +273,26 @@
 .bb-article table *{background-color:transparent!important;color:inherit!important}
 .bb-article .mwe-math-element img{filter:invert(1)}
 .bb-app h1{color:#fff}
+.bb-map .leaflet-popup-content{color:#202124;font-family:Arial,sans-serif}
+.bb-map{background:#dfe6ee}
+.bb-map{position:relative;height:60vh;min-height:360px;border-radius:14px;overflow:hidden;border:1px solid var(--br,rgba(127,219,255,.2))}
+.bb-noframe h2,.bb-blocked h2{color:#fff;margin:6px 0 8px;font-weight:600}
+.bb-noframe p,.bb-blocked p{max-width:520px;margin:0 auto;line-height:1.6}
+.bb-nf-btns{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:20px}
+.bb-nf-btns .bb-more{margin:0;min-width:280px}
+.bb-app{max-width:900px}
+/* richer results */
+.bb-nc .bb-nimg{width:100%;height:110px;object-fit:cover;border-radius:8px;margin-bottom:4px;background:var(--bq,#121a33)}
+.bb-irow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:26px;cursor:pointer;border-radius:12px;overflow:hidden}
+.bb-irow img{width:100%;height:110px;object-fit:cover;display:block;background:var(--bq,#121a33);transition:transform .2s}
+.bb-irow:hover img{transform:scale(1.03)}
+.bb-vth{position:relative;flex:none;cursor:pointer}
+.bb-vth img{display:block}
+.bb-vdur{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.8);color:#fff;font-size:11.5px;font-weight:600;padding:2px 5px;border-radius:4px}
+.bb-v small{display:block;color:var(--bm,#70757a);font-size:12px;margin-top:3px}
+.bb-vres{display:flex;gap:16px;align-items:flex-start}
+.bb-vres .bb-vth img{width:220px;aspect-ratio:16/9;object-fit:cover;border-radius:10px}
+.bb-newsres{display:flex;gap:16px;align-items:flex-start;justify-content:space-between}
+.bb-newsres img{width:120px;height:84px;object-fit:cover;border-radius:10px;flex:none}
+@media (max-width:760px){.bb-irow{grid-template-columns:repeat(2,minmax(0,1fr))}.bb-vres .bb-vth img{width:150px}.bb-newsres img{width:90px;height:64px}}
+.bb-kp img{background:#fff;padding:10px;border-radius:10px}
