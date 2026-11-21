@@ -8,17 +8,85 @@
 <style>
 html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#02040f;touch-action:none;overscroll-behavior:none;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+body{position:fixed;inset:0}
 canvas{display:block;position:fixed;left:0;top:0;width:100%;height:100%;touch-action:none;outline:none}
 #mute{position:fixed;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));width:44px;height:44px;
   border-radius:50%;border:1px solid rgba(140,230,255,.55);background:rgba(8,14,40,.55);color:#c8f6ff;display:flex;
-  align-items:center;justify-content:center;cursor:pointer;z-index:5;padding:0;touch-action:none;
+  align-items:center;justify-content:center;cursor:pointer;z-index:9;padding:0;touch-action:none;
   box-shadow:0 0 14px rgba(80,200,255,.35)}
 #mute svg{width:22px;height:22px;pointer-events:none}
+.hidden{display:none!important}
+.ov{position:fixed;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;padding:64px 14px 16px;box-sizing:border-box;
+  background:radial-gradient(ellipse at 50% 45%,rgba(2,6,24,.35),rgba(2,4,16,.82) 75%);touch-action:none;
+  font:600 15px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#eaffff;text-align:center}
+.ov .box{width:100%;max-width:460px}
+.logo{font:900 clamp(40px,12vw,80px)/1 system-ui,-apple-system,sans-serif;letter-spacing:.03em;color:#fff;
+  text-shadow:0 0 18px var(--hue,#2ef2ff),0 0 40px var(--hue,#2ef2ff)}
+.logo2{display:block;font-size:1.1em;color:var(--hue2,#ff5fd2);text-shadow:0 0 20px var(--hue2,#ff5fd2)}
+.sub{margin:10px 0 18px;color:#bff6ff;font-size:16px}
+.big{display:block;width:100%;max-width:320px;margin:9px auto;height:56px;border-radius:999px;border:2px solid rgba(255,255,255,.85);
+  font:900 20px system-ui,sans-serif;letter-spacing:.06em;color:#04122a;background:linear-gradient(#bff9ff,#38c8ff);cursor:pointer;touch-action:manipulation;
+  box-shadow:0 0 22px rgba(56,200,255,.5)}
+.big.alt{background:linear-gradient(#ffd0f4,#ff5fd2);box-shadow:0 0 22px rgba(255,95,210,.45)}
+.big.dim{background:rgba(255,255,255,.08);color:#eaffff;border-color:rgba(255,255,255,.4);box-shadow:none;height:48px;font-size:17px}
+.big:active{transform:scale(.97)}
+.hint{font-size:13px;color:rgba(234,255,255,.75);margin-top:12px;line-height:1.5}
+.best{margin-top:8px;color:#ffe9a8;font-weight:800}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0 14px}
+.lv{aspect-ratio:1/1.1;border-radius:14px;border:2px solid rgba(127,249,255,.5);background:rgba(10,30,70,.7);color:#fff;cursor:pointer;
+  font:900 20px system-ui,sans-serif;touch-action:manipulation;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0}
+.lv small{font-size:11px;letter-spacing:1px;color:#ffe066}
+.lv.lock{opacity:.4;cursor:default}
+.lv.done{border-color:#ffe066}
+.ships{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:12px 0 14px}
+.ship{border-radius:14px;border:2px solid rgba(255,255,255,.2);background:rgba(10,30,70,.7);color:#fff;padding:6px 4px 8px;cursor:pointer;
+  font:700 12px system-ui,sans-serif;touch-action:manipulation}
+.ship canvas{position:static;width:64px;height:52px;display:block;margin:0 auto 2px}
+.ship.on{border-color:#7ff9ff;box-shadow:0 0 14px rgba(127,249,255,.5)}
+.ship.lock{opacity:.5}
+.ship small{display:block;color:#ffe066;margin-top:2px}
+h2{margin:0 0 4px;font:900 30px system-ui,sans-serif;letter-spacing:.04em;text-shadow:0 0 14px #2ef2ff}
+.stars{font-size:44px;letter-spacing:6px;margin:6px 0;color:#ffe066;text-shadow:0 0 14px #ffb800}
+.stars .off{color:rgba(255,255,255,.18);text-shadow:none}
+.res{font-size:16px;line-height:1.7;margin:6px 0 14px;color:#dff}
+.res b{color:#fff}
+.newship{color:#7ff9ff;font-weight:800;margin-bottom:10px}
 </style>
 </head>
 <body>
 <canvas id="c" tabindex="0"></canvas>
 <button id="mute" aria-label="Toggle sound"></button>
+<div id="menu" class="ov"><div class="box">
+  <div class="logo" id="logo"></div>
+  <div class="sub" id="sub"></div>
+  <button class="big" id="bEndless" type="button">ENDLESS</button>
+  <button class="big alt" id="bLevels" type="button">LEVELS</button>
+  <button class="big dim" id="bShips" type="button">SHIPS</button>
+  <div class="best" id="mBest"></div>
+  <div class="hint" id="mHint"></div>
+</div></div>
+<div id="levels" class="ov hidden"><div class="box">
+  <h2>LEVELS</h2>
+  <div class="hint" style="margin-top:0">Reach the finish gate. Grab gems for more stars.</div>
+  <div class="grid" id="lvGrid"></div>
+  <div class="best" id="lvStars"></div>
+  <button class="big dim" id="lvBack" type="button">BACK</button>
+</div></div>
+<div id="shipsOv" class="ov hidden"><div class="box">
+  <h2>SHIPS</h2>
+  <div class="hint" style="margin-top:0">Unlock new looks by scoring high in Endless (either tunnel).</div>
+  <div class="ships" id="shipGrid"></div>
+  <button class="big dim" id="shBack" type="button">BACK</button>
+</div></div>
+<div id="result" class="ov hidden"><div class="box">
+  <h2 id="rTitle"></h2>
+  <div class="stars" id="rStars"></div>
+  <div class="res" id="rText"></div>
+  <div class="newship" id="rNew"></div>
+  <button class="big" id="rMain" type="button"></button>
+  <button class="big dim" id="rRetry" type="button">RETRY</button>
+  <button class="big dim" id="rMenu" type="button">MENU</button>
+</div></div>
 <script>
 (function(){
 'use strict';
@@ -26,16 +94,18 @@ canvas{display:block;position:fixed;left:0;top:0;width:100%;height:100%;touch-ac
 /* ---------- version ---------- */
 const V = (function(){ try { return new URLSearchParams(location.search).get('v') === '2' ? 2 : 1; } catch(e){ return 1; } })();
 const CFG = V === 2
-  ? { name: 'ICE TUNNEL 2', title: 'Ice Tunnel 2', key: 'icetunnel2_best', speed0: 13, speedMax: 33, tau: 75, turn: 4.6,
-      bend: 1, twist: 1, gapT0: 0.85, gapT1: 0.5, sub: 'Faster. Twistier. Stranger.' }
-  : { name: 'ICE TUNNEL', title: 'Ice Tunnel', key: 'icetunnel_best', speed0: 10, speedMax: 25, tau: 70, turn: 4.0,
-      bend: 0.25, twist: 0, gapT0: 1.0, gapT1: 0.6, sub: 'Spin through the endless frozen tube' };
+  ? { name: 'ICE TUNNEL 2', title: 'Ice Tunnel 2', key: 'icetunnel2_best', starKey: 'icetunnel2_levelstars', bpm: 150,
+      speed0: 13, speedMax: 33, tau: 75, turn: 4.6, bend: 1, twist: 1, sub: 'Faster. Twistier. Stranger.' }
+  : { name: 'ICE TUNNEL', title: 'Ice Tunnel', key: 'icetunnel_best', starKey: 'icetunnel_levelstars', bpm: 138,
+      speed0: 10, speedMax: 25, tau: 70, turn: 4.0, bend: 0.25, twist: 0, sub: 'Spin through the frozen tube, right on the beat' };
 document.title = CFG.title;
+const BEAT = 60 / CFG.bpm;          // walls arrive on these beats
+const bt = b => b * BEAT;
 
 /* ---------- canvas ---------- */
 const cv = document.getElementById('c');
 const ctx = cv.getContext('2d');
-let W = 0, H = 0, DPR = 1, M = 1, F = 300, FS = 300;
+let W = 0, H = 0, DPR = 1, M = 1, F = 300, FS = 300, BASEF = 300;
 const TAU = Math.PI * 2, R = 1, RIN = 0.58, PZ = 2, FAR = 40, NEAR = 0.7, SP = 1.5, DEPTH = 0.85;
 const S = 16, SW = TAU / S, HW = 0.08, SHIP_R = 0.79, CLOSE = 0.1, GEM_R = 0.22;
 
@@ -45,19 +115,24 @@ function resize(){
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
   M = Math.min(W, H);
   // on tall phones let the tube overflow the sides a little so the ship and gaps are bigger
-  FS = Math.max(M * 0.47, Math.min(W * 0.58, H * 0.4)); F = FS * PZ;
+  FS = Math.max(M * 0.47, Math.min(W * 0.58, H * 0.4)); BASEF = FS * PZ; F = BASEF;
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 120));
 
 /* ---------- helpers ---------- */
-const rand = (a, b) => a + Math.random() * (b - a);
 const randi = n => Math.floor(Math.random() * n);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const lerp = (a, b, k) => a + (b - a) * k;
 function angDiff(a, b){ let d = (a - b) % TAU; if (d < -Math.PI) d += TAU; if (d > Math.PI) d -= TAU; return d; }
 const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 const hsl = (h, s, l, a) => 'hsla(' + (((h % 360) + 360) % 360).toFixed(1) + ',' + s + '%,' + l + '%,' + (a === undefined ? 1 : a.toFixed(3)) + ')';
+// seeded random so handcrafted levels play the same every time
+let rng = Math.random;
+function seeded(seed){ let a = seed >>> 0; return function(){ a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const rnd = (a, b) => a + rng() * (b - a);
+const rr = r => (rng() * 2 - 1) * r;
+const fxr = (a, b) => a + Math.random() * (b - a);  // cosmetic randomness (never affects the walls)
 
 /* ---------- storage ---------- */
 const store = {
@@ -65,7 +140,10 @@ const store = {
   set(k, v){ try { localStorage.setItem('blizzard_' + k, String(v)); } catch(e){} }
 };
 let best = parseInt(store.get(CFG.key, '0'), 10) || 0;
+const otherBest = () => parseInt(store.get(V === 2 ? 'icetunnel_best' : 'icetunnel2_best', '0'), 10) || 0;
 let muted = store.get('muted', '0') === '1';
+let levelStars = (function(){ try { const a = JSON.parse(store.get(CFG.starKey, '[]')); return Array.isArray(a) ? a.map(n => clamp(n | 0, 0, 3)) : []; } catch(e){ return []; } })();
+let shipId = store.get('icetunnel_shipskin', 'glider');
 
 /* ---------- audio (bright, soft: sine/triangle only) ---------- */
 let AC = null, master = null;
@@ -104,14 +182,21 @@ function noise(dur, vol, freq){
   } catch(e){}
 }
 const LADDER = [659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1568, 1760];
+const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5];
+let zoneStep = 0;
 const sfx = {
   start(){ [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, .16, 'triangle', .14, 0, i * .07)); },
-  pass(){ tone(880, .07, 'sine', .035); },
-  close(n){ const f = LADDER[Math.min(n, LADDER.length - 1)]; tone(f, .09, 'triangle', .11); tone(f * 1.5, .14, 'sine', .07, 0, .05); },
+  // the wall-pass tick lands on the beat: a subtle accent, brighter while in the Zone
+  pass(){ if (zoneT > 0){ tone(PENTA[zoneStep++ % PENTA.length], .1, 'triangle', .05); } else tone(880, .06, 'sine', .03); },
+  close(n){ const f = LADDER[Math.min(n, LADDER.length - 1)]; tone(f, .09, 'triangle', .11); tone(f * 1.5, .14, 'sine', .07, 0, .05); noise(.12, .035, 3000); },
   gem(n){ const f = LADDER[Math.min(n, LADDER.length - 1)] * 1.5; tone(f, .08, 'sine', .09); tone(f * 1.26, .12, 'sine', .06, 0, .04); },
   level(){ [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, .16, 'triangle', .1, 0, i * .07)); },
+  zone(){ [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98].forEach((f, i) => tone(f, .22, 'triangle', .1, 0, i * .05)); tone(261.63, .9, 'sine', .08); },
+  zoneEnd(){ tone(783.99, .2, 'sine', .06); tone(659.25, .3, 'sine', .05, 0, .1); },
+  clear(){ [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98, 2093].forEach((f, i) => tone(f, .22, 'triangle', .11, 0, i * .08)); },
   crash(){ noise(.5, .2, 700); tone(783.99, .2, 'triangle', .12); tone(587.33, .24, 'triangle', .11, 0, .1); tone(392, .5, 'sine', .14, 0, .2); },
-  best(){ [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, .18, 'triangle', .13, 0, i * .09)); }
+  best(){ [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, .18, 'triangle', .13, 0, i * .09)); },
+  click(){ tone(987.77, .06, 'sine', .07); }
 };
 
 /* ---------- mute ---------- */
@@ -128,6 +213,49 @@ muteBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropaga
 muteBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); });
 refreshMute();
 
+/* ---------- ships (cosmetic, unlocked by best Endless score in either tunnel) ---------- */
+const SHIPS = [
+  { id: 'glider', name: 'Glider',      need: 0,    shape: 'glider' },
+  { id: 'dart',   name: 'Frost Dart',  need: 300,  shape: 'dart',   body: '#ffffff', trim: '#38c8ff', glow: 195 },
+  { id: 'sun',    name: 'Sunburst',    need: 800,  shape: 'glider', body: '#fff3b0', trim: '#ff9a1f', glow: 38 },
+  { id: 'star',   name: 'Crystal Star',need: 1500, shape: 'star',   body: '#f3dcff', trim: '#a64dff', glow: 280 },
+  { id: 'comet',  name: 'Comet',       need: 2500, shape: 'comet',  body: '#ffd6f2', trim: '#ff4fb8', glow: 320 },
+  { id: 'aurora', name: 'Aurora Ray',  need: 4000, shape: 'dart',   rainbow: true }
+];
+const bestAny = () => Math.max(best, otherBest());
+const shipOk = s => bestAny() >= s.need;
+function shipDef(){ const s = SHIPS.find(x => x.id === shipId); return s && shipOk(s) ? s : SHIPS[0]; }
+
+/* ---------- levels: 10 short handcrafted runs per tunnel, each ends at a finish gate ----------
+   Tokens: pattern letter + beats of rest after it.  w wide  g gap  s snake  x scatter  c cross  h half
+   y icicles  i iris  t stairs  r spin-gap  m movers  b blades  k counter-spin  p pulse  F finish */
+const LEVELS = V === 2 ? [
+  { name: 'Spin Up',       speed: 14, d: .2,  seed: 201, seq: 'w4 w3 g3 r3 g3 r3 c3 r3 g3 s3 r3 g3 F' },
+  { name: 'Twister',       speed: 15, d: .3,  seed: 202, seq: 'w4 r3 r3 s3 r3 k3 r3 g3 r3 c3 F' },
+  { name: 'Movers',        speed: 16, d: .35, seed: 203, seq: 'w4 m3 g3 m3 r3 m3 c3 g3 m3 s3 F' },
+  { name: 'Blade Dance',   speed: 17, d: .4,  seed: 204, seq: 'w4 b3 g3 b3 r3 b3 s3 g3 b3 r3 F' },
+  { name: 'Counter Spin',  speed: 18, d: .45, seed: 205, seq: 'w4 k3 r3 k3 i3 k3 r3 s3 k3 i3 F' },
+  { name: 'Pulse',         speed: 19, d: .5,  seed: 206, seq: 'w4 p3 g2 p3 m3 p3 t3 r3 p3 c3 F' },
+  { name: 'Crystal Rain',  speed: 20, d: .55, seed: 207, seq: 'w4 y2 r2 y3 b3 y2 k3 y2 t3 r2 F' },
+  { name: 'Neon Stairs',   speed: 22, d: .6,  seed: 208, seq: 'w4 t2 r2 t2 p3 t2 i2 m3 t2 k3 F' },
+  { name: 'Kaleidoscope',  speed: 24, d: .7,  seed: 209, seq: 'w4 r2 m2 b3 k2 p2 i2 y2 t2 h2 r2 F' },
+  { name: 'Prism Heart',   speed: 26, d: .8,  seed: 210, seq: 'w4 b3 k2 r2 m2 t2 i2 p2 y2 r2 h2 b3 F' }
+] : [
+  { name: 'First Frost',   speed: 10, d: .05, seed: 101, seq: 'w4 w4 g4 g4 g4 c4 g4 g4 c4 g4 F' },
+  { name: 'Gem Trail',     speed: 11, d: .15, seed: 102, seq: 'w4 g3 g3 s3 g3 c3 s3 g3 g3 F' },
+  { name: 'Snake Pass',    speed: 12, d: .25, seed: 103, seq: 'w4 s3 s3 g2 s3 c3 s3 g2 g2 s3 F' },
+  { name: 'Icicle Alley',  speed: 12, d: .3,  seed: 104, seq: 'w4 y3 g3 y3 c3 y3 s3 y3 g3 F' },
+  { name: 'Half and Half', speed: 13, d: .35, seed: 105, seq: 'w4 h3 g2 h3 c2 h3 s3 h3 g2 F' },
+  { name: 'Closing Doors', speed: 14, d: .4,  seed: 106, seq: 'w4 i3 g2 i3 i2 c3 i3 s3 i3 F' },
+  { name: 'Ice Stairs',    speed: 14, d: .45, seed: 107, seq: 'w4 t3 g2 t3 x3 t3 g2 t3 F' },
+  { name: 'Scatter Storm', speed: 15, d: .55, seed: 108, seq: 'w4 x2 x2 g2 x2 c2 x2 s3 x2 x2 F' },
+  { name: 'Mixed Up',      speed: 16, d: .65, seed: 109, seq: 'w4 g2 s2 h2 y2 i2 t2 x2 c2 h2 s2 F' },
+  { name: 'Frozen Core',   speed: 17, d: .75, seed: 110, seq: 'w4 x2 t2 i2 h2 y2 s2 x2 i2 t2 h2 x2 c2 F' }
+];
+const TOK = { w: 'wide', g: 'gap', s: 'snake', x: 'scatter', c: 'cross', h: 'half', y: 'icicles', i: 'iris', t: 'stairs',
+  r: 'rotgap', m: 'movers', b: 'blades', k: 'counter', p: 'pulse', F: 'finish' };
+const levelUnlocked = i => i === 0 || (levelStars[i - 1] || 0) > 0;
+
 /* ---------- input ---------- */
 const keys = {}, pointers = new Map();
 window.addEventListener('keydown', e => {
@@ -136,7 +264,8 @@ window.addEventListener('keydown', e => {
   ensureAudio(); keys[c] = true;
   if (e.repeat) return;
   if (c === 'Space' || c === 'Enter') primaryAction();
-  else if (c === 'KeyP' || c === 'Escape') togglePause();
+  else if (c === 'KeyP') togglePause();
+  else if (c === 'Escape'){ if (state === 'play' || state === 'dying') togglePause(); else if (state !== 'title') toMenu(); else showOnly('menu'); }
   else if (c === 'KeyM') toggleMute();
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
@@ -144,9 +273,9 @@ window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; p
 cv.addEventListener('pointerdown', e => {
   e.preventDefault(); ensureAudio();
   try { cv.setPointerCapture(e.pointerId); } catch(_){}
-  // the tap that starts a run should not also spin the ship
+  // the tap that resumes a run should not also spin the ship
   pointers.set(e.pointerId, { x: e.clientX, live: state === 'play' && !paused });
-  primaryAction();
+  if (paused) paused = false;
 });
 cv.addEventListener('pointermove', e => { const p = pointers.get(e.pointerId); if (p) p.x = e.clientX; });
 const endPtr = e => pointers.delete(e.pointerId);
@@ -168,21 +297,23 @@ function steerInput(){
 }
 
 /* ---------- state ---------- */
-let state = 'title', paused = false, t = 0, elapsed = 0;
-let theta = 0, omega = 0, speed = CFG.speed0, dist = 0, score = 0, spawnAcc = 0, level = 1;
-let obs = [], gems = [], parts = [], pops = [], dust = [];
+let state = 'title', paused = false, t = 0, elapsed = 0, songT = 0;
+let gameMode = 'endless', levelIdx = 0, LV = null, seq = [], seqI = 0, finishAt = 0;
+let theta = 0, omega = 0, speed = CFG.speed0, dist = 0, score = 0, stage = 1;
+let obs = [], gems = [], parts = [], pops = [], dust = [], lines = [];
 let shake = 0, flash = 0, overTimer = 0, dyingTimer = 0, newBest = false, rings = 0;
-let combo = 0, comboT = 0, bestCombo = 0, gemCount = 0, closes = 0, levelFlash = 0, scorePulse = 0;
+let combo = 0, comboT = 0, bestCombo = 0, gemCount = 0, gemsTotal = 0, closes = 0, levelFlash = 0, scorePulse = 0;
 let hue = 195, obsHue = 225;
 let bendX = 0, bendY = 0, twist = 0;
-let lastExit = 0, lastU = 0, lastEnd = PZ, introLeft = 0, introAng = 0;
-let crashPt = null;
-const COMBO_TIME = 3;
+let nextBeat = 0, lastExit = 0, lastU = 0, lastEndT = 0, introLeft = 0;
+let zoneHue = 0, zone = 0, zoneT = 0, zoneK = 0, zones = 0, kick = 0, beatPulse = 0, lastBeatIdx = -1;
+let crashPt = null, newShips = [];
+const COMBO_TIME = 3, ZONE_TIME = 7;
 
 function primaryAction(){
   if (paused){ paused = false; return; }
-  if (state === 'title') startGame();
-  else if (state === 'over' && overTimer > 0.7) startGame();
+  if (state === 'title' && !document.getElementById('menu').classList.contains('hidden')) startRun('endless');
+  else if ((state === 'over' || state === 'clear') && overTimer > 0.5) document.getElementById('rMain').click();
 }
 function togglePause(){ if (state === 'play' || state === 'dying') paused = !paused; }
 document.addEventListener('visibilitychange', () => {
@@ -191,24 +322,28 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pagehide', () => { if (state === 'play') paused = true; });
 
-function startGame(){
-  state = 'play'; elapsed = 0; score = 0; rings = 0; level = 1; newBest = false;
-  combo = 0; comboT = 0; bestCombo = 0; gemCount = 0; closes = 0;
-  theta = 0; omega = 0; speed = CFG.speed0; obs = []; gems = []; parts.length = 0; pops.length = 0;
-  overTimer = 0; dyingTimer = 0; crashPt = null;
-  lastExit = theta; lastU = 0; lastEnd = PZ + 4;
-  spawnAcc = 0;
-  // gentle intro: the first 3 walls open right where the ship starts, the first one ~1.75s away
-  introLeft = 3; introAng = theta;
-  let z = PZ + CFG.speed0 * 1.75;
-  while (z < FAR){ spawnNext(z); z += spawnAcc; }
-  spawnAcc = z - FAR;
+function startRun(mode, idx){
+  gameMode = mode; levelIdx = idx || 0;
+  LV = mode === 'level' ? LEVELS[levelIdx] : null;
+  rng = LV ? seeded(LV.seed) : Math.random;
+  seq = LV ? LV.seq.split(/\s+/) : []; seqI = 0; finishAt = 0;
+  state = 'play'; elapsed = 0; songT = 0; score = 0; rings = 0; stage = 1; newBest = false; newShips = [];
+  combo = 0; comboT = 0; bestCombo = 0; gemCount = 0; gemsTotal = 0; closes = 0;
+  zone = 0; zoneT = 0; zones = 0; kick = 0; lastBeatIdx = -1;
+  theta = 0; omega = 0; speed = LV ? LV.speed : CFG.speed0;
+  obs = []; gems = []; parts.length = 0; pops.length = 0; lines.length = 0;
+  overTimer = 0; dyingTimer = 0; crashPt = null; paused = false;
+  // gentle start: the first walls are wide and open right where the ship starts, the first one ~1.7s away
+  nextBeat = 4; lastExit = theta; lastU = 0; lastEndT = 0; introLeft = LV ? 0 : 3;
+  showOnly(null);
+  spawnAhead();
   sfx.start();
 }
+function toMenu(){ state = 'title'; obs = []; gems = []; paused = false; showOnly('menu'); }
 
 function initDust(){
   dust = [];
-  for (let i = 0; i < 70; i++) dust.push({ a: Math.random() * TAU, r: rand(.35, .97), z: rand(NEAR, FAR) });
+  for (let i = 0; i < 70; i++) dust.push({ a: Math.random() * TAU, r: fxr(.35, .97), z: fxr(NEAR, FAR) });
 }
 initDust();
 
@@ -224,6 +359,7 @@ function P(a, r, z){
 }
 function fogA(z){ return clamp(1 - Math.pow(z / FAR, 1.3), 0, 1); }
 function fogO(z){ return clamp(1 - Math.pow(z / FAR, 2.2), 0, 1); }
+const zOf = at => PZ + (at - songT) * speed;   // everything's position comes from its arrival time
 
 /* ---------- obstacles ---------- */
 function blocksFrom(mask){
@@ -244,167 +380,227 @@ function gapMaskAt(c, size){
   for (let k = 0; k < size; k++) m[((s0 + k) % S + S) % S] = false;
   return { m: m, c: (s0 + size / 2) * SW };
 }
-function ring(z, mask, extra){
-  const o = { z: z, zp: z, d: DEPTH, blocks: blocksFrom(mask), rot: 0, amp: 0, freq: 0, ph: 0, minClear: 9, passed: false, born: t, hit: -1 };
+function ring(at, mask, extra){
+  const o = { at: at, d: DEPTH, blocks: mask ? blocksFrom(mask) : [], rot: 0, amp: 0, freq: 0, ph: 0, minClear: 9, passed: false, hit: -1 };
   if (extra) for (const k in extra) o[k] = extra[k];
+  o.z = o.zp = zOf(at);
   obs.push(o); return o;
 }
-function gem(z, a){ gems.push({ z: z, zp: z, a: a, got: false, spin: Math.random() * TAU }); }
-function obsOff(o, at){ const tt = at === undefined ? t : at; return o.rot * (tt - o.born) + o.amp * Math.sin(o.freq * tt + o.ph); }
-const arrive = z => t + (z - PZ) / Math.max(speed, 1);
+function gem(at, a){ const g = { at: at, a: a, got: false, spin: Math.random() * TAU }; g.z = g.zp = zOf(at); gems.push(g); gemsTotal++; }
+const gemIn = at => at + DEPTH * .5 / Math.max(speed, 1);
+function obsOff(o, tt){ const dt = (tt === undefined ? songT : tt) - o.at; return o.rot * dt + o.amp * Math.sin(o.freq * dt + o.ph); }
+// iris walls: the opening narrows as the wall arrives
+function irisBlocks(o, tt){
+  const k = clamp(1 - (o.at - tt) / 1.5, 0, 1), w = lerp(o.iris.w0, o.iris.w1, k * k * (3 - 2 * k));
+  return [{ a0: o.iris.c + w / 2, w: TAU - w }];
+}
 
-/* Every pattern gets an aim angle and a reach (how far from the aim its opening may be
-   while staying reachable), and returns { len, exit, u }: its length, the angle the ship
+/* Every pattern gets a start beat, an aim angle and a reach (how far from the aim its opening may be
+   while staying reachable), and returns { beats, exit, u }: how many beats it spans, the angle the ship
    leaves through, and how uncertain that exit is. That keeps every run fair. */
 const PATTERNS = {
-  gap(z, d, aim, reach){
+  wide(b){
+    const g = gapMaskAt(lastExit, 6);
+    ring(bt(b), g.m); gem(gemIn(bt(b)), g.c);
+    return { beats: 0, exit: g.c, u: .3 };
+  },
+  gap(b, d, aim, reach){
     const size = Math.max(3, Math.round(5 - d * 2.2));
-    const g = gapMaskAt(aim + rand(-reach, reach), size);
-    ring(z, g.m); gem(z + DEPTH / 2, g.c);
-    return { len: DEPTH, exit: g.c, u: size * SW / 2 - HW - .15 };
+    const g = gapMaskAt(aim + rr(reach), size);
+    ring(bt(b), g.m); gem(gemIn(bt(b)), g.c);
+    return { beats: 0, exit: g.c, u: size * SW / 2 - HW - .15 };
   },
-  snake(z, d, aim, reach){
-    const n = 4 + Math.floor(d * 3), dir = Math.random() < .5 ? -1 : 1, step = d > .4 && Math.random() < .5 ? 2 : 1;
-    const sp = speed * (step * SW / CFG.turn) * 1.7 + 1.6;
-    let c = aim + rand(-reach, reach) * .6, g = null;
-    for (let i = 0; i < n; i++){ g = gapMaskAt(c, 4); ring(z + i * sp, g.m); if (i < n - 1) gem(z + i * sp + sp / 2, g.c + dir * step * SW / 2); c += dir * step * SW; }
-    return { len: (n - 1) * sp + DEPTH, exit: g.c, u: .3 };
+  snake(b, d, aim, reach){
+    const n = 4 + Math.floor(d * 3), dir = rng() < .5 ? -1 : 1, step = d > .4 && rng() < .5 ? 2 : 1;
+    let c = aim + rr(reach) * .6, g = null;
+    for (let i = 0; i < n; i++){ g = gapMaskAt(c, 4); ring(bt(b + i), g.m); if (i < n - 1) gem(bt(b + i + .5), g.c + dir * step * SW / 2); c += dir * step * SW; }
+    return { beats: n - 1, exit: g.c, u: .3 };
   },
-  scatter(z, d, aim, reach){
-    const m = []; for (let i = 0; i < S; i++) m.push(Math.random() < .32 + d * .25);
-    const g = gapMaskAt(aim + rand(-reach, reach), 3);
+  scatter(b, d, aim, reach){
+    const m = []; for (let i = 0; i < S; i++) m.push(rng() < .32 + d * .25);
+    const g = gapMaskAt(aim + rr(reach), 3);
     for (let i = 0; i < S; i++) if (!g.m[i]) m[i] = false;
     if (m.every(v => !v)) m[(segOf(g.c) + 8) % S] = true;
-    ring(z, m); gem(z + DEPTH / 2, g.c);
-    return { len: DEPTH, exit: g.c, u: .45 };
+    ring(bt(b), m); gem(gemIn(bt(b)), g.c);
+    return { beats: 0, exit: g.c, u: .45 };
   },
-  cross(z, d, aim, reach){
+  cross(b, d, aim, reach){
     // four 3-wide walls, four 1-segment-wider openings
-    const c = aim + rand(-reach, reach), s0 = Math.round(c / SW - 2.5), m = [];
+    const c = aim + rr(reach), s0 = Math.round(c / SW - 2.5), m = [];
     for (let i = 0; i < S; i++) m.push(((i - s0) % 8 + 8) % 8 >= 5);
-    ring(z, m); gem(z + DEPTH / 2, (s0 + 2.5) * SW);
-    return { len: DEPTH, exit: (s0 + 2.5) * SW, u: .8 };
+    ring(bt(b), m); gem(gemIn(bt(b)), (s0 + 2.5) * SW);
+    return { beats: 0, exit: (s0 + 2.5) * SW, u: .8 };
   },
-  half(z, d, aim, reach){
-    // open half first, then the opposite half: slide across the seam
-    const c = aim + rand(-reach * .5, reach * .5), s0 = Math.round(c / SW - 4);
+  half(b, d, aim, reach){
+    // open half first, then the opposite half two beats later: slide across the seam
+    const c = aim + rr(reach * .5), s0 = Math.round(c / SW - 4);
     const m1 = []; for (let i = 0; i < S; i++) m1.push(((i - s0 + S * 2) % S) >= 8);
-    const sp = 2 + speed * 0.5;
-    ring(z, m1);
-    ring(z + sp, m1.map(v => !v));
-    const ex = (Math.random() < .5 ? s0 - 1.5 : s0 + 9.5) * SW;   // just across one seam
-    gem(z + sp * .6, ex);
-    return { len: sp + DEPTH, exit: ex, u: 1.2 };
+    ring(bt(b), m1);
+    ring(bt(b + 2), m1.map(v => !v));
+    const ex = (rng() < .5 ? s0 - 1.5 : s0 + 9.5) * SW;   // just across one seam
+    gem(bt(b + 1.2), ex);
+    return { beats: 2, exit: ex, u: 1.2 };
   },
-  // ---- Ice Tunnel 2 only ----
-  rotgap(z, d, aim, reach){
-    const rot = (Math.random() < .5 ? -1 : 1) * (0.6 + d * .6);
-    const at = aim + rand(-reach, reach);           // where the gap will be when it reaches you
-    const g = gapMaskAt(at - rot * (arrive(z) - t), 4);
-    ring(z, g.m, { rot: rot });
-    return { len: DEPTH, exit: at, u: .6 };
+  icicles(b, d, aim, reach){
+    // thin crystal spikes poke out of the wall, two waves one beat apart
+    const c1 = aim + rr(reach), c2 = c1 + rr(Math.min(1, CFG.turn * BEAT * .5));
+    for (const [k, c] of [[0, c1], [1, c2]]){
+      const bl = [];
+      for (let i = 0; i < S; i++){
+        const a = (i + .5) * SW;
+        if (Math.abs(angDiff(a, c)) < SW * 1.6) continue;
+        if (rng() < .5 + d * .3) bl.push({ a0: a - SW * .3, w: SW * .6 });
+      }
+      if (!bl.length) bl.push({ a0: c + Math.PI - SW * .3, w: SW * .6 });
+      ring(bt(b + k), null, { blocks: bl, shard: true, d: DEPTH * .6 });
+      gem(gemIn(bt(b + k)), c);
+    }
+    return { beats: 1, exit: c2, u: .35 };
   },
-  movers(z, d, aim, reach){
-    const m = new Array(S).fill(false), s0 = segOf(aim + rand(-reach, reach)) + 2;
-    for (const b of [0, 5, 10]){ m[(s0 + b) % S] = true; m[(s0 + b + 1) % S] = true; }
-    ring(z, m, { amp: 0.5, freq: 1.6 + d, ph: Math.random() * TAU });
-    return { len: DEPTH + speed * .2, exit: aim, u: 1.4 };
+  iris(b, d, aim, reach){
+    const c = aim + rr(reach * .8);
+    ring(bt(b), null, { iris: { c: c, w0: SW * 10, w1: SW * Math.max(3.2, 4.4 - d * 1.2) } });
+    gem(gemIn(bt(b)), c);
+    return { beats: 0, exit: c, u: .3 };
   },
-  blades(z, d){
-    const r = randi(S), m = new Array(S).fill(false);
+  stairs(b, d, aim, reach){
+    // a quick staircase: one ring every half beat, each opening one step further round
+    const n = 5, dir = rng() < .5 ? -1 : 1;
+    let c = aim + rr(reach) * .5, g = null;
+    for (let i = 0; i < n; i++){ g = gapMaskAt(c, 4); ring(bt(b + i * .5), g.m); if (i % 2 === 0) gem(gemIn(bt(b + i * .5)), g.c); c += dir * SW; }
+    return { beats: (n - 1) * .5, exit: g.c, u: .3 };
+  },
+  // ---- Ice Tunnel 2 favourites ----
+  rotgap(b, d, aim, reach){
+    const rot = (rng() < .5 ? -1 : 1) * (0.6 + d * .6);
+    const at = aim + rr(reach);                       // where the gap will be when it reaches you
+    const g = gapMaskAt(at, 4);
+    ring(bt(b), g.m, { rot: rot });
+    gem(gemIn(bt(b)), g.c);
+    return { beats: 0, exit: g.c, u: .6 };
+  },
+  movers(b, d, aim, reach){
+    const m = new Array(S).fill(false), s0 = segOf(aim + rr(reach)) + 2;
+    for (const k of [0, 5, 10]){ m[(s0 + k) % S] = true; m[(s0 + k + 1) % S] = true; }
+    ring(bt(b), m, { amp: 0.5, freq: 1.6 + d, ph: rnd(0, TAU) });
+    return { beats: 0, exit: aim, u: 1.4 };
+  },
+  blades(b, d){
+    const r = Math.floor(rng() * S), m = new Array(S).fill(false);
     m[r] = m[(r + 1) % S] = m[(r + 8) % S] = m[(r + 9) % S] = true;
     if (d > .5){ m[(r + 4) % S] = m[(r + 12) % S] = true; }
-    const o = ring(z, m, { d: DEPTH * 1.5, rot: (Math.random() < .5 ? -1 : 1) * 1.3 });
-    return { len: DEPTH * 1.5 + speed * .3, exit: (r + 4.5) * SW + o.rot * (arrive(z) - t), u: 1.6 };
+    ring(bt(b), m, { d: DEPTH * 1.5, rot: (rng() < .5 ? -1 : 1) * 1.3 });
+    return { beats: .5, exit: (r + (d > .5 ? 2.5 : 4.5)) * SW, u: 1.6 };
   },
-  counter(z, d, aim, reach){
-    const sp = 2.5 + speed * 0.12;
-    const a1 = aim + rand(-reach, reach);
-    const a2 = a1 + rand(-1, 1) * Math.min(1.2, CFG.turn * (sp / speed) * .55);
-    const g1 = gapMaskAt(a1 - 0.9 * (arrive(z) - t), 5), g2 = gapMaskAt(a2 + 0.9 * (arrive(z + sp) - t), 5);
-    ring(z, g1.m, { rot: 0.9 });
-    ring(z + sp, g2.m, { rot: -0.9 });
-    return { len: sp + DEPTH, exit: a2, u: .7 };
+  counter(b, d, aim, reach){
+    const a1 = aim + rr(reach);
+    const a2 = a1 + rr(Math.min(1.2, CFG.turn * BEAT * 2 * .55));
+    const g1 = gapMaskAt(a1, 5), g2 = gapMaskAt(a2, 5);
+    ring(bt(b), g1.m, { rot: 0.9 });
+    ring(bt(b + 2), g2.m, { rot: -0.9 });
+    gem(gemIn(bt(b)), g1.c); gem(gemIn(bt(b + 2)), g2.c);
+    return { beats: 2, exit: g2.c, u: .7 };
   },
-  pulse(z, d, aim){
+  pulse(b, d, aim){
     const s0 = segOf(aim) + 2, m = new Array(S).fill(false);
     for (let i = 0; i < S; i += 4){ m[(s0 + i) % S] = true; }
-    ring(z, m, { amp: SW * 1.2, freq: 2.6, ph: 0 });
-    return { len: DEPTH + speed * .15, exit: aim, u: 1.2 };
+    ring(bt(b), m, { amp: SW * 1.2, freq: 2.6, ph: 0 });
+    return { beats: 0, exit: aim, u: 1.2 };
+  },
+  finish(b){
+    ring(bt(b), null, { finish: true, d: 0.3 });
+    finishAt = bt(b);
+    return { beats: 0, exit: lastExit, u: 0 };
   }
 };
-const W1 = [['gap', 26], ['snake', 18], ['scatter', 18], ['cross', 16], ['half', 14]];
-const W2 = [['gap', 10], ['snake', 12], ['scatter', 10], ['cross', 8], ['half', 8], ['rotgap', 16], ['movers', 12], ['blades', 9], ['counter', 11], ['pulse', 8]];
-const diffNow = () => clamp(elapsed / 110, 0, 1);
-function spawnNext(z){
-  const d = diffNow();
-  const turnEff = CFG.turn * (1 + d * .12);
-  const time = Math.max(0.05, (z - lastEnd) / Math.max(speed, 1));
+const W1 = [['gap', 22], ['snake', 15], ['scatter', 15], ['cross', 13], ['half', 11], ['icicles', 10], ['iris', 9], ['stairs', 9]];
+const W2 = [['gap', 8], ['snake', 9], ['scatter', 8], ['cross', 6], ['half', 6], ['icicles', 7], ['iris', 7], ['stairs', 7],
+  ['rotgap', 14], ['movers', 10], ['blades', 8], ['counter', 9], ['pulse', 7]];
+const diffNow = () => LV ? LV.d : clamp(elapsed / 110, 0, 1);
+function spawnNext(){
+  const d = diffNow(), b = nextBeat;
+  const turnEff = CFG.turn * (1 + (LV ? 0 : d * .12));
+  const time = Math.max(0.05, bt(b) - lastEndT);
   const reach = clamp(turnEff * time * 0.6 - lastU + 0.45, 0.1, Math.PI);
-  let name;
-  if (elapsed < 9) name = Math.random() < .65 ? 'gap' : 'cross';
+  let name, rest;
+  if (LV){
+    const tok = seq[seqI++] || 'F';
+    name = TOK[tok[0]] || 'gap'; rest = parseFloat(tok.slice(1)) || 2;
+  } else if (introLeft > 0){ introLeft--; name = 'wide'; rest = 2; }
   else {
-    const table = V === 2 ? W2 : W1;
-    let tot = 0; for (const e of table) tot += e[1];
-    let r = Math.random() * tot; name = table[0][0];
-    for (const e of table){ r -= e[1]; if (r <= 0){ name = e[0]; break; } }
+    if (elapsed < 9) name = rng() < .65 ? 'gap' : 'cross';
+    else {
+      const table = V === 2 ? W2 : W1;
+      let tot = 0; for (const e of table) tot += e[1];
+      let r = rng() * tot; name = table[0][0];
+      for (const e of table){ r -= e[1]; if (r <= 0){ name = e[0]; break; } }
+    }
+    rest = d < .3 ? 2 : d < .7 ? (rng() < .35 ? 1 : 2) : (rng() < .5 ? 1 : 2);
   }
-  let res;
-  if (introLeft > 0){
-    introLeft--;
-    const g = gapMaskAt(introAng, 6);   // wide opening centred on the starting angle
-    ring(z, g.m); gem(z + DEPTH / 2, g.c);
-    res = { len: DEPTH, exit: g.c, u: .3 };
-  } else res = PATTERNS[name](z, d, lastExit, reach);
+  const res = PATTERNS[name](b, d, lastExit, reach);
   // a trail of gems from the previous exit to this pattern's exit guides the eye
-  if (state === 'play' && z - lastEnd > 5){
-    const n = Math.floor((z - lastEnd) / 4.5);
+  if (name !== 'finish' && lastEndT > 0 && time > BEAT * 1.4){
+    const n = Math.floor(time / (BEAT * .75));
     const da = angDiff(res.exit, lastExit);
     for (let i = 1; i <= n; i++){
       const k = i / (n + 1);
-      if (Math.random() < .7) gem(lastEnd + (z - lastEnd) * k, lastExit + da * k * k);
+      if (LV || Math.random() < .7) gem(lastEndT + time * k, lastExit + da * k * k);
     }
   }
-  lastExit = res.exit; lastU = Math.max(0, res.u); lastEnd = z + res.len;
-  spawnAcc = res.len + speed * lerp(CFG.gapT0, CFG.gapT1, d);
+  lastExit = res.exit; lastU = Math.max(0, res.u); lastEndT = bt(b + res.beats) + DEPTH / Math.max(speed, 1);
+  nextBeat = b + res.beats + rest;
+  return name;
+}
+function spawnAhead(){
+  let guard = 0;
+  while (state === 'play' && !finishAt && zOf(bt(nextBeat)) < FAR + 2 && guard++ < 20) spawnNext();
 }
 
 /* ---------- particles ---------- */
 function burst(x, y, n, colors, spd, life, size){
   for (let i = 0; i < n; i++){
-    const a = Math.random() * TAU, v = rand(.2, 1) * spd;
-    parts.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: life * rand(.5, 1), max: life, r: size * rand(.6, 1.4), c: colors[randi(colors.length)], g: 0 });
+    const a = Math.random() * TAU, v = fxr(.2, 1) * spd;
+    parts.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: life * fxr(.5, 1), max: life, r: size * fxr(.6, 1.4), c: colors[randi(colors.length)], g: 0 });
   }
 }
 function pop(text, x, y, c, big){ pops.push({ text: text, x: x, y: y, life: big ? 1.5 : 1.0, c: c, big: !!big }); }
 function bumpCombo(){ combo++; comboT = COMBO_TIME; if (combo > bestCombo) bestCombo = combo; }
+const mult = () => zoneT > 0 ? 2 : 1;
 
 /* ---------- update ---------- */
 let last = performance.now();
 function update(dt){
   t += dt;
-  if (V === 2){ hue = 200 + t * 14; obsHue = hue + 165; }
-  else { hue = 195 + Math.sin(t * .2) * 8; obsHue = 205 + Math.sin(t * .2) * 8; }
+  zoneK += ((zoneT > 0 ? 1 : 0) - zoneK) * Math.min(1, 3 * dt);
+  zoneHue += dt * zoneK * 50;
+  if (V === 2){ hue = 200 + t * 14 + zoneHue; obsHue = hue + 165; }
+  else { hue = 195 + Math.sin(t * .2) * 8 + zoneK * 90 + zoneHue * .4; obsHue = 205 + Math.sin(t * .2) * 8 + zoneK * 110 + zoneHue * .4; }
   bendX = (Math.sin(t * .31) * .45 + Math.sin(t * .13) * .2) * CFG.bend;
   bendY = (Math.cos(t * .23) * .3 + Math.sin(t * .41) * .08) * CFG.bend;
   twist = Math.sin(t * .21) * .055 * CFG.twist;
 
   if (state === 'play'){
-    elapsed += dt;
-    speed = CFG.speed0 + (CFG.speedMax - CFG.speed0) * (1 - Math.exp(-elapsed / CFG.tau));
-    const lv = 1 + Math.floor(elapsed / 20);
-    if (lv > level){ level = lv; sfx.level(); levelFlash = 1; pop('LEVEL ' + level, W / 2, H * .28, hsl(hue, 100, 80), true); }
+    elapsed += dt; songT += dt;
+    if (!LV){
+      speed = CFG.speed0 + (CFG.speedMax - CFG.speed0) * (1 - Math.exp(-elapsed / CFG.tau));
+      const lv = 1 + Math.floor(elapsed / 20);
+      if (lv > stage){ stage = lv; sfx.level(); levelFlash = 1; pop('SPEED UP!', W / 2, H * .28, hsl(hue, 100, 80), true); }
+    }
+    // beat clock: drives the visual pulse
+    const bi = Math.floor(songT / BEAT);
+    if (bi !== lastBeatIdx){ lastBeatIdx = bi; beatPulse = 1; }
   } else if (state === 'title') speed = CFG.speed0 * .8;
+  else if (state === 'clear') speed = Math.max(CFG.speed0 * .6, speed - speed * 1.2 * dt);
   else speed = Math.max(0, speed - speed * 2.2 * dt - 2 * dt);
+  beatPulse = Math.max(0, beatPulse - dt / (BEAT * .8));
 
   const dz = speed * dt;
   dist += dz;
-  if (state === 'play') score += dz;
-  lastEnd -= dz;
+  if (state === 'play') score += dz * mult();
 
   let target = 0;
   const d = diffNow();
-  if (state === 'play') target = -steerInput() * CFG.turn * (1 + d * .12);
+  if (state === 'play') target = -steerInput() * CFG.turn * (1 + (LV ? 0 : d * .12));
   else if (state === 'title') target = Math.sin(t * .8) * 1.4;
   // fast response, quicker still when reversing direction
   const resp = (target !== 0 && Math.sign(target) !== Math.sign(omega)) ? 26 : 16;
@@ -412,52 +608,67 @@ function update(dt){
   theta += omega * dt;
 
   if (combo > 0 && state === 'play'){ comboT -= dt; if (comboT <= 0) combo = 0; }
+  if (zoneT > 0){ zoneT -= dt; if (zoneT <= 0){ zoneT = 0; zone = 0; sfx.zoneEnd(); } }
+  else zone = Math.max(0, zone - dt * .045);
+  kick = Math.max(0, kick - kick * 3 * dt);
+  // field of view widens with speed and punches out on near misses
+  const sp01 = clamp((speed - CFG.speed0) / (CFG.speedMax - CFG.speed0), 0, 1);
+  F = BASEF * (1 - sp01 * .05 - Math.min(kick, .1) - zoneK * .03);
 
   // obstacles (swept test: catches walls even on a slow frame)
-  for (let i = obs.length - 1; i >= 0; i--){
-    const o = obs[i];
-    o.zp = o.z; o.z -= dz;
-    if (state === 'play' && !o.passed){
-      if (o.z <= PZ && o.zp + o.d >= PZ){
-        const off = obsOff(o);
-        for (let bi = 0; bi < o.blocks.length; bi++){
-          const b = o.blocks[bi];
-          const dd = Math.abs(angDiff(theta, b.a0 + off + b.w / 2)) - b.w / 2 - HW;
-          if (dd < 0){ o.hit = bi; crash(o); break; }
-          if (dd < o.minClear) o.minClear = dd;
+  if (state !== 'title'){
+    for (let i = obs.length - 1; i >= 0; i--){
+      const o = obs[i];
+      o.zp = o.z; o.z = zOf(o.at);
+      if (o.iris) o.blocks = irisBlocks(o, songT);
+      if (state === 'play' && !o.passed){
+        if (o.z <= PZ && o.zp + o.d >= PZ){
+          if (o.finish){ o.passed = true; levelClear(); }
+          else {
+            const off = obsOff(o);
+            for (let bi = 0; bi < o.blocks.length; bi++){
+              const b = o.blocks[bi];
+              const dd = Math.abs(angDiff(theta, b.a0 + off + b.w / 2)) - b.w / 2 - HW;
+              if (dd < 0){ o.hit = bi; crash(o); break; }
+              if (dd < o.minClear) o.minClear = dd;
+            }
+          }
+        }
+        if (state === 'play' && !o.passed && o.z + o.d < PZ){ o.passed = true; passRing(o); }
+      }
+      if (o.z + o.d < NEAR * .6) obs.splice(i, 1);
+    }
+    for (let i = gems.length - 1; i >= 0; i--){
+      const g = gems[i];
+      g.zp = g.z; g.z = zOf(g.at); g.spin += dt * 4;
+      if (state === 'play' && !g.got && g.zp >= PZ && g.z < PZ){
+        if (Math.abs(angDiff(theta, g.a)) < GEM_R){
+          g.got = true; gemCount++; bumpCombo();
+          const b = 10 * Math.min(combo, 10) * mult(); score += b; scorePulse = 1;
+          const sp = P(theta, SHIP_R, PZ);
+          burst(sp.x, sp.y - FS * .05, 12, ['#ffffff', hsl(hue + 40, 100, 80), '#ffe9a8'], M * .35, .45, M / 160);
+          sfx.gem(combo);
+          if (combo > 2) pop('+' + b, sp.x, sp.y - FS * .2, hsl(hue + 40, 100, 85));
         }
       }
-      if (state === 'play' && o.z + o.d < PZ){ o.passed = true; passRing(o); }
+      if (g.z < NEAR || g.got) gems.splice(i, 1);
     }
-    if (o.z + o.d < NEAR * .6) obs.splice(i, 1);
   }
-  for (let i = gems.length - 1; i >= 0; i--){
-    const g = gems[i];
-    g.zp = g.z; g.z -= dz; g.spin += dt * 4;
-    if (state === 'play' && !g.got && g.zp >= PZ && g.z < PZ){
-      if (Math.abs(angDiff(theta, g.a)) < GEM_R){
-        g.got = true; gemCount++; bumpCombo();
-        const b = 10 * Math.min(combo, 10); score += b; scorePulse = 1;
-        const sp = P(theta, SHIP_R, PZ);
-        burst(sp.x, sp.y - FS * .05, 12, ['#ffffff', hsl(hue + 40, 100, 80), '#ffe9a8'], M * .35, .45, M / 160);
-        sfx.gem(combo);
-        if (combo > 2) pop('+' + b, sp.x, sp.y - FS * .2, hsl(hue + 40, 100, 85));
-      }
-    }
-    if (g.z < NEAR || g.got) gems.splice(i, 1);
-  }
-  if (state === 'play'){
-    spawnAcc -= dz;
-    if (spawnAcc <= 0) spawnNext(FAR + spawnAcc);
-  }
+  if (state === 'play') spawnAhead();
 
-  for (const s of dust){ s.z -= dz * 1.15; if (s.z < NEAR){ s.z = FAR * rand(.7, 1); s.a = Math.random() * TAU; s.r = rand(.35, .97); } }
+  for (const s of dust){ s.z -= dz * 1.15; if (s.z < NEAR){ s.z = FAR * fxr(.7, 1); s.a = Math.random() * TAU; s.r = fxr(.35, .97); } }
+
+  // speed lines streaming out of the vanishing point
+  const lineRate = (state === 'play' ? (sp01 * 18 + 4) : 2) + zoneK * 30 + kick * 160;
+  let nl = lineRate * dt;
+  while (nl > 0){ if (Math.random() < nl) lines.push({ a: Math.random() * TAU, r: fxr(.15, .4), v: fxr(1.6, 2.6), life: .6 }); nl -= 1; }
+  for (let i = lines.length - 1; i >= 0; i--){ const l = lines[i]; l.r += l.v * l.r * dt * 2.4; l.life -= dt; if (l.life <= 0 || l.r > 1.5) lines.splice(i, 1); }
 
   if (state === 'play'){
-    const sp = P(theta, SHIP_R, PZ), u = FS * .075;
-    for (let k = 0; k < 2; k++){
-      parts.push({ x: sp.x + rand(-.3, .3) * u, y: sp.y + u * .35, vx: rand(-30, 30) + omega * 25, vy: rand(60, 160), life: rand(.25, .5), max: .5,
-        r: rand(2, 4) * u / 20, c: Math.random() < .5 ? '#ffffff' : hsl(hue, 100, 72), g: 0 });
+    const sp = P(theta, SHIP_R, PZ), u = FS * .075, sd = shipDef();
+    for (let k = 0; k < (sd.shape === 'comet' ? 4 : 2); k++){
+      parts.push({ x: sp.x + fxr(-.3, .3) * u, y: sp.y + u * .35, vx: fxr(-30, 30) + omega * 25, vy: fxr(60, 160), life: fxr(.25, .5), max: .5,
+        r: fxr(2, 4) * u / 20, c: Math.random() < .5 ? '#ffffff' : shipTrail(sd), g: 0 });
     }
   }
   for (let i = parts.length - 1; i >= 0; i--){
@@ -473,24 +684,33 @@ function update(dt){
   levelFlash = Math.max(0, levelFlash - 1.2 * dt);
   scorePulse = Math.max(0, scorePulse - 3 * dt);
   if (state === 'dying'){ dyingTimer += dt; if (dyingTimer > 1.0) gameOver(); }
-  if (state === 'over') overTimer += dt;
+  if (state === 'over' || state === 'clear') overTimer += dt;
 }
 
 function passRing(o){
   rings++;
-  score += 5;
+  score += 5 * mult();
   if (o.minClear < CLOSE){
     bumpCombo(); closes++;
-    const b = 20 * Math.min(combo, 10);
-    score += b; scorePulse = 1; shake = Math.max(shake, 3);
+    const b = 20 * Math.min(combo, 10) * mult();
+    score += b; scorePulse = 1; shake = Math.max(shake, 3); kick += .05;
     const sp = P(theta, SHIP_R, PZ);
     pop('CLOSE +' + b, sp.x, sp.y - FS * .22, hsl(obsHue, 100, 82));
     burst(sp.x, sp.y, 14, ['#ffffff', hsl(obsHue, 100, 80)], M * .4, .4, M / 170);
     sfx.close(combo);
+    // near misses charge the Zone meter
+    if (zoneT <= 0){
+      zone = Math.min(1, zone + .26);
+      if (zone >= 1){
+        zoneT = ZONE_TIME; zones++; zoneStep = 0; levelFlash = 1; kick += .06;
+        pop('ZONE!  x2', W / 2, H * .3, '#ffffff', true);
+        sfx.zone();
+      }
+    } else { zoneT = Math.min(ZONE_TIME, zoneT + .6); score += 50; }
   } else sfx.pass();
 }
 function crash(o){
-  state = 'dying'; dyingTimer = 0; shake = 20; flash = .55;
+  state = 'dying'; dyingTimer = 0; shake = 20; flash = .55; zoneT = 0;
   const sp = P(theta, SHIP_R, PZ);
   crashPt = { x: sp.x, y: sp.y };
   burst(sp.x, sp.y, 60, ['#ffffff', hsl(hue, 100, 72), '#bff6ff'], M * .9, 1.2, M / 110);
@@ -500,7 +720,23 @@ function crash(o){
 function gameOver(){
   state = 'over'; overTimer = 0;
   const s = Math.floor(score);
-  if (s > best){ best = s; newBest = true; store.set(CFG.key, best); sfx.best(); }
+  if (!LV){
+    const before = bestAny();
+    if (s > best){ best = s; newBest = true; store.set(CFG.key, best); sfx.best(); }
+    newShips = SHIPS.filter(x => x.need > before && x.need <= bestAny());
+  }
+  showResult(false);
+}
+function levelClear(){
+  state = 'clear'; overTimer = 0; zoneT = 0;
+  const ratio = gemsTotal ? gemCount / gemsTotal : 1;
+  const stars = 1 + (ratio >= .6 ? 1 : 0) + (ratio >= .9 ? 1 : 0);
+  if ((levelStars[levelIdx] || 0) < stars){ levelStars[levelIdx] = stars; store.set(CFG.starKey, JSON.stringify(levelStars)); }
+  flash = .4; levelFlash = 1;
+  const sp = P(theta, SHIP_R, PZ);
+  burst(sp.x, sp.y, 70, ['#ffffff', '#ffe066', hsl(hue, 100, 75), hsl(obsHue, 100, 75)], M * .9, 1.4, M / 100);
+  sfx.clear();
+  showResult(true, stars, ratio);
 }
 
 /* ---------- render: tunnel ---------- */
@@ -508,7 +744,7 @@ function drawTunnel(){
   const cf = centerAt(FAR);
   ctx.fillStyle = hsl(hue + 20, 70, 5); ctx.fillRect(-30, -30, W + 60, H + 60);
   const bg = ctx.createRadialGradient(cf.x, cf.y, 0, cf.x, cf.y, Math.max(W, H) * .8);
-  bg.addColorStop(0, hsl(hue, 85, 24)); bg.addColorStop(.35, hsl(hue + 15, 80, 11)); bg.addColorStop(1, hsl(hue + 30, 70, 5));
+  bg.addColorStop(0, hsl(hue, 85, 24 + beatPulse * 5 + zoneK * 8)); bg.addColorStop(.35, hsl(hue + 15, 80, 11 + zoneK * 4)); bg.addColorStop(1, hsl(hue + 30, 70, 5));
   ctx.fillStyle = bg; ctx.fillRect(-30, -30, W + 60, H + 60);
 
   const off = dist % SP, base = Math.floor(dist / SP);
@@ -527,34 +763,35 @@ function drawTunnel(){
     for (let i = 0; i < S; i++){
       const p1 = G[j][i], p2 = G[j][(i + 1) % S], p3 = G[j + 1][(i + 1) % S], p4 = G[j + 1][i];
       const odd = ((idx[j] + i) & 1) !== 0;
-      ctx.fillStyle = hsl(hue + i * 2, 85, odd ? 30 : 48, (odd ? .08 : .16) * a);
+      ctx.fillStyle = hsl(hue + i * 2 + (zoneK ? i * 10 * zoneK : 0), 85, odd ? 30 : 48, (odd ? .08 : .16 + zoneK * .06) * a);
       ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y); ctx.closePath(); ctx.fill();
     }
   }
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   for (let i = 0; i < S; i++){
-    ctx.strokeStyle = hsl(hue, 100, 65, .2);
+    ctx.strokeStyle = hsl(hue, 100, 65, .2 + zoneK * .15);
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let j = 0; j < zs.length; j++){ const p = G[j][i]; j ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); }
     ctx.stroke();
   }
+  const bp = beatPulse * beatPulse;
   for (let j = 0; j < zs.length - 1; j++){
     const z = zs[j], a = fogA(z), c = centerAt(z), r = R * F / z;
     const big = (idx[j] % 4) === 0;
     if (big){
-      ctx.strokeStyle = hsl(hue, 100, 60, (.25 + levelFlash * .5) * a); ctx.lineWidth = Math.max(2, .09 * F / z);
+      ctx.strokeStyle = hsl(hue, 100, 60, (.25 + levelFlash * .5 + bp * .35 + zoneK * .2) * a); ctx.lineWidth = Math.max(2, .09 * F / z);
       ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, TAU); ctx.stroke();
       ctx.strokeStyle = hsl(hue, 100, 85, .85 * a); ctx.lineWidth = Math.max(1, .022 * F / z);
     } else {
-      ctx.strokeStyle = hsl(hue, 100, 70, .3 * a); ctx.lineWidth = Math.max(.75, .01 * F / z);
+      ctx.strokeStyle = hsl(hue, 100, 70, (.3 + bp * .15) * a); ctx.lineWidth = Math.max(.75, .01 * F / z);
     }
     ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, TAU); ctx.stroke();
   }
-  const fr = M * .32;
+  const fr = M * (.32 + bp * .05 + zoneK * .08);
   const fg = ctx.createRadialGradient(cf.x, cf.y, 0, cf.x, cf.y, fr);
-  fg.addColorStop(0, hsl(hue, 100, 88, .55)); fg.addColorStop(.3, hsl(hue, 100, 60, .16)); fg.addColorStop(1, hsl(hue, 100, 50, 0));
+  fg.addColorStop(0, hsl(hue, 100, 88, .55 + zoneK * .2)); fg.addColorStop(.3, hsl(hue, 100, 60, .16)); fg.addColorStop(1, hsl(hue, 100, 50, 0));
   ctx.fillStyle = fg; ctx.fillRect(cf.x - fr, cf.y - fr, fr * 2, fr * 2);
   ctx.lineCap = 'round';
   for (const s of dust){
@@ -591,9 +828,31 @@ function drawGems(){
   ctx.restore();
 }
 
+function drawFinish(o){
+  const z = o.z; if (z < NEAR || z > FAR + 1) return;
+  const c = centerAt(z), r = R * F / z, a = clamp((FAR + 1 - z) / 4, 0, 1) * (z < PZ ? clamp((z - NEAR) / (PZ - NEAR), 0, 1) : 1);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 16; i++){
+    const a0 = i * SW - theta + Math.PI / 2;
+    ctx.strokeStyle = i % 2 ? hsl(50, 100, 70, a) : hsl(0, 0, 100, a);
+    ctx.lineWidth = Math.max(3, .12 * F / z);
+    ctx.beginPath(); ctx.arc(c.x, c.y, r * .97, a0, a0 + SW); ctx.stroke();
+  }
+  const g = ctx.createRadialGradient(c.x, c.y, r * .6, c.x, c.y, r);
+  g.addColorStop(0, 'rgba(255,230,120,0)'); g.addColorStop(1, 'rgba(255,230,120,' + (.35 * a).toFixed(3) + ')');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, TAU); ctx.fill();
+  ctx.restore();
+  if (z > PZ + .5 && r > 30){
+    ctx.globalAlpha = a;
+    text('FINISH', c.x, c.y - r * .7, clamp(r * .14, 12, 46), '#ffe066', '#ffb800');
+    ctx.globalAlpha = 1;
+  }
+}
+
 function drawObstacles(){
   const list = obs.slice().sort((a, b) => b.z - a.z);
   for (const o of list){
+    if (o.finish){ drawFinish(o); continue; }
     const z1 = Math.max(o.z, NEAR), z2 = o.z + o.d;
     if (z2 <= NEAR || z1 > FAR + 1) continue;
     const a = fogO(z1);
@@ -604,18 +863,34 @@ function drawObstacles(){
     const warn = tti > 0 && tti < .55 ? (1 - tti / .55) : 0;
     // walls that have gone past the ship fade out fast so they never smother the view
     const passedA = o.z < PZ ? clamp((o.z - NEAR) / (PZ - NEAR), 0, 1) * (o.hit >= 0 ? .8 : .45) : 1;
+    const oh = obsHue + (o.shard ? 40 : o.iris ? -30 : 0);
     for (let bi = 0; bi < o.blocks.length; bi++){
       const b = o.blocks[bi];
       const a0 = b.a0 + off, a1 = a0 + b.w, n = Math.max(2, Math.ceil(b.w / .12));
       const hitB = o.hit === bi;
+      if (o.shard){
+        // crystal icicle: a spike from the wall pointing inward
+        const am = (a0 + a1) / 2, tipR = RIN - .04;
+        const q1 = P(a0, R, z1), q2 = P(a1, R, z1), tip = P(am, tipR, z1 + o.d * .5), q3 = P(a1, R, z2), q4 = P(a0, R, z2);
+        ctx.fillStyle = hsl(oh, 80, hitB ? 85 : 45, .9 * fade * passedA);
+        ctx.beginPath(); ctx.moveTo(q4.x, q4.y); ctx.lineTo(q3.x, q3.y); ctx.lineTo(tip.x, tip.y); ctx.closePath(); ctx.fill();
+        const g = ctx.createLinearGradient(q1.x, q1.y, tip.x, tip.y);
+        g.addColorStop(0, hsl(oh, 95, hitB ? 95 : 70, .97 * fade * passedA)); g.addColorStop(1, hsl(oh, 100, 96, fade * passedA));
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.moveTo(q1.x, q1.y); ctx.lineTo(q2.x, q2.y); ctx.lineTo(tip.x, tip.y); ctx.closePath(); ctx.fill();
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = hsl(oh, 100, 85, (.6 + warn * .4) * fade * passedA); ctx.lineWidth = Math.max(1, .02 * s1);
+        ctx.stroke(); ctx.restore();
+        continue;
+      }
       // inner (top) face
-      ctx.fillStyle = hsl(obsHue, 75, hitB ? 80 : 38, .85 * fade * passedA);
+      ctx.fillStyle = hsl(oh, 75, hitB ? 80 : 38, .85 * fade * passedA);
       ctx.beginPath();
       for (let k = 0; k <= n; k++){ const p = P(a0 + (a1 - a0) * k / n, RIN, z2); k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); }
       for (let k = n; k >= 0; k--){ const p = P(a0 + (a1 - a0) * k / n, RIN, z1); ctx.lineTo(p.x, p.y); }
       ctx.closePath(); ctx.fill();
       // side faces
-      ctx.fillStyle = hsl(obsHue, 70, 30, .85 * fade * passedA);
+      ctx.fillStyle = hsl(oh, 70, 30, .85 * fade * passedA);
       for (const ae of [a0, a1]){
         const q1 = P(ae, R, z1), q2 = P(ae, RIN, z1), q3 = P(ae, RIN, z2), q4 = P(ae, R, z2);
         ctx.beginPath(); ctx.moveTo(q1.x, q1.y); ctx.lineTo(q2.x, q2.y); ctx.lineTo(q3.x, q3.y); ctx.lineTo(q4.x, q4.y); ctx.closePath(); ctx.fill();
@@ -626,50 +901,72 @@ function drawObstacles(){
       for (let k = n; k >= 0; k--) front.push(P(a0 + (a1 - a0) * k / n, RIN, z1));
       const c = centerAt(z1);
       const g = ctx.createRadialGradient(c.x, c.y, RIN * s1, c.x, c.y, R * s1);
-      g.addColorStop(0, hsl(obsHue, 95, hitB ? 95 : 84, .97 * fade * passedA)); g.addColorStop(1, hsl(obsHue, 90, hitB ? 80 : 56, .95 * fade * passedA));
+      g.addColorStop(0, hsl(oh, 95, hitB ? 95 : 84, .97 * fade * passedA)); g.addColorStop(1, hsl(oh, 90, hitB ? 80 : 56, .95 * fade * passedA));
       ctx.fillStyle = g;
       ctx.beginPath(); front.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.closePath(); ctx.fill();
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      ctx.strokeStyle = hsl(obsHue, 100, 70, (.35 + warn * .3) * fade * passedA); ctx.lineWidth = Math.max(2, .07 * s1);
+      ctx.strokeStyle = hsl(oh, 100, 70, (.35 + warn * .3) * fade * passedA); ctx.lineWidth = Math.max(2, .07 * s1);
       ctx.stroke();
-      ctx.strokeStyle = hsl(obsHue, 100, 94, fade * passedA); ctx.lineWidth = Math.max(1, (.018 + warn * .012) * s1);
+      ctx.strokeStyle = hsl(oh, 100, 94, fade * passedA); ctx.lineWidth = Math.max(1, (.018 + warn * .012) * s1);
       ctx.stroke();
       ctx.restore();
     }
   }
 }
 
+/* ---------- ship ---------- */
+function shipCols(sd, h){
+  if (sd.rainbow){ const k = (t * 80) % 360; return { body: hsl(k, 100, 85), trim: hsl(k + 120, 100, 60), glow: k + 60, canopy: hsl(k + 200, 100, 70) }; }
+  if (!sd.body) return { body: hsl(h, 90, 80), trim: hsl(h, 100, 50), glow: h, canopy: hsl(h + 180, 100, 68) };
+  return { body: sd.body, trim: sd.trim, glow: sd.glow, canopy: hsl(sd.glow + 180, 100, 70) };
+}
+function shipTrail(sd){ const c = shipCols(sd, hue); return hsl(c.glow, 100, 72); }
+function paintShip(g, u, sd, h, tt, om, combo){
+  const c = shipCols(sd, h);
+  g.save(); g.globalCompositeOperation = 'lighter';
+  const ga = .5 + Math.min(combo, 8) * .04;
+  const gl = g.createRadialGradient(0, 0, 0, 0, 0, u * 2.8);
+  gl.addColorStop(0, hsl(c.glow, 100, 70, ga)); gl.addColorStop(1, hsl(c.glow, 100, 60, 0));
+  g.fillStyle = gl; g.fillRect(-u * 2.8, -u * 2.8, u * 5.6, u * 5.6);
+  const fl = 1 + Math.sin(tt * 40) * .2 + Math.random() * .15;
+  g.fillStyle = hsl(c.glow - 20, 100, 72, .9);
+  const flen = sd.shape === 'comet' ? 2.2 : .9;
+  g.beginPath(); g.moveTo(-u * .35, u * .3); g.lineTo(0, u * (.3 + flen * fl)); g.lineTo(u * .35, u * .3); g.closePath(); g.fill();
+  g.restore();
+  const hg = g.createLinearGradient(0, -u * 1.2, 0, u * .4);
+  hg.addColorStop(0, '#ffffff'); hg.addColorStop(1, c.body);
+  g.fillStyle = hg;
+  g.beginPath();
+  if (sd.shape === 'dart'){
+    g.moveTo(0, -u * 1.45); g.lineTo(u * .55, u * .1); g.lineTo(u * 1.0, u * .5); g.lineTo(u * .2, u * .3); g.lineTo(0, u * .45); g.lineTo(-u * .2, u * .3); g.lineTo(-u * 1.0, u * .5); g.lineTo(-u * .55, u * .1);
+  } else if (sd.shape === 'star'){
+    for (let i = 0; i < 10; i++){ const a = -Math.PI / 2 + i * Math.PI / 5, r = (i % 2 ? .45 : 1.15) * u; i ? g.lineTo(Math.cos(a) * r, Math.sin(a) * r) : g.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+  } else if (sd.shape === 'comet'){
+    g.arc(0, -u * .25, u * .62, 0, TAU);
+  } else {
+    g.moveTo(0, -u * 1.25); g.lineTo(u * 1.05, u * .4); g.lineTo(u * .3, u * .2); g.lineTo(0, u * .42); g.lineTo(-u * .3, u * .2); g.lineTo(-u * 1.05, u * .4);
+  }
+  g.closePath(); g.fill();
+  g.strokeStyle = c.trim; g.lineWidth = Math.max(1.5, u * .08); g.stroke();
+  if (sd.id === 'sun'){
+    g.strokeStyle = 'rgba(255,200,80,.8)'; g.lineWidth = Math.max(1, u * .05);
+    for (let i = 0; i < 8; i++){ const a = i * Math.PI / 4 + tt; g.beginPath(); g.moveTo(Math.cos(a) * u * 1.3, Math.sin(a) * u * 1.3 - u * .2); g.lineTo(Math.cos(a) * u * 1.6, Math.sin(a) * u * 1.6 - u * .2); g.stroke(); }
+  }
+  g.fillStyle = c.canopy;
+  g.beginPath(); g.ellipse(0, -u * .35, u * .16, u * .32, 0, 0, TAU); g.fill();
+  g.fillStyle = '#ffffff';
+  g.globalAlpha = Math.sin(tt * 10) > 0 ? 1 : .4;
+  g.beginPath(); g.arc(-u * .9, u * .36, u * .09, 0, TAU); g.arc(u * .9, u * .36, u * .09, 0, TAU); g.fill();
+  g.globalAlpha = 1;
+}
 function drawShip(){
-  if (state !== 'play') return;
+  if (state !== 'play' && state !== 'clear') return;
   const sp = P(theta, SHIP_R, PZ), u = FS * .075;
   ctx.save();
   ctx.translate(sp.x, sp.y);
   ctx.rotate(clamp(-omega * .07, -.35, .35));
-  ctx.save(); ctx.globalCompositeOperation = 'lighter';
-  const ga = .5 + Math.min(combo, 8) * .04;
-  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, u * 2.8);
-  g.addColorStop(0, hsl(hue, 100, 70, ga)); g.addColorStop(1, hsl(hue, 100, 60, 0));
-  ctx.fillStyle = g; ctx.fillRect(-u * 2.8, -u * 2.8, u * 5.6, u * 5.6);
-  const fl = 1 + Math.sin(t * 40) * .2 + Math.random() * .15;
-  ctx.fillStyle = hsl(hue - 20, 100, 72, .9);
-  ctx.beginPath(); ctx.moveTo(-u * .35, u * .3); ctx.lineTo(0, u * (.3 + .9 * fl)); ctx.lineTo(u * .35, u * .3); ctx.closePath(); ctx.fill();
-  ctx.restore();
-  const hg = ctx.createLinearGradient(0, -u * 1.2, 0, u * .4);
-  hg.addColorStop(0, '#ffffff'); hg.addColorStop(1, hsl(hue, 90, 75));
-  ctx.fillStyle = hg;
-  ctx.beginPath();
-  ctx.moveTo(0, -u * 1.25); ctx.lineTo(u * 1.05, u * .4); ctx.lineTo(u * .3, u * .2); ctx.lineTo(0, u * .42); ctx.lineTo(-u * .3, u * .2); ctx.lineTo(-u * 1.05, u * .4); ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = hsl(hue, 100, 50); ctx.lineWidth = Math.max(1.5, u * .08); ctx.stroke();
-  ctx.fillStyle = hsl(hue + 180, 100, 68);
-  ctx.beginPath(); ctx.ellipse(0, -u * .35, u * .16, u * .32, 0, 0, TAU); ctx.fill();
-  // wing-tip lights
-  ctx.fillStyle = '#ffffff';
-  const blink = Math.sin(t * 10) > 0 ? 1 : .4;
-  ctx.globalAlpha = blink;
-  ctx.beginPath(); ctx.arc(-u * 1.0, u * .36, u * .09, 0, TAU); ctx.arc(u * 1.0, u * .36, u * .09, 0, TAU); ctx.fill();
-  ctx.globalAlpha = 1;
+  paintShip(ctx, u, shipDef(), hue, t, omega, combo);
   ctx.restore();
 }
 
@@ -681,11 +978,6 @@ function text(str, x, y, size, color, glow, align, weight){
   if (glow){ ctx.shadowColor = glow; ctx.shadowBlur = size * .5; }
   ctx.fillStyle = color; ctx.fillText(str, x, y); ctx.shadowBlur = 0;
 }
-function panel(x, y, w, h){
-  ctx.fillStyle = 'rgba(4,8,28,.7)'; ctx.strokeStyle = hsl(hue, 100, 70, .55); ctx.lineWidth = 1.5;
-  ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, 18); else ctx.rect(x, y, w, h);
-  ctx.fill(); ctx.stroke();
-}
 // HUD sits top-centre; on narrow screens it drops below the exit/music buttons (top-left, ~y 12-50)
 function hudTop(){ return W / 2 - 110 < 350 ? 64 : 14; }
 function drawHUD(){
@@ -694,13 +986,31 @@ function drawHUD(){
   ctx.save(); ctx.translate(W / 2, top + sz * .55); ctx.scale(ps, ps);
   text(Math.floor(score).toLocaleString(), 0, 0, sz, '#ffffff', glow);
   ctx.restore();
-  text('BEST ' + Math.max(best, Math.floor(score)).toLocaleString() + '   ·   LV ' + level, W / 2, top + sz * 1.3, clamp(sz * .34, 12, 16), hsl(hue, 100, 88), 'rgba(0,0,20,.8)', 'center', 700);
+  const info = LV ? 'LEVEL ' + (levelIdx + 1) + '  ·  ' + LV.name.toUpperCase() : 'BEST ' + Math.max(best, Math.floor(score)).toLocaleString();
+  text(info, W / 2, top + sz * 1.3, clamp(sz * .34, 12, 16), hsl(hue, 100, 88), 'rgba(0,0,20,.8)', 'center', 700);
+  let y = top + sz * 1.85;
+  const bw = Math.min(200, W * .5);
+  if (LV){
+    // progress to the finish gate
+    const k = finishAt ? clamp(songT / finishAt, 0, 1) : clamp(songT / (bt(nextBeat) + 4), 0, .95);
+    ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(W / 2 - bw / 2, y - 3, bw, 6);
+    ctx.fillStyle = '#ffe066'; ctx.fillRect(W / 2 - bw / 2, y - 3, bw * k, 6);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(W / 2 + bw / 2 - 2, y - 7, 4, 14);
+    y += 18;
+  }
+  // Zone meter: near misses fill it
+  const zk = zoneT > 0 ? zoneT / ZONE_TIME : zone;
+  ctx.fillStyle = 'rgba(255,255,255,.16)'; ctx.fillRect(W / 2 - bw / 2, y - 4, bw, 8);
+  const zg = ctx.createLinearGradient(W / 2 - bw / 2, 0, W / 2 + bw / 2, 0);
+  zg.addColorStop(0, hsl(obsHue, 100, 70)); zg.addColorStop(1, hsl(obsHue + 80, 100, 75));
+  ctx.fillStyle = zg; ctx.fillRect(W / 2 - bw / 2, y - 4, bw * zk, 8);
+  text(zoneT > 0 ? 'ZONE  x2' : 'ZONE', W / 2 - bw / 2 - 8, y, 12, zoneT > 0 ? '#ffffff' : 'rgba(255,255,255,.75)', zoneT > 0 ? hsl(obsHue, 100, 60) : null, 'right', 900);
+  y += 20;
   if (combo > 1){
-    const cy = top + sz * 1.85, k = clamp(comboT / COMBO_TIME, 0, 1);
-    text('COMBO x' + combo, W / 2, cy, clamp(sz * .42, 14, 20), hsl(obsHue, 100, 85), hsl(obsHue, 100, 60), 'center', 900);
-    const bw = 90;
-    ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.fillRect(W / 2 - bw / 2, cy + 12, bw, 4);
-    ctx.fillStyle = hsl(obsHue, 100, 80); ctx.fillRect(W / 2 - bw / 2, cy + 12, bw * k, 4);
+    const k = clamp(comboT / COMBO_TIME, 0, 1);
+    text('COMBO x' + combo, W / 2, y, clamp(sz * .42, 14, 20), hsl(obsHue, 100, 85), hsl(obsHue, 100, 60), 'center', 900);
+    ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.fillRect(W / 2 - 45, y + 12, 90, 4);
+    ctx.fillStyle = hsl(obsHue, 100, 80); ctx.fillRect(W / 2 - 45, y + 12, 90 * k, 4);
   }
   for (const q of pops){
     ctx.globalAlpha = clamp(q.life * 1.5, 0, 1);
@@ -709,58 +1019,23 @@ function drawHUD(){
   }
   ctx.globalAlpha = 1;
 }
-function drawTitle(){
-  ctx.fillStyle = 'rgba(2,4,18,.4)'; ctx.fillRect(0, 0, W, H);
-  const ts = clamp(Math.min(W * .12, H * .12), 32, 92), cy = Math.max(H * .24, 80 + ts * .5), wob = Math.sin(t * 2) * 3;
-  if (V === 2){
-    text('ICE TUNNEL', W / 2, cy + wob, ts, '#ffffff', hsl(hue, 100, 60));
-    ctx.save(); ctx.translate(W / 2, cy + ts * .95 + wob); ctx.rotate(Math.sin(t * 3) * .06);
-    text('2', 0, 0, ts * 1.05, hsl(hue + 160, 100, 70), hsl(hue + 160, 100, 60));
-    ctx.restore();
-  } else {
-    text('ICE TUNNEL', W / 2, cy + wob, ts, '#eaffff', hsl(hue, 100, 60));
-  }
-  const subY = cy + ts * (V === 2 ? 1.75 : 1.0);
-  text(CFG.sub, W / 2, subY, clamp(M * .04, 14, 22), hsl(hue, 100, 85), null, 'center', 600);
-  const pw = Math.min(W - 32, 460), ph = clamp(M * .34, 150, 200), y0 = Math.max(subY + 28, H * .48);
-  panel(W / 2 - pw / 2, y0, pw, ph);
-  const fs = clamp(M * .036, 13, 19);
-  text(isTouch ? 'Hold LEFT or RIGHT side of the screen' : 'Rotate with  ← →  or  A / D', W / 2, y0 + ph * .18, fs, '#ffffff', null, 'center', 700);
-  text('to spin around the tunnel', W / 2, y0 + ph * .34, fs * .92, hsl(hue, 100, 85), null, 'center', 500);
-  text(V === 2 ? 'Dodge spinning gaps and moving blocks' : 'Slip through the gaps in the ice walls', W / 2, y0 + ph * .52, fs * .92, hsl(obsHue, 100, 82), null, 'center', 500);
-  text('Follow the gems  ·  shave walls for a COMBO', W / 2, y0 + ph * .7, fs * .88, '#ffe9a8', null, 'center', 600);
-  text('There is always a way through', W / 2, y0 + ph * .86, fs * .82, 'rgba(255,255,255,.7)', null, 'center', 500);
-  ctx.globalAlpha = .55 + .45 * Math.sin(t * 4);
-  text('Tap / press Space to start', W / 2, Math.min(H - 44, y0 + ph + clamp(M * .09, 34, 60)), clamp(M * .05, 18, 28), '#ffffff', hsl(hue, 100, 60));
-  ctx.globalAlpha = 1;
-  if (best > 0) text('BEST ' + best.toLocaleString(), W / 2, Math.min(H - 16, y0 + ph + clamp(M * .15, 60, 100)), clamp(M * .035, 13, 18), hsl(hue, 100, 85), null, 'center', 700);
-}
-function drawOver(){
-  const a = clamp(overTimer * 3, 0, 1);
-  ctx.fillStyle = 'rgba(2,4,18,' + (.55 * a).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H);
-  ctx.globalAlpha = a;
-  const pw = Math.min(W - 32, 420), ph = clamp(M * .66, 280, 370), x0 = W / 2 - pw / 2, y0 = Math.max(60, H / 2 - ph / 2);
-  panel(x0, y0, pw, ph);
-  text('SHATTERED!', W / 2, y0 + ph * .13, clamp(M * .085, 28, 52), '#ffffff', hsl(obsHue, 100, 60));
-  text('SCORE', W / 2, y0 + ph * .28, 14, hsl(hue, 100, 85), null, 'center', 700);
-  text(Math.floor(score).toLocaleString(), W / 2, y0 + ph * .4, clamp(M * .1, 34, 64), '#ffffff', hsl(hue, 100, 60));
-  text('BEST  ' + best.toLocaleString(), W / 2, y0 + ph * .54, clamp(M * .04, 15, 22), '#ffe066', null, 'center', 700);
-  text('Walls ' + rings + '   ·   Gems ' + gemCount + '   ·   Top combo x' + bestCombo, W / 2, y0 + ph * .65, clamp(M * .03, 12, 16), hsl(obsHue, 100, 85), null, 'center', 600);
-  if (newBest){
-    const s = 1 + Math.sin(t * 6) * .05;
-    ctx.save(); ctx.translate(W / 2, y0 + ph * .76); ctx.scale(s, s);
-    text('NEW BEST!', 0, 0, clamp(M * .045, 16, 24), '#ffe066', '#ffd23f'); ctx.restore();
-  }
-  if (overTimer > .7){
-    ctx.globalAlpha = a * (.55 + .45 * Math.sin(t * 4));
-    text('Tap / press Space to restart', W / 2, y0 + ph * .9, clamp(M * .04, 15, 22), '#ffffff', hsl(hue, 100, 60));
-  }
-  ctx.globalAlpha = 1;
-}
 function drawPaused(){
   ctx.fillStyle = 'rgba(2,4,18,.6)'; ctx.fillRect(0, 0, W, H);
   text('PAUSED', W / 2, H * .45, clamp(M * .1, 30, 64), '#ffffff', hsl(hue, 100, 60));
   text('Tap / press Space to resume', W / 2, H * .45 + clamp(M * .1, 40, 70), clamp(M * .04, 15, 22), hsl(hue, 100, 85), null, 'center', 600);
+}
+function drawLines(){
+  if (!lines.length) return;
+  const c = centerAt(FAR), Rr = Math.max(W, H);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+  ctx.strokeStyle = zoneK > .3 ? hsl(obsHue, 100, 85) : 'rgba(230,250,255,1)';
+  for (const l of lines){
+    const r0 = l.r * Rr, r1 = r0 * 1.3;
+    ctx.globalAlpha = clamp(l.life * 2, 0, 1) * .45;
+    ctx.lineWidth = 1 + l.r * 2.5;
+    ctx.beginPath(); ctx.moveTo(c.x + Math.cos(l.a) * r0, c.y + Math.sin(l.a) * r0); ctx.lineTo(c.x + Math.cos(l.a) * r1, c.y + Math.sin(l.a) * r1); ctx.stroke();
+  }
+  ctx.restore(); ctx.globalAlpha = 1;
 }
 
 function render(){
@@ -769,20 +1044,99 @@ function render(){
   drawTunnel();
   drawGems();
   drawObstacles();
+  drawLines();
   drawShip();
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   for (const p of parts){ ctx.globalAlpha = clamp(p.life / p.max, 0, 1); ctx.fillStyle = p.c; ctx.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.r); }
   ctx.restore(); ctx.globalAlpha = 1;
   const vg = ctx.createRadialGradient(W / 2, H / 2, M * .35, W / 2, H / 2, Math.max(W, H) * .75);
-  vg.addColorStop(0, 'rgba(0,0,10,0)'); vg.addColorStop(1, 'rgba(0,0,10,.5)');
+  vg.addColorStop(0, 'rgba(0,0,10,0)'); vg.addColorStop(1, zoneK > .02 ? hsl(obsHue, 90, 20, .5 * zoneK + .3) : 'rgba(0,0,10,.5)');
   ctx.fillStyle = vg; ctx.fillRect(-30, -30, W + 60, H + 60);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   if (flash > 0){ ctx.fillStyle = 'rgba(255,255,255,' + (flash * .6).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); }
   if (state === 'play' || state === 'dying') drawHUD();
-  if (state === 'title') drawTitle();
-  if (state === 'over') drawOver();
   if (paused) drawPaused();
 }
+
+/* ---------- menus (DOM overlays, hidden with display:none) ---------- */
+const $ = id => document.getElementById(id);
+const OVS = ['menu', 'levels', 'shipsOv', 'result'];
+function showOnly(id){ for (const o of OVS) $(o).classList.toggle('hidden', o !== id); if (id === 'menu') fillMenu(); }
+function fillMenu(){
+  const logo = $('logo');
+  logo.innerHTML = V === 2 ? 'ICE TUNNEL<span class="logo2">2</span>' : 'ICE TUNNEL';
+  $('sub').textContent = CFG.sub;
+  const st = levelStars.reduce((a, b) => a + (b || 0), 0);
+  $('mBest').textContent = 'BEST ' + best.toLocaleString() + '   ·   STARS ' + st + ' / 30';
+  $('mHint').innerHTML = (isTouch ? 'Hold the <b>left</b> or <b>right</b> side to spin.' : 'Spin with <b>← →</b> or <b>A / D</b>. Space starts Endless.') +
+    '<br>Walls arrive on the beat. Shave past them to fill the <b>ZONE</b> meter.';
+}
+function fillLevels(){
+  const g = $('lvGrid'); g.innerHTML = '';
+  LEVELS.forEach((L, i) => {
+    const b = document.createElement('button'); b.type = 'button';
+    const ok = levelUnlocked(i), s = levelStars[i] || 0;
+    b.className = 'lv' + (ok ? '' : ' lock') + (s ? ' done' : '');
+    b.innerHTML = (ok ? (i + 1) : '🔒') + '<small>' + '★'.repeat(s) + '<span style="opacity:.3">' + '★'.repeat(3 - s) + '</span></small>';
+    b.title = L.name;
+    b.addEventListener('click', () => { if (!ok) return; sfx.click(); startRun('level', i); });
+    g.appendChild(b);
+  });
+  const st = levelStars.reduce((a, b) => a + (b || 0), 0);
+  $('lvStars').textContent = 'STARS ' + st + ' / 30';
+}
+function fillShips(){
+  const g = $('shipGrid'); g.innerHTML = '';
+  SHIPS.forEach(s => {
+    const ok = shipOk(s), on = shipDef().id === s.id;
+    const b = document.createElement('button'); b.type = 'button';
+    b.className = 'ship' + (on ? ' on' : '') + (ok ? '' : ' lock');
+    const c = document.createElement('canvas'); c.width = 128; c.height = 104;
+    b.appendChild(c);
+    b.insertAdjacentHTML('beforeend', s.name + '<small>' + (on ? 'Flying' : ok ? 'Tap to fly' : 'Score ' + s.need.toLocaleString()) + '</small>');
+    const g2 = c.getContext('2d'); g2.translate(64, 60);
+    if (!ok) g2.globalAlpha = .35;
+    paintShip(g2, 26, s, 195, 0.3, 0, 0);
+    b.addEventListener('click', () => { if (!ok) return; shipId = s.id; store.set('icetunnel_shipskin', s.id); sfx.click(); fillShips(); });
+    g.appendChild(b);
+  });
+}
+function showResult(win, stars, ratio){
+  showOnly('result');
+  $('rTitle').textContent = win ? 'LEVEL CLEAR!' : 'SHATTERED!';
+  $('rStars').innerHTML = LV ? [0, 1, 2].map(i => i < (stars || 0) ? '★' : '<span class="off">★</span>').join('') : '';
+  $('rStars').style.display = LV ? '' : 'none';
+  let html;
+  if (LV){
+    html = '<b>Level ' + (levelIdx + 1) + ': ' + LV.name + '</b><br>';
+    html += win ? 'Gems ' + gemCount + ' / ' + gemsTotal + ' (' + Math.round(ratio * 100) + '%)<br><span style="opacity:.75">60% gems = 2 stars · 90% = 3 stars</span>'
+      : 'Made it ' + Math.round(clamp(songT / Math.max(finishAt || bt(nextBeat) + 2, 1), 0, .99) * 100) + '% of the way. So close!';
+  } else {
+    html = 'Score <b>' + Math.floor(score).toLocaleString() + '</b>' + (newBest ? '  ·  <b style="color:#ffe066">NEW BEST!</b>' : '') +
+      '<br>Best ' + best.toLocaleString() + '<br>Walls ' + rings + '  ·  Gems ' + gemCount + '  ·  Top combo x' + bestCombo + '  ·  Zones ' + zones;
+  }
+  $('rText').innerHTML = html;
+  $('rNew').textContent = newShips.length ? 'New ship unlocked: ' + newShips.map(s => s.name).join(', ') + '!' : '';
+  const next = win && levelIdx < LEVELS.length - 1;
+  $('rMain').textContent = next ? 'NEXT LEVEL' : win ? 'LEVELS' : 'TRY AGAIN';
+  $('rRetry').style.display = win ? '' : 'none';
+}
+function retry(){ sfx.click(); startRun(gameMode, levelIdx); }
+$('bEndless').addEventListener('click', () => { ensureAudio(); sfx.click(); startRun('endless'); });
+$('bLevels').addEventListener('click', () => { ensureAudio(); sfx.click(); fillLevels(); showOnly('levels'); });
+$('bShips').addEventListener('click', () => { ensureAudio(); sfx.click(); fillShips(); showOnly('shipsOv'); });
+$('lvBack').addEventListener('click', () => { sfx.click(); showOnly('menu'); });
+$('shBack').addEventListener('click', () => { sfx.click(); showOnly('menu'); });
+$('rMain').addEventListener('click', () => {
+  if (state === 'clear'){
+    if (levelIdx < LEVELS.length - 1){ sfx.click(); startRun('level', levelIdx + 1); }
+    else { state = 'title'; obs = []; gems = []; fillLevels(); showOnly('levels'); }
+  } else retry();
+});
+$('rRetry').addEventListener('click', retry);
+$('rMenu').addEventListener('click', () => { sfx.click(); toMenu(); });
+for (const o of OVS) $(o).addEventListener('pointerdown', e => { e.stopPropagation(); ensureAudio(); });
+document.documentElement.style.setProperty('--hue', V === 2 ? '#ff5fd2' : '#2ef2ff');
 
 function frame(now){
   requestAnimationFrame(frame);
@@ -793,6 +1147,9 @@ function frame(now){
   render();
 }
 resize();
+showOnly('menu');
+// test hook for automated play-testing only (?test=1); not used in normal play
+try { if (/[?&]test=1/.test(location.search)) window.__game = code => eval(code); } catch(e){}
 requestAnimationFrame(t0 => { last = t0; frame(t0); });
 })();
 </script>

@@ -10,7 +10,7 @@
 html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
 body{font-family:Georgia,"Times New Roman",serif;color:#ddd5c4}
 #c{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block;touch-action:none}
-.ov{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at 50% 40%,rgba(14,12,20,.5),rgba(0,0,0,.93) 75%);overflow-y:auto;touch-action:pan-y}
+.ov{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:62px 18px 18px;background:radial-gradient(ellipse at 50% 40%,rgba(14,12,20,.5),rgba(0,0,0,.93) 75%);overflow-y:auto;touch-action:pan-y}
 .hidden{display:none!important}
 .card{max-width:560px;width:100%;text-align:center;animation:fadein .8s ease;margin:auto}
 @keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -30,6 +30,14 @@ h2{margin:0 0 8px;font-weight:normal;font-size:clamp(34px,8vw,56px);color:#ece4d
 .chb.on{border-color:#8fc59d;color:#dff3e3;background:rgba(143,197,157,.14)}
 .chb .ok{color:#8fc59d}
 .stats{font:15px/1.7 system-ui,sans-serif;color:#b9c2cc;margin:8px 0 18px}
+.paper{background:linear-gradient(#efe4c8,#ddcfae);color:#3b2c1c;border-radius:6px;padding:18px 20px 14px;margin:0 auto 18px;max-width:440px;text-align:left;
+ box-shadow:0 10px 30px rgba(0,0,0,.6);transform:rotate(-1deg);font:17px/1.55 Georgia,serif}
+.paper p{margin:6px 0 10px}
+.ptag{font:700 11px/1 system-ui,sans-serif;letter-spacing:.25em;color:#7a5a8a}
+.psig{text-align:right;font-style:italic;color:#6a5238}
+.jn{background:rgba(239,228,200,.92);color:#3b2c1c;border-radius:6px;padding:10px 14px;margin:0 auto 10px;max-width:460px;text-align:left;font:15px/1.5 Georgia,serif}
+.jn.lock{background:rgba(255,255,255,.06);color:#8e98a3;font-style:italic}
+.jn b{font:700 11px system-ui,sans-serif;letter-spacing:.2em;color:#7a5a8a;display:block;margin-bottom:3px}
 #hudb{position:fixed;right:10px;top:max(58px,calc(env(safe-area-inset-top) + 48px));z-index:15;display:flex;gap:8px}
 .ib{width:42px;height:42px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(10,10,14,.55);color:#d8d2c4;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;touch-action:manipulation}
 .ib svg{width:22px;height:22px}
@@ -48,7 +56,20 @@ h2{margin:0 0 8px;font-weight:normal;font-size:clamp(34px,8vw,56px);color:#ece4d
  <p class="story" id="tStory"></p>
  <div class="ctrl" id="tCtrl"></div>
  <button class="btn" id="bStart">Enter the House</button>
+ <button class="btn sec" id="bExplore">Explore Mode</button>
+ <div class="ctrl" style="margin:6px auto 0">Explore Mode: no night limit, a slower Warden, and getting caught just sends you back to bed. Great for younger players!</div>
  <div class="chs" id="chs"></div>
+ <button class="chb" id="bJournal" style="margin-top:12px">Secret Notes</button>
+</div></div>
+<div id="noteOv" class="ov hidden"><div class="card">
+ <div class="paper"><div class="ptag" id="nTag">SECRET NOTE</div><p id="nText"></p><div class="psig" id="nSig"></div></div>
+ <button class="btn" id="bNoteOk">Keep exploring</button>
+</div></div>
+<div id="journal" class="ov hidden"><div class="card">
+ <h2 style="font-size:36px">Secret Notes</h2>
+ <p class="story" id="jCount"></p>
+ <div id="jList"></div>
+ <button class="btn" id="bJClose">Back</button>
 </div></div>
 <div id="win" class="ov hidden"><div class="card">
  <div class="brand">ESCAPED</div>
@@ -91,8 +112,22 @@ function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);
 
 // ---------- save ----------
 const SKEY='blizzard_hollowhouse';
-let save={done:{},best:{},muted:false};
+let save={done:{},best:{},muted:false,notes:{}};
 try{const s=JSON.parse(localStorage.getItem(SKEY));if(s&&typeof s==='object')save=Object.assign(save,s);}catch(e){}
+if(!save.notes||typeof save.notes!=='object')save.notes={};
+// secret notes: a light mystery about who built the Warden, three per chapter
+const NOTES={
+ 1:[{t:'Day one of my new invention! Warden Model 7 is finished. It sweeps, it dusts, and every night it locks all the doors so nothing gets lost. What a helpful fellow.',s:'M.H.'},
+  {t:'The Warden has started collecting keys. It jingles them when it is happy. I counted 212 on its ring today. I do not even OWN 212 doors!',s:'M.H.'},
+  {t:'Big thunderstorm last night. Lightning hit the weathervane and the whole house buzzed. Since then the Warden acts odd... it tried to tuck the cat into a drawer.',s:'M.H.'}],
+ 2:[{t:'Pickwick the crow used to be my alarm clock. Now it helps the Warden and squawks whenever anyone is out of bed. Traitor! (I still give it crackers.)',s:'M.H.'},
+  {t:'I think I understand. The storm jumbled the Warden\'s sorting gears. It believes every person in the house is a LOST THING that must be put back to bed.',s:'M.H.'},
+  {t:'Note to self: the Warden will never peek inside a wardrobe, a chest, or under a bed. I built it to be polite. Unless it SEES you climb in...',s:'M.H.'}],
+ 3:[{t:'I hid the fuses all around the manor so the Warden could not "tidy" them away. Clever me. Also, annoying me.',s:'M.H.'},
+  {t:'I wrote a lullaby for the Warden\'s music drum. Three gentle notes that reset its gears. I just need to reach my workshop under the manor...',s:'M.H.'},
+  {t:'To whoever finds this: the Warden is not wicked, only muddled. When you get out, leave these notes on the front step. I will come home and fix my old friend.',s:'Professor Mabel Hollow'}]};
+const noteId=(ch,k)=>ch+'-'+k;
+const notesFound=()=>Object.keys(save.notes).filter(k=>save.notes[k]).length;
 function persist(){try{localStorage.setItem(SKEY,JSON.stringify(save));}catch(e){}}
 let chN=1;
 try{const n=parseInt(new URLSearchParams(location.search).get('ch'),10);if(n>=1&&n<=3)chN=n;}catch(e){}
@@ -111,11 +146,14 @@ function audioInit(){
 function setMute(m){AU.muted=m;save.muted=m;persist();
  try{if(AU.m)AU.m.gain.setTargetAtTime(m?0:1,AU.c.currentTime,.05);}catch(e){}
  $('sndW').style.display=m?'none':'';$('sndX').style.display=m?'':'none';}
-function osc(type,f0,f1,dur,vol,delay){if(!AU.c)return;try{const c=AU.c,t=c.currentTime+(delay||0);
+function osc(type,f0,f1,dur,vol,delay,pan){if(!AU.c)return;try{const c=AU.c,t=c.currentTime+(delay||0);
  const o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f0,t);
  if(f1&&f1!==f0)o.frequency.exponentialRampToValueAtTime(f1,t+dur);
  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+Math.min(.02,dur/4));g.gain.exponentialRampToValueAtTime(.0001,t+dur);
- o.connect(g);g.connect(AU.m);o.start(t);o.stop(t+dur+.05);}catch(e){}}
+ o.connect(g);
+ // footsteps are panned left/right so you can hear which side the Warden is on
+ if(pan&&c.createStereoPanner){const sp=c.createStereoPanner();sp.pan.value=clamp(pan,-1,1);g.connect(sp);sp.connect(AU.m);}else g.connect(AU.m);
+ o.start(t);o.stop(t+dur+.05);}catch(e){}}
 function nz(dur,vol,ft,f0,f1,q,delay){if(!AU.c)return;try{const c=AU.c,t=c.currentTime+(delay||0);
  const s=c.createBufferSource();s.buffer=AU.nb;const fl=c.createBiquadFilter();fl.type=ft||'lowpass';
  fl.frequency.setValueAtTime(f0||1000,t);if(f1)fl.frequency.exponentialRampToValueAtTime(f1,t+dur);fl.Q.value=q||1;
@@ -134,7 +172,10 @@ const sfx={
  heart(v){sin(110,85,.08,Math.min(.12,v*.5));sin(104,82,.08,Math.min(.1,v*.4),.13);},
  hide(){tri(440,330,.12,.05);},
  screech(){tri(1047,784,.12,.08);tri(1175,880,.14,.08,.15);},
- thud(v){sin(196,165,.06,Math.min(.06,v*.5));},
+ thud(v,pan){osc('sine',196,165,.07,Math.min(.07,v*.55),0,pan);osc('sine',131,110,.08,Math.min(.05,v*.4),.01,pan);},
+ phew(){[784,659,523].forEach((f,i)=>tri(f,null,.18,.06,i*.1));sin(1047,null,.3,.04,.32);},
+ note(){[659,784,988].forEach((f,i)=>tri(f,null,.16,.07,i*.08));sin(1319,null,.4,.05,.24);},
+ sniff(){sin(330,294,.12,.04);sin(330,294,.12,.04,.18);},
  fuse(){[523,659,784,1047].forEach((f,i)=>tri(f,null,.12,.07,i*.07));},
  clank(){tri(659,null,.07,.07);tri(988,null,.12,.06,.06);},
  engine(){tri(220,440,.6,.08);sin(330,660,.6,.06,.1);tri(523,784,.4,.06,.5);},
@@ -151,23 +192,23 @@ const CHAPTERS={
  story:'You wake on a dusty bed in a house you have never seen. Down the hall: slow, heavy steps and the jingle of keys. The Warden locks every door it finds. Find the front door key and the three torn notes with the padlock code, then slip out before the fifth night ends.',
  floors:[{name:'Ground Floor',dark:'rgba(2,2,7,.965)',map:[
 '################################',
-'#..W....#.....#__2__#,,,,,,,,,,#',
+'#..W..N.#J....#__2__#,,,,,,,,,,#',
 '#.......#.....#_____#,,,,,,,3,,#',
 '#.B.....C..=..D___W_C,,TT,,,,W,#',
 '#...P...#..=..#_____#,,TT,,,,,,#',
 '#.......#.....#_____#,,,,,,,,B,#',
-'####D####.....###########D######',
-'#______v#.....#................#',
+'####D####....J###########D######',
+'#______v#.....#J...............#',
 '#_W_____#..=..#..TTTTTT....W...#',
 '#_______C.....C..TTTTTT........#',
-'#_______#.....#v....H..........#',
-'#__T____#..=..#.............W..#',
+'#_______#.....#v....H.........N#',
+'#__T___J#..=..#.............W..#',
 '####D####.....#####L######D#####',
 '#..W....#.....#K..5...K#..v..W.#',
 '#......4#.....#........#...1...#',
-'#.v..W..#.....#..TT....#...B...#',
-'#.......#..=..#........#.......#',
-'#O.....O#.....#........#O.....O#',
+'#.v..W..#J....#..TT....#...B...#',
+'#.N.....#..=..#........#.......#',
+'#O.....O#.....#.......J#O.....O#',
 '###########X####################']}],
  items:{
   '1':{id:'brass',name:'Brass Key',icon:'key',color:'#d9b04c',msg:'A small brass key. It smells of pipe smoke.'},
@@ -182,38 +223,38 @@ const CHAPTERS={
  story:'You got out... and woke up somewhere worse. This house has two floors, a garage, and a crow with a voice like a rusty hinge. If it spots you it will scream for the Warden. Fix the old car in the garage: it needs a battery, a fuel can and its key.',
  floors:[{name:'Ground Floor',dark:'rgba(2,2,7,.965)',stairs:'UP',map:[
 '##YYYY########################',
-'#::AA::::::#________#,,,,,,,,#',
+'#J:AA::::::#________#,,,,,,,,#',
 '#::AA:::::K#__TT____#,,,,,,W,#',
-'#::AA::::::D__TT____C,,,2,,,,#',
+'#::AA:N::::D__TT____C,,,2,,,,#',
 '#:::::::::K#________#,,TT,,,,#',
 '#O::::::::O#_W______#,,TT,,B,#',
 '#::::::::::#________#,,,,,,,,#',
 '#####D######D#########C#######',
-'#............................#',
+'#...........................J#',
 '#..==.....v.........==....v..#',
-'#.....................H......#',
+'#J............J.......H......#',
 '####D#####C#######D###########',
-'#..W....#.......#............#',
+'#..W....#......J#............#',
 '#......5#.......#..TTTTTT..W.#',
 '#.v.....#..%%%..#..TTTTTT....#',
 '#..W....#..%%%..#............#',
-'#.......#.......#..v.....B...#',
+'#.......#.......#..v.N...B...#',
 '#O.....O#O.....O#O..........O#',
 '##############################']},
  {name:'Upstairs',dark:'rgba(2,2,8,.97)',stairs:'DOWN',map:[
 '##############################',
 '#,,,,,,,,,,#________#........#',
-'#,,B,,,,W,,#__W_____#..B..W..#',
+'#,,B,,,,W,,#__W___N_#..B..W..#',
 '#,,,,,,,,,,#________#........#',
 '#,,,,4,,,,K#________#....3...#',
 '#,,TT,,,,,,#_____v__#.v......#',
 '#,,TT,,,,,K#________#O......O#',
 '#####Q######D#########C#######',
-'#............................#',
+'#J...........................#',
 '#....==.........v....==......#',
-'#............................#',
+'#...........................J#',
 '####L#####D#######C###########',
-'#..K.K..#.......#............#',
+'#..K.K..#J......#............#',
 '#...1...#.......#..B.....W...#',
 '#.K...K.#..%%%..#.....P......#',
 '#.......#..%%%..#..TT........#',
@@ -236,16 +277,16 @@ const CHAPTERS={
  story:'A great dark manor, and a Warden that has learned to hurry. The power is dead and the only way out is the old sewer under the basement, drowned in black water. Find three fuses, bring the lights and the pumps back to life, and pry open the grate. Careful: if it catches you, it takes back what you carried.',
  floors:[{name:'Ground Floor',dark:'rgba(2,2,7,.97)',stairs:'DOWN',map:[
 '######################################',
-'#KKKKKKKKKKK#,,,,,,,,,,,,#...........#',
-'#...........#,,,,,,,,,,,,#.O.......O.#',
+'#KKKKKKKKKKK#B,,,,,,,,,,W#...........#',
+'#.....N.....#,,,,,,,,,,,,#.O.......O.#',
 '#.KK.KK.KK..D,,,,,,,,,,,,C...........#',
 '#...........#,,,,P,,,,,,,#.....3.....#',
 '#.KK.KK.KK.W#,,TT,,,,TT,,#...........#',
 '#...........#,,,,,,,,,,,,#W.........W#',
 '######D########C###########D##########',
-'#....................................#',
+'#...................................J#',
 '#..==....v.......==.........v...==...#',
-'#.............................H......#',
+'#J................J...........H......#',
 '#####D#######C#######D#######L########',
 '#_________#.......#.........#..KK..KK#',
 '#__TT_____#.......#..TTTTT..#........#',
@@ -254,8 +295,8 @@ const CHAPTERS={
 '#____5____#.......#..v...B..#........#',
 '#_W_______#.......#.........#W......W#',
 '#O_______O#O.....O#O.......O#........#',
-'#_________#.......#.........#..B.....#',
-'#_________#.......#.........#........#',
+'#_________#.......#.........#..B.N...#',
+'#_________#J......#.........#........#',
 '######################################']},
  {name:'Basement',dark:'rgba(1,2,5,.982)',stairs:'UP',map:[
 '######################################',
@@ -267,7 +308,7 @@ const CHAPTERS={
 '#####Z#################D##############',
 '#::::::::::::::::::::::::::::::::::::#',
 '#::::::::::::::::::::::::::::::::::::#',
-'#:::::::::v::::::::::::::::::::v:::::#',
+'#J::::::::v::::::::::::::::::::v::::J#',
 '####D########C########D########D######',
 '#:::::::::#:::::::#:::::::::#::::::::#',
 '#:KK:KK:::#:::::::#:O:::::O:#::::::::#',
@@ -277,8 +318,8 @@ const CHAPTERS={
 '#:KK:KK:::#:::::::#:::::::::#::W:::::#',
 '#::::::::B#:::::::#::v::::::#::::::::#',
 '#:::::::::#O:::::O#O:::::::O#O::::::O#',
-'#:::::::::#:::::::#::::::::W#::::::::#',
-'#:::::::::#:::::::#:::::::::#::::::::#',
+'#::::N::::#:::::::#::::::::W#::::::::#',
+'#:::::::::#J::::::#:::::::::#::::::::#',
 '######################################']}],
  items:{
   '1':{id:'f1',name:'Fuse',icon:'fuse',color:'#e8c25a',msg:'A glass fuse. The fuse box is in the basement.'},
@@ -297,11 +338,12 @@ const CHAPTERS={
 /*MAPS_END*/
 
 // ---------- state ----------
-let C=null,G=null,P=null,W=null,crow=null;
+let C=null,G=null,P=null,W=null,crow=null,exploreMode=false;
 const cam={x:0,y:0};
 let mode='title',modeT=0,paused=false,fadeIn=0,floorFade=0;
 const FLOORS='.,_:=';
-const SOLID=new Set('#WBTKOAFGXY~'.split(''));
+const SOLID=new Set('#WBJTKOAFGXY~'.split(''));
+const isHide=c=>c==='W'||c==='B'||c==='J';
 const LBLOCK=new Set('#WKXYG'.split(''));
 const isDoorCh=c=>c==='D'||c==='C'||c==='L'||c==='Q'||c==='Z';
 const DIRS8=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
@@ -319,12 +361,13 @@ function buildFloor(def,fi){
    const b=FLOORS.includes(c)?c:findBase(rows,x,y);F.base[y][x]=b;
    if(c==='P'){G.start={fl:fi,x:x+.5,y:y+.5};c=b;}
    else if(c==='H'){G.wstart={fl:fi,x:x+.5,y:y+.5};c=b;}
+   else if(c==='N'){const k=G.secrets.length;G.secrets.push({fl:fi,x:x+.5,y:y+.5,id:noteId(chN,k),k,taken:false});c=b;}
    else if(c>='0'&&c<='9'){const d=C.items[c];G.items.push({def:d,fl:fi,x:x+.5,y:y+.5,ofl:fi,ox:x+.5,oy:y+.5,taken:false,used:false});c=b;}
    F.t[y][x]=c;
    if(isDoorCh(c)){const L=rows[y][x-1],R=rows[y][x+1];
     F.doors.set(y*w+x,{open:false,creaky:c==='C',lock:(c==='L'||c==='Q'||c==='Z')?c:null,horiz:(L==='#'&&R==='#')});}
    if(c==='%')F.stairs.push([x,y]);
-   if(c==='W'||c==='B')F.hides.push([x,y]);
+   if(isHide(c))F.hides.push([x,y]);
    if(c==='F')F.fuse.push([x,y]);
    if(c==='A'){if(!F.car)F.car={x0:x,y0:y,x1:x,y1:y};F.car.x0=Math.min(F.car.x0,x);F.car.x1=Math.max(F.car.x1,x);F.car.y0=Math.min(F.car.y0,y);F.car.y1=Math.max(F.car.y1,y);}
   }}
@@ -375,7 +418,8 @@ function bfs(fl,sx,sy,goal){
 function newGame(){
  C=CHAPTERS[chN];
  G={floors:[],items:[],inv:[],nights:1,time:0,fuses:0,car:{},drainT:0,draining:false,drained:false,zones:[],rings:[],motes:[],
-  shake:0,lastPick:null,guideT:0,guide:null,guidePt:null,fx:[],toasts:[],ambT:6,hbT:0,hbPulse:0,focus:null,won:false,wSteps:0,flick:0,escapeMsg:''};
+  shake:0,lastPick:null,guideT:0,guide:null,guidePt:null,fx:[],toasts:[],ambT:6,hbT:0,hbPulse:0,focus:null,won:false,wSteps:0,flick:0,escapeMsg:'',
+  secrets:[],steps:[],stepSide:1,heardT:0,cc:null,closeCalls:0,notesRun:0,crumbs:[],explore:exploreMode,lockT:0};
  C.floors.forEach((f,i)=>G.floors.push(buildFloor(f,i)));
  P={fl:G.start.fl,x:G.start.x,y:G.start.y,r:.28,a:-PI/2,light:true,stam:1,tired:false,hidden:null,moving:false,run:false,stepAcc:0,lastTile:-1,onStairs:true,walkPh:0};
  W={fl:G.wstart.fl,x:G.wstart.x,y:G.wstart.y,a:PI,face:PI,look:PI,state:'patrol',path:null,pi:0,goal:null,wait:2,sus:0,last:null,seenT:9,repath:0,
@@ -409,6 +453,27 @@ function objective(){
  if(G.fuses<3)return 'Restore power: fuses in the basement box ('+G.fuses+'/3)';
  if(!has('crowbar'))return 'The cistern drained. Find something to pry the grate';
  return 'Pry open the sewer grate in the basement!';
+}
+
+// goal checklist per chapter. st: 0 still to find, 1 carrying it, 2 done
+function goals(){
+ const it=id=>{const x=G.items.find(i=>i.def.id===id);return x?x.def:{icon:'key',color:'#888'};};
+ const st=id=>{const x=G.items.find(i=>i.def.id===id);if(!x||!x.taken)return 0;return x.used?2:1;};
+ const door={icon:'door'};
+ if(chN===1){const n=notesHave();return [
+  {ic:{icon:'note'},label:'Torn notes '+n+'/3',st:n>=3?2:n?1:0},
+  {ic:it('brass'),label:'Brass key (study)',st:st('brass')||(has('front')?2:0)},
+  {ic:it('front'),label:'Front door key',st:st('front')},
+  {ic:door,label:'Escape the front door',st:0}];}
+ if(chN===2){const p=id=>G.car[id]?2:st(id);return [
+  {ic:it('battery'),label:'Car battery',st:p('battery')},
+  {ic:it('fuel'),label:'Fuel can',st:p('fuel')},
+  {ic:it('carkey'),label:'Car key',st:p('carkey')},
+  {ic:{icon:'car'},label:'Start the old car',st:0}];}
+ const inF=G.inv.filter(i=>i.def.icon==='fuse'&&!i.used).length;return [
+  {ic:it('f1'),label:'Fuses in the box '+G.fuses+'/3',st:G.fuses>=3?2:inF?1:0},
+  {ic:it('crowbar'),label:'Crowbar',st:has('crowbar')?1:0},
+  {ic:{icon:'grate'},label:'Pry open the sewer grate',st:0}];
 }
 
 // ---------- guidance (where to go next) ----------
@@ -450,12 +515,13 @@ function updateGuide(){
  goalTiles().forEach(g=>cands.push(g));
  let best=null,bc=1e9;
  for(const t of cands){let c=cost(t);if(c<0)continue;if(!t.item)c-=4;if(c<bc){bc=c;best=t;}}
- G.guide=best;G.guidePt=null;
+ G.guide=best;G.guidePt=null;G.crumbs=[];
  if(!best)return;
  let seeds;
  if(best.fl===fl)seeds=best.adj?adjSeeds(fl,best.x,best.y):[[best.x|0,best.y|0]];
  else seeds=F.stairs;
  const dT=distMap(fl,seeds);let cx=px,cy=py,v=dT[cy*F.w+cx];
+ G.crumbs=[];{let bx=px,by=py,bv=v;for(let s=0;s<11&&bv>0;s++){let nx=bx,ny=by;for(const[dx,dy]of D4){const vv=dT[(by+dy)*F.w+bx+dx];if(vv>=0&&vv<bv){bv=vv;nx=bx+dx;ny=by+dy;}}if(nx===bx&&ny===by)break;bx=nx;by=ny;if(s>0)G.crumbs.push([bx,by]);}}
  if(v<0){G.guidePt={x:best.fl===fl?best.x+.5*(!best.item):F.stairC[0],y:best.fl===fl?best.y+.5*(!best.item):F.stairC[1]};return;}
  const walkLos=(x1,y1)=>{const dx=x1-P.x,dy=y1-P.y,d=Math.hypot(dx,dy),n=Math.ceil(d/.15);for(let i=1;i<=n;i++){const qx=P.x+dx*i/n,qy=P.y+dy*i/n;
    for(const[ox,oy]of[[.22,0],[-.22,0],[0,.22],[0,-.22]])if(!pPass(fl,Math.floor(qx+ox),Math.floor(qy+oy)))return false;}return true;};
@@ -529,7 +595,7 @@ function updatePlayer(dt){
  if(lightQ){lightQ=false;if(!P.hidden){P.light=!P.light;sfx.flash();}}
  if(actQ){actQ=false;doAction();}
  const iv=inputVec();
- if(P.hidden){if(iv.mag>.5&&P.hidden.t>.6)unhide();P.hidden.t+=dt;P.moving=false;return;}
+ if(P.hidden){if(iv.mag>.5&&P.hidden.t>.6){unhide();return;}P.hidden.t+=dt;P.moving=false;return;}
  P.moving=iv.mag>.05;
  let run=iv.run&&P.moving&&!P.tired;
  if(run){P.stam-=dt/4.5;if(P.stam<=0){P.stam=0;P.tired=true;toast('Out of breath...',1.6);}}
@@ -577,12 +643,14 @@ function findFocus(){
  let best=null,bs=9;
  for(const it of G.items){if(it.taken||it.fl!==P.fl)continue;const d=Math.hypot(it.x-P.x,it.y-P.y);
   if(d<.95&&d<bs){bs=d;best={k:'item',it,label:'TAKE',text:'Pick up the '+it.def.name};}}
+ for(const n of G.secrets){if(n.taken||n.fl!==P.fl)continue;const d=Math.hypot(n.x-P.x,n.y-P.y);
+  if(d<.95&&d<bs){bs=d;best={k:'secret',n,label:'READ',text:'Read the secret note'};}}
  if(best)return best;
  const tx=P.x|0,ty=P.y|0;
  for(let y=ty-1;y<=ty+1;y++)for(let x=tx-1;x<=tx+1;x++){
   const c=T(P.fl,x,y);const cx=clamp(P.x,x,x+1),cy=clamp(P.y,y,y+1);const d=Math.hypot(P.x-cx,P.y-cy);
   if(d>.55)continue;let o=null,w=0;
-  if(c==='W'||c==='B'){o={k:'hide',x,y,kind:c,label:'HIDE',text:c==='W'?'Hide in the wardrobe':'Hide under the bed'};w=.3;}
+  if(isHide(c)){o={k:'hide',x,y,kind:c,label:'HIDE',text:c==='W'?'Hide in the wardrobe':c==='J'?'Hide in the big chest':'Hide under the bed'};w=.3;}
   else if('XAFG'.includes(c)&&(c!=='A'||C.carParts)){const sp=specialPrompt(c);if(sp){o=Object.assign({k:'special',c,x,y},sp);w=.05;}}
   else if(isDoorCh(c)){const dr=door(P.fl,x,y);
    if(dr.lock){o={k:'lock',x,y,dr,label:'USE',text:'Locked door'};w=.1;}
@@ -598,6 +666,7 @@ function doAction(){
   if(it.def.digit)toast('A torn note: "'+['_','_','_'].map((s,i)=>i===it.def.slot?it.def.digit:s).join(' ')+'"  Code so far: '+codeStr(),4);
   else toast(it.def.msg||('Got the '+it.def.name),3.4);return;}
  if(o.k==='hide')return hideIn(o);
+ if(o.k==='secret')return readSecret(o.n);
  if(o.k==='door'){if(o.dr.open)closeDoor(P.fl,o.x,o.y);else openDoor(P.fl,o.x,o.y,false);return;}
  if(o.k==='lock')return useLock(o);
  if(o.k==='special')return useSpecial(o);
@@ -634,6 +703,16 @@ function useSpecial(o){
   if(!has('crowbar')){toast('The grate is rusted shut. You need something to pry it open.');sfx.thunk();return;}
   sfx.pry();G.escapeMsg='The grate screeches open. You crawl into the tunnel and follow the cold draft to the river, and the dawn.';return startEscape();}
 }
+function readSecret(n){
+ n.taken=true;const fresh=!save.notes[n.id];save.notes[n.id]=true;persist();if(fresh)G.notesRun++;
+ sfx.note();spawnFx(n.x,n.y,'rgba(220,190,255,1)',14,fresh?'Secret note!':'');
+ const N=NOTES[chN][n.k];
+ $('nTag').textContent='SECRET NOTE '+(n.k+1)+' OF 3  ·  '+notesFound()+' / 9 FOUND';
+ $('nText').textContent=N.t;$('nSig').textContent='— '+N.s;
+ mode='note';paused=true;for(const k in keys)keys[k]=false;joy.id=null;
+ $('noteOv').classList.remove('hidden');
+}
+function closeNote(){if(mode!=='note')return;$('noteOv').classList.add('hidden');mode='play';paused=false;}
 function startEscape(){if(mode!=='play')return;mode='escape';modeT=0;P.hidden=null;}
 
 // ---------- warden ----------
@@ -648,7 +727,7 @@ function wardenPathTo(goal){
 function wardenSees(){
  if(P.hidden||P.fl!==W.fl||mode!=='play')return false;
  const dx=P.x-W.x,dy=P.y-W.y,d=Math.hypot(dx,dy);
- let range=C.warden.vision;if(!P.light)range*=.55;if(isLit(P.fl,P.x,P.y))range=Math.max(range,10);
+ let range=C.warden.vision*(G.explore?.85:1);if(!P.light)range*=.55;if(isLit(P.fl,P.x,P.y))range=Math.max(range,10);
  if(d>range)return false;
  if(d>1.2&&Math.abs(angDiff(Math.atan2(dy,dx),W.look))>.85)return false;
  return clearLine(W.fl,W.x,W.y,P.x,P.y);
@@ -688,7 +767,7 @@ function beginSearch(boost){
  }
 }
 function updateWarden(dt){
- const cw=C.warden;
+ const k=G.explore?.78:1,cw={patrol:C.warden.patrol*k,inv:C.warden.inv*k,chase:C.warden.chase*k};
  W.iconT-=dt;W.lookT+=dt;
  const sees=wardenSees();
  if(sees){W.seenT=0;W.last={fl:P.fl,x:P.x,y:P.y};}else W.seenT+=dt;
@@ -741,9 +820,16 @@ function updateWarden(dt){
   break;
  }
  W.look=W.a+lookOff;
- // footsteps
+ // footsteps: a sound panned toward the Warden, plus glowing footprints on the floor
  if(W.moved>.8){W.moved=0;W.walkPh+=1;
-  const d=W.fl===P.fl?dP:30;const v=W.fl===P.fl?clamp(.16*(1-d/13),0,.16):.025;if(v>.004)sfx.thud(v);}
+  const d=W.fl===P.fl?dP:30;const v=W.fl===P.fl?clamp(.16*(1-d/13),0,.16):.025;
+  const pan=W.fl===P.fl?clamp((W.x-P.x)/6,-1,1)*.8:0;if(v>.004)sfx.thud(v,pan);
+  G.stepSide=-G.stepSide;const ox=Math.cos(W.a+PI/2)*.14*G.stepSide,oy=Math.sin(W.a+PI/2)*.14*G.stepSide;
+  G.steps.push({fl:W.fl,x:W.x+ox,y:W.y+oy,a:W.a,t:0,chase:W.state==='chase'||W.state==='grab'});if(G.steps.length>40)G.steps.shift();
+  G.heardT=1.2;}
+ // a quick sniff when it walks right past your hiding spot (pure tension: it never finds you this way)
+ if(P.hidden&&W.fl===P.fl&&W.state==='patrol'&&!W.sniffed&&dP<1.7&&W.path){W.sniffed=true;if(Math.random()<.55){W.halt=1.1;W.icon='?';W.iconT=1.1;W.face=Math.atan2(P.y-W.y,P.x-W.x);sfx.sniff();}}
+ if(!P.hidden||dP>3)W.sniffed=false;
  // catch
  if(!P.hidden&&W.fl===P.fl&&dP<.62)caught();
 }
@@ -789,6 +875,7 @@ function caught(){
  if(P.hidden){P.x=P.hidden.px;P.y=P.hidden.py;P.hidden=null;}
 }
 function nextNight(){
+ if(G.explore){G.nightMsg='The Warden tucked you back into bed. Everything you found is still in your pockets!';resetNight();mode='night';modeT=0;return;}
  G.nights++;
  if(G.nights>5){mode='lost';showLose();return;}
  G.nightMsg='You wake up in the same bed. The Warden must have carried you back.';
@@ -816,7 +903,18 @@ function update(dt){
  let close=0;
  if(W.fl===P.fl){const d=Math.hypot(W.x-P.x,W.y-P.y);close=clamp(1-(d-1.5)/8,0,1);if(W.state==='chase')close=Math.max(close,.65);}
  G.close=close;G.hbPulse=Math.max(0,G.hbPulse-dt*3);
- if(close>0){G.hbT-=dt;if(G.hbT<=0){sfx.heart(.07+.28*close);G.hbPulse=1;G.hbT=lerp(1.15,.36,close);}}
+ if(close>0){G.hbT-=dt;if(G.hbT<=0){sfx.heart((.07+.28*close)*(G.explore?.6:1));G.hbPulse=1;G.hbT=lerp(1.15,.36,close);}}
+ // close calls: the Warden walks right past your hiding spot... and keeps going
+ const wd=W.fl===P.fl?Math.hypot(W.x-P.x,W.y-P.y):99;
+ if(P.hidden){
+  if(wd<2.4&&W.state!=='check'&&W.state!=='grab'){if(!G.cc)G.cc={t:0};G.cc.t+=dt;G.cc.near=true;}
+  else if(G.cc&&wd>4.2){if(G.cc.t>.3){G.closeCalls++;toast('Phew! That was a close call...',2.4);spawnFx(P.x,P.y-.2,'rgba(190,255,210,1)',14,'Close call!');sfx.phew();}G.cc=null;}
+  else if(G.cc)G.cc.near=false;
+ }else G.cc=null;
+ for(const st of G.steps)st.t+=dt;G.steps=G.steps.filter(st=>st.t<6);
+ G.heardT=Math.max(0,G.heardT-dt);
+ // secret notes nearby: little chime when you first get close
+ for(const n of G.secrets){if(n.taken||n.fl!==P.fl||n.pinged)continue;if(Math.hypot(n.x-P.x,n.y-P.y)<3){n.pinged=true;sin(1568,null,.12,.03);sin(2093,null,.18,.025,.08);}}
 }
 
 // ---------- tile drawing (cache) ----------
@@ -883,6 +981,12 @@ function drawTile(g,fl,x,y){
   if(h<.3){g.fillStyle='#ddd';g.beginPath();g.arc(X+s/2,Y+s/2,s*.16,0,TAU);g.fill();g.fillStyle='#bbb';g.beginPath();g.arc(X+s/2,Y+s/2,s*.09,0,TAU);g.fill();}
   else if(h<.45){g.fillStyle='#e8e0c8';g.fillRect(X+s*.4,Y+s*.35,s*.18,s*.18);g.fillStyle='#f6c35a';g.fillRect(X+s*.47,Y+s*.3,3,4);}
   break;}
+ case 'J':
+  g.fillStyle='rgba(0,0,0,.4)';g.fillRect(X+5,Y+8,s-7,s-10);
+  g.fillStyle='#6b4428';rr(g,X+3,Y+6,s-6,s-10,4);g.fill();
+  g.fillStyle='#82562f';rr(g,X+3,Y+6,s-6,s*.32,4);g.fill();
+  g.fillStyle='#3a2414';g.fillRect(X+3,Y+6+s*.32,s-6,2);
+  g.fillStyle='#c9a24a';g.fillRect(X+7,Y+8,3,s-14);g.fillRect(X+s-10,Y+8,3,s-14);g.fillRect(X+s/2-3,Y+6+s*.28,6,6);break;
  case 'K':
   g.fillStyle='#2e1e13';g.fillRect(X+1,Y+2,s-2,s-4);
   for(let i=0;i<7;i++){g.fillStyle=['#7a2d2d','#2d4f7a','#5b6b2d','#7a6a2d','#4a2d6b','#8a5a3a'][(hash(x*7+i,y,1)*6)|0];g.fillRect(X+3+i*(s-6)/7,Y+4,(s-6)/7-1,s*.36);}
@@ -959,6 +1063,9 @@ function drawIcon(g,it,x,y,s){
  case 'battery':g.fillStyle='#2b2f36';g.fillRect(-s*.34,-s*.24,s*.68,s*.48);g.fillStyle='#d33';g.fillRect(-s*.26,-s*.33,s*.12,s*.1);g.fillStyle='#111';g.fillRect(s*.14,-s*.33,s*.12,s*.1);
   g.fillStyle='#e8c25a';g.fillRect(-s*.3,-s*.04,s*.6,s*.08);break;
  case 'fuel':g.fillStyle=d.color;rr(g,-s*.28,-s*.26,s*.56,s*.58,4);g.fill();g.fillStyle='#222';g.fillRect(s*.1,-s*.38,s*.12,s*.14);g.fillStyle='rgba(255,255,255,.3)';g.fillRect(-s*.2,-s*.18,s*.08,s*.4);break;
+ case 'door':g.fillStyle='#6b4428';g.fillRect(-s*.24,-s*.4,s*.48,s*.8);g.fillStyle='#c9a24a';g.beginPath();g.arc(s*.12,0,s*.06,0,TAU);g.fill();break;
+ case 'car':g.fillStyle='#8a2a2e';rr(g,-s*.4,-s*.12,s*.8,s*.3,4);g.fill();g.fillRect(-s*.22,-s*.3,s*.42,s*.2);g.fillStyle='#111';g.beginPath();g.arc(-s*.22,s*.2,s*.09,0,TAU);g.arc(s*.22,s*.2,s*.09,0,TAU);g.fill();break;
+ case 'grate':g.strokeStyle='#9aa3a0';g.lineWidth=s*.07;g.strokeRect(-s*.32,-s*.32,s*.64,s*.64);for(let i=-1;i<=1;i++){g.beginPath();g.moveTo(i*s*.16,-s*.32);g.lineTo(i*s*.16,s*.32);g.stroke();}break;
  case 'carkey':g.fillStyle='#1d1d1f';rr(g,-s*.36,-s*.18,s*.34,s*.36,5);g.fill();g.fillStyle='#d33';g.beginPath();g.arc(-s*.19,0,s*.06,0,TAU);g.fill();
   g.fillStyle='#c9ced3';g.fillRect(-s*.03,-s*.05,s*.4,s*.1);g.fillRect(s*.2,0,s*.06,s*.12);break;
  }
@@ -1062,6 +1169,9 @@ function render(dt){
  // items
  for(const it of G.items){if(it.taken||it.fl!==P.fl)continue;const X=sx(it.x),Y=sy(it.y);const p=.5+.5*Math.sin(G.time*3+it.x);
   ctx.fillStyle='rgba(255,240,180,'+(.12+.12*p)+')';ctx.beginPath();ctx.arc(X,Y,S*.38,0,TAU);ctx.fill();drawIcon(ctx,it,X,Y,S*.62);}
+ for(const n of G.secrets){if(n.taken||n.fl!==P.fl)continue;const X=sx(n.x),Y=sy(n.y);
+  ctx.save();ctx.translate(X,Y);ctx.rotate(.25+Math.sin(G.time*2+n.x)*.08);ctx.fillStyle='#e9dcc0';ctx.fillRect(-S*.17,-S*.2,S*.34,S*.4);
+  ctx.fillStyle='#b9a2d8';ctx.fillRect(-S*.17,-S*.2,S*.34,S*.07);ctx.fillStyle='#8a7f68';for(let i=0;i<3;i++)ctx.fillRect(-S*.11,-S*.04+i*S*.08,S*.22,1.5);ctx.restore();}
  if(crow&&crow.fl===P.fl&&crow.state==='perch')drawCrowSprite(sx(crow.x),sy(crow.y));
  if(!P.hidden)drawPlayerSprite(sx(P.x),sy(P.y));
  if(W.fl===P.fl)drawWardenSprite(sx(W.x),sy(W.y));
@@ -1109,13 +1219,19 @@ function render(dt){
  // hidden overlay
  if(P.hidden){if(P.hidden.kind==='W'){const n=9,h=VH/n;for(let i=0;i<n;i++){ctx.fillStyle='rgba(20,12,7,.8)';ctx.fillRect(0,i*h,VW,h*.5);}
    ctx.fillStyle='rgba(20,12,7,.85)';ctx.fillRect(0,0,VW*.08,VH);ctx.fillRect(VW*.92,0,VW*.08,VH);}
+  else if(P.hidden.kind==='J'){ctx.fillStyle='rgba(22,14,8,.86)';ctx.fillRect(0,0,VW,VH*.36);ctx.fillRect(0,VH*.8,VW,VH*.2);
+   ctx.fillStyle='#3a2716';ctx.fillRect(0,VH*.36,VW,10);ctx.fillRect(0,VH*.8-10,VW,10);ctx.fillStyle='rgba(255,220,150,.06)';ctx.fillRect(0,VH*.37,VW,3);}
   else{ctx.fillStyle='rgba(8,6,6,.82)';ctx.fillRect(0,0,VW,VH*.4);ctx.fillRect(0,VH*.86,VW,VH*.14);
    ctx.fillStyle='#2a1c12';ctx.fillRect(0,VH*.4,VW,8);}
-  ctx.font='600 13px system-ui';ctx.fillStyle='rgba(220,220,210,.7)';ctx.textAlign='center';ctx.fillText('Hiding... stay quiet. Move to step out.',VW/2,VH*.34);}
+  const near=G.cc&&G.cc.near;
+  ctx.font=near?'italic 600 17px Georgia':'600 13px system-ui';ctx.fillStyle=near?'rgba(255,235,200,'+(.75+.25*Math.sin(G.time*6))+')':'rgba(220,220,210,.7)';ctx.textAlign='center';
+  ctx.fillText(near?'Shhh... hold still... it\'s right outside!':'Hiding... the Warden can\'t see you here. Move to step out.',VW/2,VH*.32);}
  // vignette + heartbeat tint + grain
  if(!vign){vign=ctx.createRadialGradient(VW/2,VH/2,Math.min(VW,VH)*.3,VW/2,VH/2,Math.max(VW,VH)*.75);vign.addColorStop(0,'rgba(0,0,0,0)');vign.addColorStop(1,'rgba(0,0,0,.7)');}
  ctx.fillStyle=vign;ctx.fillRect(0,0,VW,VH);
- if(G.close>0&&mode==='play'){ctx.fillStyle='rgba(120,0,0,'+(G.close*.12*(.4+.6*G.hbPulse))+')';ctx.fillRect(0,0,VW,VH);}
+ if(G.close>0&&mode==='play'&&!G.explore){ctx.fillStyle='rgba(120,0,0,'+(G.close*.12*(.4+.6*G.hbPulse))+')';ctx.fillRect(0,0,VW,VH);}
+ // close call: the view tightens while the Warden is right outside your hiding spot
+ if(G.cc&&G.cc.near&&mode==='play'){const v=ctx.createRadialGradient(VW/2,VH/2,Math.min(VW,VH)*.18,VW/2,VH/2,Math.max(VW,VH)*.6);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.6)');ctx.fillStyle=v;ctx.fillRect(0,0,VW,VH);}
  if(grain){ctx.globalAlpha=.05;ctx.fillStyle=ctx.createPattern(grain,'repeat');ctx.save();ctx.translate(Math.random()*128,Math.random()*128);ctx.fillRect(-128,-128,VW+256,VH+256);ctx.restore();ctx.globalAlpha=1;}
  if(floorFade>0){ctx.fillStyle='rgba(0,0,0,'+floorFade+')';ctx.fillRect(0,0,VW,VH);}
  if(fadeIn>0){ctx.fillStyle='rgba(0,0,0,'+Math.min(1,fadeIn)+')';ctx.fillRect(0,0,VW,VH);}
@@ -1149,6 +1265,15 @@ function drawAfterDark(F,x0,x1,y0,y1){
   if(d>(tg?30:7))continue;const p=.5+.5*Math.sin(t*4+it.x*3);const a=(tg?.55:.35*(1-d/7))*(.5+.5*p);const X=sx(it.x),Y=sy(it.y);
   const gr=ctx.createRadialGradient(X,Y,0,X,Y,S*.7);gr.addColorStop(0,'rgba(255,230,150,'+a+')');gr.addColorStop(1,'rgba(255,230,150,0)');ctx.fillStyle=gr;ctx.fillRect(X-S*.7,Y-S*.7,S*1.4,S*1.4);
   ctx.strokeStyle='rgba(255,245,210,'+(a*1.2)+')';ctx.lineWidth=1.5;const r=S*(.18+.12*p);ctx.beginPath();ctx.moveTo(X-r,Y);ctx.lineTo(X+r,Y);ctx.moveTo(X,Y-r);ctx.lineTo(X,Y+r);ctx.stroke();}
+ // secret notes shimmer purple through the dark when you are near
+ for(const n of G.secrets){if(n.taken||n.fl!==P.fl)continue;const d=Math.hypot(n.x-P.x,n.y-P.y);if(d>6)continue;
+  const p=.5+.5*Math.sin(t*3+n.x);const a=(1-d/6)*(.3+.3*p);const X=sx(n.x),Y=sy(n.y);
+  const gr=ctx.createRadialGradient(X,Y,0,X,Y,S*.6);gr.addColorStop(0,'rgba(210,170,255,'+a+')');gr.addColorStop(1,'rgba(210,170,255,0)');ctx.fillStyle=gr;ctx.fillRect(X-S*.6,Y-S*.6,S*1.2,S*1.2);}
+ // the Warden's footprints glow softly for a few seconds, so you can read where it walked
+ for(const st of G.steps){if(st.fl!==P.fl)continue;const d=Math.hypot(st.x-P.x,st.y-P.y);if(d>13)continue;
+  const a=(1-st.t/6)*(.55-.3*d/13);if(a<=.02)continue;ctx.save();ctx.translate(sx(st.x),sy(st.y));ctx.rotate(st.a);
+  ctx.fillStyle=st.chase?'rgba(255,120,90,'+a+')':'rgba(255,200,120,'+a+')';
+  ctx.beginPath();ctx.ellipse(S*.04,0,S*.12,S*.07,0,0,TAU);ctx.fill();ctx.beginPath();ctx.ellipse(-S*.13,0,S*.07,S*.055,0,0,TAU);ctx.fill();ctx.restore();}
  // fx sparkles
  for(const f of G.fx){if(f.text)continue;const k=1-f.t/f.d;ctx.fillStyle=f.col;ctx.globalAlpha=k;ctx.beginPath();ctx.arc(sx(f.x),sy(f.y),f.s*k+.5,0,TAU);ctx.fill();}
  ctx.globalAlpha=1;ctx.restore();
@@ -1162,6 +1287,22 @@ function drawAfterDark(F,x0,x1,y0,y1){
    ctx.save();ctx.translate(X,Y);ctx.rotate(a);
    const gr=ctx.createRadialGradient(0,0,0,0,0,S*.45);gr.addColorStop(0,'rgba(170,255,200,.45)');gr.addColorStop(1,'rgba(170,255,200,0)');ctx.fillStyle=gr;ctx.fillRect(-S*.45,-S*.45,S*.9,S*.9);
    ctx.fillStyle='rgba(200,255,215,.95)';ctx.beginPath();ctx.moveTo(S*.2,0);ctx.lineTo(-S*.1,-S*.14);ctx.lineTo(-S*.03,0);ctx.lineTo(-S*.1,S*.14);ctx.closePath();ctx.fill();ctx.restore();}}
+ // breadcrumbs: glowing dots along the way to the next goal
+ if(G.crumbs&&!P.hidden){ctx.save();ctx.globalCompositeOperation='lighter';G.crumbs.forEach((c,i)=>{const a=(.42-i*.035)*(.6+.4*Math.sin(t*5-i*.7));if(a<=0)return;
+  ctx.fillStyle='rgba(170,255,200,'+a+')';ctx.beginPath();ctx.arc(sx(c[0]+.5),sy(c[1]+.5),S*.07,0,TAU);ctx.fill();});ctx.restore();}
+ // the Warden's line of sight, drawn faintly so you can learn where it is looking
+ if(W.fl===P.fl&&Math.hypot(W.x-P.x,W.y-P.y)<12){const range=C.warden.vision*(G.explore?.85:1)*(P.light?1:.55);
+  const pts=lightPts(W.fl,W.x,W.y,W.look-.85,W.look+.85,range,28,0);const chase=W.state==='chase'||W.state==='grab';
+  ctx.save();fillPts(ctx,pts,sx(W.x),sy(W.y),true,range*S,chase?.16:.1+W.sus*.08,chase?.08:.05,chase?'rgba(255,90,70,':'rgba(255,235,170,');ctx.restore();}
+ // sound compass: when you can hear the Warden's steps, an arc around you points at it
+ if(G.heardT>0){
+  if(W.fl===P.fl){const d=Math.hypot(W.x-P.x,W.y-P.y);if(d<13&&d>1.2){const a=Math.atan2(W.y-P.y,W.x-P.x),R=S*1.25,al=Math.min(1,G.heardT)*(1-d/13)*.9+.15;
+   const col=W.state==='chase'||W.state==='grab'?'255,110,80':W.state==='investigate'||W.state==='search'||W.state==='check'?'255,200,110':'200,230,255';
+   ctx.save();ctx.translate(sx(P.x),sy(P.y));ctx.rotate(a);ctx.strokeStyle='rgba('+col+','+al+')';ctx.lineCap='round';
+   for(let k=0;k<3;k++){ctx.lineWidth=3-k*.6;ctx.beginPath();ctx.arc(0,0,R+k*S*.16,-.28+k*.04,.28-k*.04);ctx.stroke();}
+   ctx.fillStyle='rgba('+col+','+al+')';ctx.beginPath();ctx.moveTo(R+S*.55,0);ctx.lineTo(R+S*.36,-S*.1);ctx.lineTo(R+S*.36,S*.1);ctx.closePath();ctx.fill();ctx.restore();}}
+  else{ctx.save();ctx.globalAlpha=Math.min(1,G.heardT);ctx.font='italic 14px Georgia';ctx.textAlign='center';ctx.fillStyle='rgba(220,225,240,.85)';
+   ctx.fillText((C.floors[P.fl].stairs==='UP'?'Footsteps upstairs...':'Footsteps downstairs...'),sx(P.x),sy(P.y)-S*1.1);ctx.restore();}}
  // warden off-screen warning
  if(W.fl===P.fl){const X=sx(W.x),Y=sy(W.y),d=Math.hypot(W.x-P.x,W.y-P.y);
   if((X<0||X>VW||Y<60||Y>VH)&&d<14){const[ex,ey]=edgePoint(X,Y,26);const chase=W.state==='chase'||W.state==='grab';const a=(1-d/14)*.7+.3;
@@ -1174,15 +1315,25 @@ function drawHUD(){
  const top=Math.max(58,58);
  // nights (below the site exit bar in the top-left)
  ctx.textAlign='left';ctx.textBaseline='middle';
+ const narrow=VW<520;
+ if(G.explore){ctx.font='600 13px system-ui';ctx.fillStyle='#a8f0bd';ctx.fillText('EXPLORE MODE'+(G.floors.length>1&&!narrow?'  ·  '+C.floors[P.fl].name:''),14,top+11);}
+ else{
  for(let i=0;i<5;i++){const x=20+i*20,y=top+10;ctx.fillStyle=i<G.nights-1?'#5a2a2a':i===G.nights-1?'#e8e0c0':'rgba(232,224,192,.25)';
   ctx.beginPath();ctx.arc(x,y,7,0,TAU);ctx.fill();if(i<G.nights-1){ctx.strokeStyle='#c55';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-5,y-5);ctx.lineTo(x+5,y+5);ctx.stroke();}}
- ctx.font='600 13px system-ui';ctx.fillStyle='#e8e0c0';const narrow=VW<520;ctx.fillText('NIGHT '+G.nights+' / 5'+(G.floors.length>1&&!narrow?'  ·  '+C.floors[P.fl].name:''),120,top+11);
- ctx.font='13px system-ui';ctx.fillStyle='rgba(200,210,200,.85)';
- const lines=wrapText(objective(),Math.min(VW-130,360));lines.forEach((l,i)=>ctx.fillText(l,14,top+34+i*17));
- if(G.guide){ctx.font='600 13px system-ui';ctx.fillStyle='#a8f0bd';ctx.fillText((narrow&&G.floors.length>1?C.floors[P.fl].name+'  ':'')+'✦ Next: '+G.guide.label+(G.guide.fl!==P.fl?(C.floors[P.fl].stairs==='UP'?'  (↑ stairs)':'  (↓ stairs)'):''),14,top+38+lines.length*17);}
+ ctx.font='600 13px system-ui';ctx.fillStyle='#e8e0c0';ctx.fillText('NIGHT '+G.nights+' / 5'+(G.floors.length>1&&!narrow?'  ·  '+C.floors[P.fl].name:''),120,top+11);}
+ // goal checklist with item pictures: what you still need, what you carry, what is done
+ const gl=goals();const gw=Math.min(VW*.52,210),gy0=top+26;
+ ctx.fillStyle='rgba(8,8,12,.55)';rr(ctx,8,gy0,gw,gl.length*22+10,10);ctx.fill();
+ gl.forEach((g,i)=>{const y=gy0+16+i*22;
+  ctx.globalAlpha=g.st===2?.55:1;drawIcon(ctx,g.ic,24,y,17);
+  ctx.font=(g.st===1?'600 ':'')+'13px system-ui';ctx.fillStyle=g.st===2?'#9fc9a8':g.st===1?'#ffe9a8':'#e8e0d0';ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.fillText(g.label,38,y);
+  const mark=g.st===2?'✓':g.st===1?'•':'';if(mark){ctx.textAlign='right';ctx.fillStyle=g.st===2?'#8fe0a0':'#ffe9a8';ctx.font='700 13px system-ui';ctx.fillText(mark,gw,y);}
+  ctx.globalAlpha=1;});
+ if(G.guide){ctx.textAlign='left';ctx.font='600 13px system-ui';ctx.fillStyle='#a8f0bd';ctx.fillText((narrow&&G.floors.length>1?C.floors[P.fl].name+'  ':'')+'✦ Next: '+G.guide.label+(G.guide.fl!==P.fl?(C.floors[P.fl].stairs==='UP'?'  (↑ stairs)':'  (↓ stairs)'):''),14,gy0+gl.length*22+26);}
  // inventory (top right, under the buttons)
  const inv=G.inv.filter(i=>!i.used&&!i.def.digit);const notes=notesHave();
- const slots=inv.length+(notes?1:0);const sz=40;let x=VW-12-slots*(sz+6)+6;const y=VW<520?top+92:108;
+ const slots=inv.length+(notes?1:0);const sz=40;let x=VW-12-inv.length*(sz+6)-(notes?sz+30:-6);const y=VW<520?gy0+gl.length*22+40:108;
  for(const it of inv){ctx.fillStyle='rgba(12,12,16,.6)';rr(ctx,x,y,sz,sz,8);ctx.fill();ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=1;ctx.stroke();drawIcon(ctx,it,x+sz/2,y+sz/2,sz*.7);x+=sz+6;}
  if(notes){ctx.fillStyle='rgba(12,12,16,.6)';rr(ctx,x,y,sz+30,sz,8);ctx.fill();ctx.fillStyle='#e8e0c8';ctx.font='bold 14px Georgia';ctx.textAlign='center';ctx.fillText(codeStr(),x+(sz+30)/2,y+sz/2+1);
   ctx.font='9px system-ui';ctx.fillStyle='#998';ctx.fillText('CODE',x+(sz+30)/2,y+8);}
@@ -1225,16 +1376,18 @@ function drawMask(cx,cy,s,a){
  ctx.restore();
 }
 function drawCaught(){
+ // gentle, not a jump scare: the Warden's mask fades in small, with a friendly line
  const t=modeT;ctx.fillStyle='rgba(10,14,30,'+Math.min(.85,t*1.2)+')';ctx.fillRect(0,0,VW,VH);
- const s=Math.min(VW,VH)*(.3+Math.min(1,t*1.4)*.45);drawMask(VW/2,VH/2,s,Math.min(1,t*3));
- if(t>.9){ctx.globalAlpha=Math.min(1,(t-.9)*3);ctx.font='600 '+Math.min(48,VW*.09|0)+'px Georgia';ctx.fillStyle='#f2e6d0';ctx.textAlign='center';ctx.fillText('Caught!',VW/2,VH*.86);ctx.globalAlpha=1;}
+ const s=Math.min(VW,VH)*.32;drawMask(VW/2,VH*.44+Math.sin(t*2)*4,s,Math.min(.9,t*1.5));
+ if(t>.5){ctx.globalAlpha=Math.min(1,(t-.5)*3);ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='600 '+Math.min(44,VW*.09|0)+'px Georgia';ctx.fillStyle='#f2e6d0';ctx.fillText('Caught!',VW/2,VH*.72);
+  ctx.font='italic 16px Georgia';ctx.fillStyle='#bcb4a2';ctx.fillText('"Lost thing found. Back to bed you go."',VW/2,VH*.72+36);ctx.globalAlpha=1;}
  if(t>1.6){ctx.fillStyle='rgba(0,0,0,'+Math.min(1,(t-1.6)*3)+')';ctx.fillRect(0,0,VW,VH);}
 }
 function drawNightCard(){
  const t=modeT,a=t<2.2?1:Math.max(0,1-(t-2.2)/.6);
  ctx.fillStyle='rgba(0,0,0,'+a+')';ctx.fillRect(0,0,VW,VH);ctx.globalAlpha=Math.min(1,t*1.5)*a;
- ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=Math.min(64,VW*.13|0)+'px Georgia';ctx.fillStyle='#ece4d2';ctx.fillText('NIGHT '+G.nights,VW/2,VH*.42);
- for(let i=0;i<5;i++){ctx.fillStyle=i<G.nights-1?'#7a2a2a':i===G.nights-1?'#e8e0c0':'#333';ctx.beginPath();ctx.arc(VW/2-48+i*24,VH*.52,8,0,TAU);ctx.fill();}
+ ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=Math.min(64,VW*.13|0)+'px Georgia';ctx.fillStyle='#ece4d2';ctx.fillText(G.explore?'EXPLORE':'NIGHT '+G.nights,VW/2,VH*.42);
+ if(!G.explore)for(let i=0;i<5;i++){ctx.fillStyle=i<G.nights-1?'#7a2a2a':i===G.nights-1?'#e8e0c0':'#333';ctx.beginPath();ctx.arc(VW/2-48+i*24,VH*.52,8,0,TAU);ctx.fill();}
  ctx.font='italic 16px Georgia';ctx.fillStyle='#bcb4a2';wrapText(G.nightMsg||'',Math.min(VW-40,460)).forEach((l,i)=>ctx.fillText(l,VW/2,VH*.6+i*22));
  ctx.globalAlpha=1;
 }
@@ -1246,22 +1399,33 @@ function showTitle(){
  $('tName').innerHTML=chTitle(chN);document.title=chN===1?'Hollow House':'Hollow House '+chN;
  $('tChap').textContent='Chapter '+chN+' · '+C.sub+(save.done[chN]?'  ·  escaped ✓':'');
  $('tStory').textContent=C.story;
- $('tCtrl').innerHTML=isTouch?'<b>Left thumb</b> move (push far to run) · <b>Right button</b> take / hide / use · <b>LIGHT</b> flashlight<br>Running, creaky boards, vases and doors make noise. The Warden can\'t see you hiding... unless it watched you hide.<br>Lost? Follow the little <b>green arrow</b> to your next goal.'
-  :'<b>WASD / Arrows</b> move · <b>Shift</b> run · <b>E / Space</b> take, hide, use · <b>F</b> flashlight · <b>Mouse</b> aims the light<br>Running, creaky boards, vases and doors make noise. The Warden can\'t see you hiding... unless it watched you hide.<br>Lost? Follow the little <b>green arrow</b> to your next goal.';
+ $('tCtrl').innerHTML=isTouch?'<b>Left thumb</b> move (push far to run) · <b>Right button</b> take / hide / use · <b>LIGHT</b> flashlight<br>Noise (running, creaky boards, vases, doors) draws the Warden. Hide in wardrobes, chests and under beds.<br>Follow the <b>green arrow and dots</b>. <b>Glowing footprints</b> and the <b>arc around you</b> show where the Warden walks. <b>Purple shimmers</b> are secret notes.'
+  :'<b>WASD / Arrows</b> move · <b>Shift</b> run · <b>E / Space</b> take, hide, use · <b>F</b> flashlight · <b>Mouse</b> aims the light<br>Noise (running, creaky boards, vases, doors) draws the Warden. Hide in wardrobes, chests and under beds.<br>Follow the <b>green arrow and dots</b>. <b>Glowing footprints</b> and the <b>arc around you</b> show where the Warden walks. <b>Purple shimmers</b> are secret notes.';
+ $('bJournal').textContent='Secret Notes  ·  '+notesFound()+' / 9 found';
  const chs=$('chs');chs.innerHTML='';
  for(let i=1;i<=3;i++){const b=document.createElement('button');b.className='chb'+(i===chN?' on':'');b.innerHTML='Chapter '+i+(save.done[i]?' <span class="ok">✓</span>':'');
   b.onclick=()=>{audioInit();loadChapter(i);showTitle();};chs.appendChild(b);}
 }
-function hideAll(){['title','win','lose','pause'].forEach(id=>$(id).classList.add('hidden'));}
+function hideAll(){['title','win','lose','pause','noteOv','journal'].forEach(id=>$(id).classList.add('hidden'));}
+function showJournal(){
+ hideAll();$('journal').classList.remove('hidden');
+ $('jCount').textContent='You have found '+notesFound()+' of 9 secret notes. They glow purple in the dark. Who built the Warden, and why?';
+ const L=$('jList');L.innerHTML='';
+ for(let ch=1;ch<=3;ch++)NOTES[ch].forEach((n,k)=>{const d=document.createElement('div');const got=save.notes[noteId(ch,k)];
+  d.className='jn'+(got?'':' lock');d.innerHTML='<b>CHAPTER '+ch+' · NOTE '+(k+1)+'</b>';
+  d.appendChild(document.createTextNode(got?n.t+'  — '+n.s:'Not found yet. Look for a purple shimmer in Chapter '+ch+'.'));L.appendChild(d);});
+}
 function loadChapter(n){chN=n;try{history.replaceState(null,'','?ch='+n);}catch(e){}newGame();}
-function startGame(){audioInit();hideAll();newGame();mode='night';modeT=0;G.nightMsg=C.sub;fadeIn=0;}
+function startGame(explore){audioInit();exploreMode=!!explore;hideAll();newGame();mode='night';modeT=0;G.nightMsg=explore?C.sub+'  ·  Explore Mode: take your time':C.sub;fadeIn=0;}
 function showWin(){
- mode='won';sfx.win();save.done[chN]=true;const best=save.best[chN];if(!best||G.nights<best)save.best[chN]=G.nights;persist();
+ mode='won';sfx.win();save.done[chN]=true;const best=save.best[chN];if(!G.explore&&(!best||G.nights<best))save.best[chN]=G.nights;persist();
  hideAll();$('win').classList.remove('hidden');
  $('wTitle').textContent=chN===3?'Free at last!':'You escaped!';
  $('wText').textContent=G.escapeMsg+(chN===3?' The Warden\'s keys jingle somewhere far behind you, and then, finally, silence.':'');
  const m=Math.floor(G.time/60),s=Math.floor(G.time%60);
- $('wStats').innerHTML='Nights used: <b>'+G.nights+' / 5</b><br>Time: <b>'+m+':'+String(s).padStart(2,'0')+'</b><br>Best: <b>'+save.best[chN]+' night'+(save.best[chN]>1?'s':'')+'</b>';
+ $('wStats').innerHTML=(G.explore?'Explore Mode<br>':'Nights used: <b>'+G.nights+' / 5</b><br>')+'Time: <b>'+m+':'+String(s).padStart(2,'0')+'</b><br>'+
+  (G.explore?'':'Best: <b>'+save.best[chN]+' night'+(save.best[chN]>1?'s':'')+'</b><br>')+
+  'Close calls: <b>'+G.closeCalls+'</b><br>Secret notes: <b>'+G.secrets.filter(n=>save.notes[n.id]).length+' / 3</b> this chapter';
  $('bNext').style.display=chN<3?'':'none';
 }
 function showLose(){hideAll();$('lose').classList.remove('hidden');}
@@ -1269,10 +1433,14 @@ function togglePause(){
  if(mode==='play'){paused=true;mode='paused';$('pause').classList.remove('hidden');}
  else if(mode==='paused'){paused=false;mode='play';$('pause').classList.add('hidden');}
 }
-$('bStart').onclick=()=>startGame();
+$('bStart').onclick=()=>startGame(false);
+$('bExplore').onclick=()=>startGame(true);
+$('bJournal').onclick=()=>{audioInit();showJournal();};
+$('bJClose').onclick=()=>showTitle();
+$('bNoteOk').onclick=()=>closeNote();
 $('bNext').onclick=()=>{loadChapter(Math.min(3,chN+1));showTitle();};
-$('bAgain').onclick=()=>startGame();
-$('bRetry').onclick=()=>startGame();
+$('bAgain').onclick=()=>startGame(exploreMode);
+$('bRetry').onclick=()=>startGame(exploreMode);
 $('bMenu1').onclick=$('bMenu2').onclick=()=>{newGame();showTitle();};
 $('bResume').onclick=()=>togglePause();
 $('bQuit').onclick=()=>{$('pause').classList.add('hidden');newGame();showTitle();};
@@ -1283,6 +1451,7 @@ $('bPause').onclick=()=>{audioInit();togglePause();};
 addEventListener('keydown',e=>{
  const k=e.code;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(k)&&mode!=='title')e.preventDefault();
  audioInit();keys[k]=true;if(e.repeat)return;
+ if(mode==='note'){if(k==='KeyE'||k==='Space'||k==='Enter'||k==='Escape'){e.preventDefault();closeNote();}return;}
  if(mode==='play'){if(k==='KeyE'||k==='Space'||k==='Enter')actQ=true;if(k==='KeyF')lightQ=true;}
  if(k==='Escape'||k==='KeyP')togglePause();
  if(k==='KeyM')setMute(!AU.muted);
@@ -1334,6 +1503,8 @@ function frame(now){
  requestAnimationFrame(frame);
 }
 resize();makeGrain();setMute(AU.muted);newGame();showTitle();requestAnimationFrame(frame);
+// test hook for automated play-testing only (?test=1); not used in normal play
+try{if(/[?&]test=1/.test(location.search))window.__game=code=>eval(code);}catch(e){}
 })();
 </script>
 <script id="blizExitScript">

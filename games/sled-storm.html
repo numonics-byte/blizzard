@@ -14,11 +14,39 @@ canvas{display:block;position:fixed;left:0;top:0;width:100%;height:100%;touch-ac
   align-items:center;justify-content:center;cursor:pointer;z-index:5;padding:0;touch-action:none;
   box-shadow:0 0 14px rgba(80,200,255,.35);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 #mute svg{width:22px;height:22px;pointer-events:none}
+.hidden{display:none!important}
+#shopBtn{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;height:46px;padding:0 22px;
+  border-radius:999px;border:2px solid rgba(255,224,102,.9);background:rgba(40,16,70,.82);color:#fff6c8;font:800 16px system-ui,-apple-system,sans-serif;
+  cursor:pointer;touch-action:manipulation;box-shadow:0 0 18px rgba(255,95,210,.45);white-space:nowrap}
+#shopBtn:active{transform:translateX(-50%) scale(.96)}
+#shop{position:fixed;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;background:rgba(4,8,30,.82);padding:16px;touch-action:none}
+#shop .box{width:100%;max-width:440px;background:rgba(10,16,48,.96);border:2px solid rgba(127,249,255,.55);border-radius:22px;padding:16px 16px 14px;
+  color:#eaffff;font:600 15px system-ui,-apple-system,sans-serif;text-align:center;box-shadow:0 0 30px rgba(46,242,255,.3)}
+#shop h2{margin:2px 0 4px;font-size:26px;letter-spacing:.04em;color:#fff;text-shadow:0 0 12px #2ef2ff}
+#shop .bank{color:#ffe066;margin-bottom:10px}
+#shop .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}
+#shop .sw{border-radius:14px;border:2px solid rgba(255,255,255,.18);background:rgba(255,255,255,.05);color:#fff;padding:8px 4px 7px;cursor:pointer;
+  font:700 12px system-ui,-apple-system,sans-serif;touch-action:manipulation}
+#shop .sw.on{border-color:#7ff9ff;background:rgba(127,249,255,.16);box-shadow:0 0 12px rgba(127,249,255,.45)}
+#shop .sw.lock{opacity:.75}
+#shop .sw.poor{opacity:.45}
+#shop .chip{height:30px;border-radius:9px;margin:0 auto 6px;width:78%;position:relative;overflow:hidden}
+#shop .price{display:block;color:#ffe066;margin-top:2px}
+#shop .close{height:44px;padding:0 30px;border-radius:999px;border:0;background:linear-gradient(#7ff9ff,#2ec4ff);color:#04122a;font:800 16px system-ui,sans-serif;cursor:pointer;touch-action:manipulation}
+#shop .note{font-size:12px;color:#bff6ff;opacity:.8;margin-top:8px}
 </style>
 </head>
 <body>
 <canvas id="c" tabindex="0"></canvas>
 <button id="mute" aria-label="Toggle sound"></button>
+<button id="shopBtn" class="hidden" type="button">Sled Shop</button>
+<div id="shop" class="hidden"><div class="box">
+  <h2>SLED SHOP</h2>
+  <div class="bank" id="shopBank"></div>
+  <div class="grid" id="shopGrid"></div>
+  <button class="close" id="shopClose" type="button">Done</button>
+  <div class="note">Colors are just for looks. Spend gifts you collect on runs and from missions.</div>
+</div></div>
 <script>
 (function(){
 'use strict';
@@ -27,12 +55,17 @@ canvas{display:block;position:fixed;left:0;top:0;width:100%;height:100%;touch-ac
 const cv = document.getElementById('c');
 const ctx = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1;
-let F = 600, HOR = 200, CAMH = 2;
+let F = 600, HOR = 200, CAMH = 2, BASEF = 600;
 const FAR = 70, PZ = 4, PHW = 0.38;
 
 function setupView(){
-  F = Math.min(H * 0.72, W * 0.85);
+  BASEF = Math.min(H * 0.72, W * 0.85);
   HOR = H * 0.36;
+  applyFov(0);
+}
+// wider field of view at speed (and on near-miss / jump kicks) = a stronger sense of rushing downhill
+function applyFov(k){
+  F = BASEF * (1 - k);
   CAMH = (H * 0.84 - HOR) * PZ / F;
 }
 function resize(){
@@ -65,6 +98,39 @@ const store = {
 };
 let best = parseInt(store.get('sledstorm_best', '0'), 10) || 0;
 let muted = store.get('muted', '0') === '1';
+let bank = parseInt(store.get('sledstorm_giftbank', '0'), 10) || 0;          // gifts saved up for sled colors
+let owned = (store.get('sledstorm_colors', 'violet') || 'violet').split(',');
+let sledId = store.get('sledstorm_color', 'violet');
+let missionsDone = (store.get('sledstorm_missionsv2', '') || '').split(',').filter(id => /^[a-z0-9]+$/.test(id));
+
+/* ---------- missions (shown on the title screen, rewards are gifts for the shop) ---------- */
+const MISSIONS = [
+  { id: 'surv60',  text: 'Survive 60 seconds',          goal: 60,   stat: 'time',    reward: 40 },
+  { id: 'gift30',  text: 'Collect 30 gifts in one run', goal: 30,   stat: 'gifts',   reward: 50 },
+  { id: 'jump3',   text: 'Hit 3 ramps in a row',        goal: 3,    stat: 'jumpRow', reward: 40 },
+  { id: 'close10', text: '10 close shaves in one run',  goal: 10,   stat: 'closes',  reward: 40 },
+  { id: 'bridge2', text: 'Cross 2 ice bridges',         goal: 2,    stat: 'bridges', reward: 50 },
+  { id: 'aval1',   text: 'Outrun an avalanche',         goal: 1,    stat: 'avals',   reward: 60 },
+  { id: 'combo15', text: 'Reach a x15 combo',           goal: 15,   stat: 'combo',   reward: 60 },
+  { id: 'score5k', text: 'Score 5,000 in one run',      goal: 5000, stat: 'score',   reward: 70 },
+  { id: 'surv120', text: 'Survive 2 minutes',           goal: 120,  stat: 'time',    reward: 80 },
+  { id: 'gift60',  text: 'Collect 60 gifts in one run', goal: 60,   stat: 'gifts',   reward: 100 }
+];
+const activeMissions = () => MISSIONS.filter(m => missionsDone.indexOf(m.id) < 0).slice(0, 5);
+
+/* ---------- sled colors (cosmetic only) ---------- */
+const SLEDS = [
+  { id: 'violet', name: 'Violet',     price: 0,   a: '#b06bff', b: '#5a2fd0', s: '#ff4fa3' },
+  { id: 'cherry', name: 'Cherry',     price: 30,  a: '#ff8a9c', b: '#c2253f', s: '#ffe066' },
+  { id: 'mint',   name: 'Mint',       price: 60,  a: '#8dffd2', b: '#12a47a', s: '#2ef2ff' },
+  { id: 'sunny',  name: 'Sunny',      price: 100, a: '#ffe36b', b: '#e0900f', s: '#ff4fa3' },
+  { id: 'ocean',  name: 'Ocean',      price: 150, a: '#6bd0ff', b: '#1560c9', s: '#ffffff' },
+  { id: 'candy',  name: 'Candy Cane', price: 220, a: '#ffffff', b: '#ff3b5c', s: '#ff3b5c', stripes: true },
+  { id: 'night',  name: 'Midnight',   price: 300, a: '#6a7bff', b: '#141a5e', s: '#7ff9ff' },
+  { id: 'gold',   name: 'Golden',     price: 450, a: '#fff2a8', b: '#c8920f', s: '#ffffff' },
+  { id: 'aurora', name: 'Aurora',     price: 650, a: '#7ff9ff', b: '#8a5cff', s: '#ffe066', rainbow: true }
+];
+function sledDef(){ return SLEDS.find(s => s.id === sledId && owned.indexOf(s.id) >= 0) || SLEDS[0]; }
 
 /* ---------- audio (bright, soft: sine/triangle only) ---------- */
 let AC = null, master = null;
@@ -119,7 +185,15 @@ const sfx = {
   over(){ tone(659.25, .14, 'triangle', .1); tone(987.77, .18, 'triangle', .08, 0, .06); },
   crash(){ noise(.45, .2, 650); tone(523.25, .22, 'triangle', .13, 0, 0); tone(392, .24, 'triangle', .12, 0, .12); tone(261.63, .45, 'sine', .14, 0, .24); },
   mile(){ [783.99, 987.77, 1174.66].forEach((f, i) => tone(f, .16, 'triangle', .1, 0, i * .07)); },
-  best(){ [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, .18, 'triangle', .13, 0, i * .09)); }
+  best(){ [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, .18, 'triangle', .13, 0, i * .09)); },
+  whoosh(){ noise(.16, .05, 2600); },
+  mission(){ [659.25, 783.99, 987.77, 1318.5].forEach((f, i) => tone(f, .2, 'triangle', .12, 0, i * .09)); tone(1567.98, .4, 'sine', .07, 0, .36); },
+  tier(){ [783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, .14, 'sine', .1, 0, i * .05)); },
+  rumble(){ noise(1.4, .12, 220); tone(110, 1.2, 'sine', .08, 82); },
+  outran(){ [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98].forEach((f, i) => tone(f, .2, 'triangle', .12, 0, i * .08)); },
+  bridge(){ tone(1046.5, .12, 'sine', .07); tone(1318.5, .16, 'sine', .05, 0, .06); },
+  buy(){ [783.99, 987.77, 1174.66, 1567.98].forEach((f, i) => tone(f, .15, 'triangle', .11, 0, i * .06)); },
+  nope(){ tone(392, .12, 'sine', .08); tone(349.23, .16, 'sine', .07, 0, .08); }
 };
 
 /* ---------- mute button ---------- */
@@ -139,6 +213,49 @@ muteBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropaga
 muteBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); });
 refreshMute();
 
+/* ---------- sled shop (DOM overlay) ---------- */
+const shopEl = document.getElementById('shop'), shopBtn = document.getElementById('shopBtn');
+const shopOpen = () => !shopEl.classList.contains('hidden');
+function refreshShopBtn(){
+  const show = (state === 'title' || state === 'over') && !shopOpen();
+  shopBtn.classList.toggle('hidden', !show);
+  shopBtn.textContent = 'Sled Shop  ·  ' + bank + ' gifts';
+}
+function chipStyle(sd){
+  if (sd.rainbow) return 'background:linear-gradient(90deg,#ff5f9e,#ffd23f,#59ffb0,#2ef2ff,#8a5cff)';
+  if (sd.stripes) return 'background:repeating-linear-gradient(115deg,#ffffff 0 9px,#ff3b5c 9px 18px)';
+  return 'background:linear-gradient(' + sd.a + ',' + sd.b + ');box-shadow:inset 0 -5px 0 ' + sd.s;
+}
+function renderShop(){
+  document.getElementById('shopBank').textContent = 'You have ' + bank + ' gifts';
+  const grid = document.getElementById('shopGrid');
+  grid.innerHTML = '';
+  for (const sd of SLEDS){
+    const have = owned.indexOf(sd.id) >= 0, on = sledDef().id === sd.id;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sw' + (on ? ' on' : '') + (have ? '' : ' lock') + (!have && bank < sd.price ? ' poor' : '');
+    b.innerHTML = '<div class="chip" style="' + chipStyle(sd) + '"></div>' + sd.name +
+      '<span class="price">' + (on ? 'Riding' : have ? 'Tap to ride' : sd.price + ' gifts') + '</span>';
+    b.addEventListener('click', () => {
+      if (have){ sledId = sd.id; store.set('sledstorm_color', sledId); sfx.bridge(); }
+      else if (bank >= sd.price){
+        bank -= sd.price; owned.push(sd.id); sledId = sd.id;
+        store.set('sledstorm_giftbank', bank); store.set('sledstorm_colors', owned.join(',')); store.set('sledstorm_color', sledId);
+        sfx.buy();
+      } else sfx.nope();
+      renderShop();
+    });
+    grid.appendChild(b);
+  }
+}
+function openShop(){ ensureAudio(); renderShop(); shopEl.classList.remove('hidden'); refreshShopBtn(); }
+function closeShop(){ shopEl.classList.add('hidden'); refreshShopBtn(); }
+shopBtn.addEventListener('click', e => { e.stopPropagation(); openShop(); });
+shopBtn.addEventListener('pointerdown', e => e.stopPropagation());
+document.getElementById('shopClose').addEventListener('click', e => { e.stopPropagation(); closeShop(); });
+shopEl.addEventListener('pointerdown', e => { e.stopPropagation(); if (e.target === shopEl) closeShop(); });
+
 /* ---------- input ---------- */
 const keys = {};
 const pointers = new Map();
@@ -148,6 +265,8 @@ window.addEventListener('keydown', e => {
   ensureAudio();
   keys[c] = true;
   if (e.repeat) return;
+  if (shopOpen()){ if (c === 'Escape' || c === 'Enter' || c === 'Space') closeShop(); return; }
+  if (c === 'KeyS' && (state === 'title' || state === 'over')){ openShop(); return; }
   if (c === 'Space' || c === 'Enter') primaryAction();
   else if (c === 'KeyP' || c === 'Escape') togglePause();
   else if (c === 'KeyM') toggleMute();
@@ -190,14 +309,19 @@ function steerInput(){
 /* ---------- game state ---------- */
 let state = 'title', paused = false, t = 0;
 let px = 0, pvx = 0, py = 0, pvy = 0, camX = 0, speed = 14, dist = 0, score = 0, elapsed = 0, airTime = 0;
-let objs = [], parts = [], pops = [], flakes = [], sparkles = [], streaks = [];
+let objs = [], parts = [], pops = [], flakes = [], sparkles = [], streaks = [], chunks = [];
 let shake = 0, flash = 0, overTimer = 0, dyingTimer = 0, spawnAcc = 0, newBest = false, gifts = 0, tilt = 0, roll = 0;
 let combo = 0, comboT = 0, bestCombo = 0, closes = 0, nextMile = 1000, scorePulse = 0, camBob = 0;
 let pathX = 0, pathV = 0, mode = 'scatter', modeRows = 0, landing = 0, zig = 1;
 let env = null;
+// set-piece / mission bookkeeping
+let kick = 0, fovNow = 0, jumpRow = 0, jumpRowBest = 0, bridges = 0, avals = 0, onBridge = null, bridgeRun = 0;
+let avalNext = 38, avalLeft = 0, avalK = 0, banner = null, runMissions = [], missionCheckT = 0, crashCause = '';
 const COMBO_TIME = 2.4;
+const AVAL_LEN = 12;
 
 function primaryAction(){
+  if (shopOpen()) return;
   if (paused){ paused = false; return; }
   if (state === 'title') startGame();
   else if (state === 'over' && overTimer > 0.7) startGame();
@@ -215,14 +339,18 @@ function startGame(){
   speed = 17; score = 0; elapsed = 0; airTime = 0; gifts = 0; newBest = false;
   combo = 0; comboT = 0; bestCombo = 0; closes = 0; nextMile = 1000;
   overTimer = 0; dyingTimer = 0;
+  jumpRow = 0; jumpRowBest = 0; bridges = 0; avals = 0; onBridge = null; bridgeRun = 0;
+  avalNext = 38; avalLeft = 0; avalK = 0; banner = null; runMissions = []; missionCheckT = 0; kick = 0; crashCause = '';
   objs = objs.filter(o => o.scenery);
-  parts.length = 0; pops.length = 0;
+  parts.length = 0; pops.length = 0; chunks.length = 0;
   pathX = px; pathV = 0; mode = 'gifts'; modeRows = 4; landing = 0;
   // first rows start a couple of seconds ahead, so nothing is ever on top of you at the start
   spawnAcc = 0;
   for (let z = 36; z < FAR; z += rowGap()) spawnRow(z);
   sfx.start();
+  refreshShopBtn();
 }
+function showBanner(text, sub, color){ banner = { text: text, sub: sub || '', c: color || '#ffffff', life: 2.4 }; }
 
 /* ---------- obstacles ---------- */
 const diffNow = () => state === 'play' ? clamp(elapsed / 120, 0, 1) : 0.15;
@@ -242,7 +370,7 @@ function heightOf(o){
 function add(type, x, z, ex){
   const o = { type: type, x: x, z: z, seed: Math.random() };
   if (ex) for (const k in ex) o[k] = ex[k];
-  o.hw = hwOf(o);
+  if (o.hw === undefined) o.hw = hwOf(o);
   objs.push(o);
   return o;
 }
@@ -251,10 +379,13 @@ function pickObstacle(){
   return r < 0.45 ? 'tree' : r < 0.74 ? 'rock' : 'frost';
 }
 function pickMode(d){
-  const tbl = [['scatter', 4], ['gifts', 2.2], ['slalom', d < 0.12 ? 0 : 1.4 + d * 2], ['ramp', 1.1 + d * 0.6], ['forest', d < 0.3 ? 0 : d * 2.2]];
-  let tot = 0; for (const e of tbl) tot += e[1];
+  const e = state === 'play' ? elapsed : 0;
+  const tbl = [['scatter', 3.4], ['gifts', 1.8], ['slalom', d < 0.12 ? 0 : 1.3 + d * 2], ['ramp', e < 8 ? 0 : 0.9 + d * 0.5],
+    ['forest', d < 0.3 ? 0 : d * 2], ['tunnel', e < 10 ? 0 : 1.3], ['chain', e < 12 ? 0 : 1.1], ['bridge', e < 20 ? 0 : 1.0 + d * .6],
+    ['ramps', e < 25 ? 0 : 0.7]];
+  let tot = 0; for (const x of tbl) tot += x[1];
   let r = Math.random() * tot;
-  for (const e of tbl){ r -= e[1]; if (r <= 0) return e[0]; }
+  for (const x of tbl){ r -= x[1]; if (r <= 0) return x[0]; }
   return 'scatter';
 }
 function spawnRow(z){
@@ -263,11 +394,20 @@ function spawnRow(z){
   const lat = 7 + speed * 0.13;
   const maxStep = gap / Math.max(speed, 1) * lat * 0.5; // how far the safe line may drift per row
   const cw = corridor();
+  const playing = state === 'play';
 
   if (modeRows <= 0){
+    const prev = mode;
     mode = pickMode(d);
-    modeRows = mode === 'ramp' ? 1 : mode === 'slalom' ? 6 + Math.floor(d * 4) : mode === 'forest' ? 5 : 4 + Math.floor(Math.random() * 3);
+    if (mode === prev && (mode === 'bridge' || mode === 'tunnel' || mode === 'chain' || mode === 'ramps')) mode = 'scatter';
+    if (avalLeft > 0 && (mode === 'gifts' || mode === 'scatter')) mode = Math.random() < .5 ? 'slalom' : 'forest';
+    modeRows = mode === 'ramp' || mode === 'chain' ? 1 : mode === 'slalom' ? 6 + Math.floor(d * 4) : mode === 'forest' ? 5
+      : mode === 'tunnel' ? 7 + Math.floor(Math.random() * 3) : mode === 'bridge' ? 6 + Math.floor(d * 3) : mode === 'ramps' ? 12
+      : 4 + Math.floor(Math.random() * 3);
     zig = Math.random() < .5 ? -1 : 1;
+    if (playing && mode === 'bridge') add('sign', pathX, z, { label: 'ICE BRIDGE', hw: 0 });
+    if (playing && mode === 'tunnel') add('sign', pathX, z, { label: 'TREE TUNNEL', hw: 0 });
+    if (mode === 'bridge'){ modeRows++; bridgeApproach = true; }   // one approach row first
   }
   modeRows--;
 
@@ -275,7 +415,11 @@ function spawnRow(z){
   if (mode === 'slalom'){
     if (modeRows % 2 === 0) zig = -zig;
     pathV = zig * maxStep * 0.95;
-  } else if (mode === 'ramp' || landing > 0){
+  } else if (mode === 'tunnel'){
+    pathV = zig * maxStep * 0.3 * Math.sin(modeRows * .9);
+  } else if (mode === 'bridge'){
+    pathV = 0;
+  } else if (mode === 'ramp' || mode === 'chain' || mode === 'ramps' || landing > 0){
     pathV *= 0.3;
   } else {
     pathV = clamp(pathV + rand(-1, 1) * maxStep * 0.55 + (px - pathX) * 0.012, -maxStep, maxStep);
@@ -299,18 +443,63 @@ function spawnRow(z){
       placed.push(x); i++;
     }
   };
-
-  if (mode === 'ramp' && state === 'play'){
-    const rx = pathX;
-    add('ramp', rx, z);
-    const wz = z + 1.6 + speed * 0.32;
+  const rampWall = (rx, wz) => {
     for (let i = -3; i <= 3; i++){
       add(Math.random() < .5 ? 'rock' : 'frost', rx + i * 1.5 + rand(-.1, .1), wz + rand(-.2, .2));
       placed.push(rx + i * 1.5);
     }
+  };
+  let scenery = true;
+
+  if (!playing && (mode === 'bridge' || mode === 'chain' || mode === 'ramps')) mode = 'scatter';
+
+  if (mode === 'ramp' && playing){
+    const rx = pathX;
+    add('ramp', rx, z);
+    const wz = z + 1.6 + speed * 0.32;
+    rampWall(rx, wz);
     add('gift', rx, wz, { y: 2.2, big: true });
     landing = 3;
     scatter(Math.round(1 + d * 2));
+  } else if (mode === 'chain'){
+    // ramp launches you through an arc of gifts
+    const rx = pathX;
+    add('ramp', rx, z);
+    const v = 10.5 + speed * 0.06, T = 2 * v / 26, n = 6;
+    for (let i = 1; i <= n; i++){
+      const tau = T * i / (n + 1);
+      add('gift', rx, z + 0.9 + speed * tau, { y: Math.max(0.7, v * tau - 13 * tau * tau), chain: true });
+    }
+    landing = 4;
+  } else if (mode === 'ramps'){
+    // three ramps back to back (spaced so you land between them): chain the jumps
+    if (modeRows % 4 === 3){
+      add('ramp', pathX, z);
+      add('gift', pathX, z + 0.9 + speed * 0.42, { y: 2.6 });
+    } else add('gift', pathX, z);
+    landing = 2;
+  } else if (mode === 'bridge'){
+    scenery = false;
+    const hw = lerp(2.1, 1.4, d);
+    if (bridgeApproach){ bridgeApproach = false; add('gift', pathX, z); }
+    else {
+      add('bridge', pathX, z, { hw: hw, len: gap + 1.1, first: !onBridgeSpawned, last: modeRows <= 0 });
+      onBridgeSpawned = modeRows > 0;
+      if (Math.random() < .55) add('gift', pathX + rand(-hw * .5, hw * .5), z + gap * .5);
+    }
+  } else if (mode === 'tunnel'){
+    // trees packed tight on both sides of the safe line, gifts down the middle
+    const tw = lerp(2.6, 2.1, d);
+    for (const side of [-1, 1]){
+      for (let k = 0; k < 2; k++){
+        const seed = Math.random();
+        const hw = hwOf({ type: 'tree', seed: seed });
+        add('tree', pathX + side * (tw + hw + k * 2.1 + rand(0, .25)), z + rand(-.3, .3) + k * .5, { seed: seed, tunnel: true });
+        placed.push(pathX + side * (tw + hw + k * 2.1));
+      }
+    }
+    add('gift', pathX, z);
+    scatter(Math.round(rand(0, 1.5)));
   } else if (mode === 'forest' || (mode === 'slalom' && modeRows % 2 === 0)){
     // a wall of trees with one opening on the safe line
     const step = mode === 'forest' ? 2.0 : 2.4;
@@ -329,13 +518,17 @@ function spawnRow(z){
     scatter(Math.round(rand(1.5, 3 + d * 3.5)));
     if (Math.random() < .12) add('gift', pathX, z);
   }
+  if (mode !== 'bridge') onBridgeSpawned = false;
   if (landing > 0) landing--;
 
   // scenery trees off to the sides
-  const side = Math.random() < .5 ? -1 : 1;
-  add('tree', px + side * rand(15, 28), z + rand(0, 3), { scenery: true });
-  if (Math.random() < .6) add('tree', px - side * rand(15, 28), z + rand(0, 3), { scenery: true });
+  if (scenery){
+    const side = Math.random() < .5 ? -1 : 1;
+    add('tree', px + side * rand(15, 28), z + rand(0, 3), { scenery: true });
+    if (Math.random() < .6) add('tree', px - side * rand(15, 28), z + rand(0, 3), { scenery: true });
+  }
 }
+let onBridgeSpawned = false, bridgeApproach = false;
 
 /* ---------- particles ---------- */
 function burst(x, y, n, colors, spd, life, grav, size){
@@ -385,9 +578,20 @@ const mtnSeed = [Math.random() * 10, Math.random() * 10, Math.random() * 10, Mat
 let last = performance.now();
 function update(dt){
   t += dt;
-  if (state === 'play'){ elapsed += dt; speed = 17 + 35 * (1 - Math.exp(-elapsed / 85)); }
+  if (state === 'play'){
+    elapsed += dt;
+    updateAvalanche(dt);
+    speed = (17 + 35 * (1 - Math.exp(-elapsed / 85))) * (1 + 0.22 * avalK);
+  }
   else if (state === 'title') speed = 13;
   else speed = Math.max(0, speed - speed * 2.5 * dt - 3 * dt);
+  // field-of-view kick: widens with speed, punches out on near misses / jumps / avalanches
+  kick = Math.max(0, kick - kick * 2.2 * dt - .02 * dt);
+  const fovTarget = (state === 'play' ? clamp((speed - 17) / 38, 0, 1) * 0.17 : 0) + Math.min(kick, .14) + avalK * .05;
+  fovNow += (fovTarget - fovNow) * Math.min(1, (fovTarget > fovNow ? 9 : 3) * dt);
+  applyFov(fovNow);
+  if (banner){ banner.life -= dt; if (banner.life <= 0) banner = null; }
+  if (state === 'play'){ missionCheckT -= dt; if (missionCheckT <= 0){ missionCheckT = .25; checkMissions(); } }
 
   const dz = speed * dt;
   dist += dz;
@@ -434,6 +638,20 @@ function update(dt){
     const o = objs[i];
     const z0 = o.z;
     o.z -= dz;
+    if (o.type === 'bridge'){
+      if (state === 'play' && o.z <= PZ && o.z + o.len > PZ && !o.crossed){
+        if (py <= 0.05 && Math.abs(px - o.x) > o.hw - PHW * .4){ crashCause = 'bridge'; crash(o); }
+        if (onBridge !== o){ onBridge = o; if (o.first){ bridgeRun = 0; sfx.bridge(); } bridgeRun++; }
+        if (o.last && o.z + o.len - PZ < dz * 1.5 && state === 'play'){
+          o.crossed = true; bridges++;
+          const p = project(px, py, PZ);
+          const b = 150 + 25 * bridgeRun; score += b; scorePulse = 1;
+          pop('BRIDGE +' + b, p.x, p.y - p.s * 1.6, '#bff6ff'); sfx.bridge(); kick += .05;
+        }
+      }
+      if (o.z + o.len < 1.1) objs.splice(i, 1);
+      continue;
+    }
     if (state === 'play' && !o.done){
       const cz = o.type === 'ramp' ? o.z + 0.9 : o.z, cz0 = o.type === 'ramp' ? z0 + 0.9 : z0;
       if (cz0 >= PZ && cz < PZ) collide(o);
@@ -453,7 +671,7 @@ function update(dt){
   // snow spray from runners
   if ((state === 'play' || state === 'title') && py <= 0){
     const p = project(px, 0, PZ);
-    const amt = 0.5 + Math.abs(pvx) * 0.25 + speed * 0.02;
+    const amt = 0.6 + Math.abs(pvx) * 0.32 + speed * 0.035 + avalK;
     const n = Math.floor(amt) + (Math.random() < amt % 1 ? 1 : 0);
     for (let j = 0; j < n; j++){
       for (let k = -1; k <= 1; k += 2){
@@ -464,10 +682,21 @@ function update(dt){
   }
 
   // speed streaks
-  const sv = clamp((speed - 26) / 22, 0, 1);
-  if (state === 'play' && Math.random() < sv * 0.9){
-    const a = Math.random() * Math.PI * 2;
-    streaks.push({ a: a, r: rand(.25, .5), v: rand(1.6, 2.6), life: .5 });
+  const sv = clamp((speed - 19) / 26, 0, 1) + kick * 4 + avalK * .6;
+  if (state === 'play'){
+    let n = sv * 60 * dt; // streaks per frame
+    while (n > 0){
+      if (Math.random() < n) streaks.push({ a: Math.random() * Math.PI * 2, r: rand(.2, .45), v: rand(1.8, 3), life: .5 });
+      n -= 1;
+    }
+  }
+  // avalanche: snow chunks blasting past from behind the camera
+  if (state === 'play' && avalK > .05 && Math.random() < avalK * 0.9){
+    chunks.push({ x: rand(-.2, 1.2) * W, y: H + 20, vx: rand(-60, 60), vy: -rand(500, 900), r: rand(4, 12) * (H / 800), life: 1.2 });
+  }
+  for (let i = chunks.length - 1; i >= 0; i--){
+    const c = chunks[i]; c.life -= dt; c.x += (c.vx + (c.x - W / 2) * .8) * dt; c.y += c.vy * dt; c.vy *= Math.pow(.25, dt); c.r *= Math.pow(.45, dt);
+    if (c.life <= 0 || c.y < HOR) chunks.splice(i, 1);
   }
   for (let i = streaks.length - 1; i >= 0; i--){
     const s = streaks[i]; s.r += s.v * s.r * dt * 2.2; s.life -= dt;
@@ -501,19 +730,25 @@ function update(dt){
   if (state === 'over') overTimer += dt;
 }
 
+const TIERS = { 5: 'NICE!', 10: 'SLICK!', 15: 'WILD!', 20: 'STORM MODE!', 30: 'LEGENDARY!' };
 function bumpCombo(){
   combo++; comboT = COMBO_TIME;
   if (combo > bestCombo) bestCombo = combo;
+  if (TIERS[combo]){
+    pop(TIERS[combo] + '  x' + combo, W / 2, H * .38, '#ff9be3', true);
+    sfx.tier(); kick += .07; scorePulse = 1;
+  }
 }
 function collide(o){
   const dx = Math.abs(o.x - px);
   const p = project(px, py, PZ);
+  if (o.type === 'sign') return;
   if (o.type === 'gift'){
     const gy = o.y || 0.7;
     if (dx < 1.1 && Math.abs(gy - py) < 1.3){
       o.dead = true; o.done = true;
       bumpCombo();
-      const bonus = (o.big ? 150 : 50) + 25 * Math.min(combo, 10);
+      const bonus = (o.big ? 150 : o.chain ? 70 : 50) + 25 * Math.min(combo, 10);
       score += bonus; gifts++; scorePulse = 1;
       sfx.gift(combo);
       burst(p.x, p.y - p.s * .6, 30, ['#ffe066', '#ff5fd2', '#7ff3ff', '#ffffff'], 280, .8, 200, 3.2);
@@ -526,9 +761,11 @@ function collide(o){
     if (dx < 1.6 && py < 0.4){
       pvy = 10.5 + speed * 0.06; py = 0.01; airTime = 0;
       sfx.jump();
-      shake = Math.max(shake, 3);
+      shake = Math.max(shake, 3); kick += .08;
       burst(p.x, p.y, 22, ['#bff6ff', '#ffffff'], 200, .5, 300, 2.5);
-    }
+      jumpRow++; if (jumpRow > jumpRowBest) jumpRowBest = jumpRow;
+      if (jumpRow >= 2) pop(jumpRow + ' JUMPS IN A ROW!', p.x, p.y - p.s * 2.2, '#ffe066');
+    } else if (py < 0.4) jumpRow = 0;
     return;
   }
   o.done = true;
@@ -547,7 +784,7 @@ function collide(o){
     const b = 15 * Math.min(combo, 10); score += b;
     const side = o.x < px ? -1 : 1;
     pop('CLOSE +' + b, p.x + side * p.s * .9, p.y - p.s * 1.2, '#ff9be3');
-    sfx.close(combo);
+    sfx.close(combo); sfx.whoosh(); kick += .035;
     burst(p.x + side * p.s * .5, p.y - p.s * .3, 10, ['#ffffff', '#ff9be3', '#7ff3ff'], 160, .4, 200, 2.4);
   }
 }
@@ -578,8 +815,62 @@ function crash(o){
 }
 function gameOver(){
   state = 'over'; overTimer = 0;
+  checkMissions();
   const s = Math.floor(score);
   if (s > best){ best = s; newBest = true; store.set('sledstorm_best', best); sfx.best(); }
+  bank += gifts; store.set('sledstorm_giftbank', bank);
+  refreshShopBtn();
+}
+
+/* ---------- avalanche set-piece: every so often the mountain lets go behind you ---------- */
+function updateAvalanche(dt){
+  if (avalLeft > 0){
+    avalLeft -= dt;
+    avalK = Math.min(1, avalK + dt * 1.5);
+    shake = Math.max(shake, 1.2 + avalK * 1.2);
+    if (avalLeft <= 0){
+      avals++;
+      const b = 500; score += b; scorePulse = 1; kick += .1;
+      showBanner('YOU OUTRAN IT!', '+' + b, '#7ff9ff');
+      sfx.outran();
+      avalNext = rand(42, 55);
+    }
+  } else {
+    avalK = Math.max(0, avalK - dt * .7);
+    avalNext -= dt;
+    if (avalNext <= 0 && state === 'play'){
+      avalLeft = AVAL_LEN;
+      showBanner('AVALANCHE!', 'Keep going and don\'t crash!', '#ffffff');
+      sfx.rumble();
+    }
+  }
+}
+
+/* ---------- missions ---------- */
+function statOf(m){
+  switch (m.stat){
+    case 'time': return elapsed;
+    case 'gifts': return gifts;
+    case 'jumpRow': return jumpRowBest;
+    case 'closes': return closes;
+    case 'bridges': return bridges;
+    case 'avals': return avals;
+    case 'combo': return bestCombo;
+    case 'score': return Math.floor(score);
+  }
+  return 0;
+}
+function checkMissions(){
+  if (state !== 'play' && state !== 'dying' && state !== 'over') return;
+  for (const m of activeMissions()){
+    if (statOf(m) >= m.goal){
+      missionsDone.push(m.id); store.set('sledstorm_missionsv2', missionsDone.join(','));
+      bank += m.reward; store.set('sledstorm_giftbank', bank);
+      runMissions.push(m);
+      if (state === 'play') showBanner('MISSION COMPLETE!', m.text + '  ·  +' + m.reward + ' gifts', '#ffe066');
+      sfx.mission();
+    }
+  }
 }
 
 /* ---------- drawing: world ---------- */
@@ -862,11 +1153,7 @@ function drawPlayer(){
     ctx.quadraticCurveTo(k * .38 * s, -.62 * s, k * .3 * s, -.5 * s);
     ctx.stroke();
   }
-  const dg = ctx.createLinearGradient(0, -.4 * s, 0, 0);
-  dg.addColorStop(0, '#b06bff'); dg.addColorStop(1, '#5a2fd0');
-  ctx.fillStyle = dg;
-  ctx.beginPath(); ctx.moveTo(-.56 * s, -.08 * s); ctx.lineTo(.56 * s, -.08 * s); ctx.lineTo(.4 * s, -.42 * s); ctx.lineTo(-.4 * s, -.42 * s); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#ff4fa3'; ctx.fillRect(-.56 * s, -.13 * s, 1.12 * s, .06 * s);
+  paintSled(ctx, s, sledDef());
   if (!crashed || (dyingTimer + overTimer) < .25){
     const bg = ctx.createLinearGradient(-.35 * s, 0, .35 * s, 0);
     bg.addColorStop(0, '#1fd2e8'); bg.addColorStop(1, '#0f7fb8');
@@ -886,10 +1173,87 @@ function drawPlayer(){
   ctx.restore();
 }
 
+// ice bridge: a glassy strip over a deep blue crevasse
+function drawBridge(o){
+  const z0 = Math.max(o.z, 1.2), z1 = Math.min(o.z + o.len, FAR);
+  if (z1 <= z0) return;
+  const a = fogAlpha(z0);
+  const L0 = project(o.x - o.hw, 0, z0), R0 = project(o.x + o.hw, 0, z0);
+  const L1 = project(o.x - o.hw, 0, z1), R1 = project(o.x + o.hw, 0, z1);
+  const far0 = project(camX - 60, 0, z0), far1 = project(camX - 60, 0, z1);
+  const farR0 = project(camX + 60, 0, z0), farR1 = project(camX + 60, 0, z1);
+  ctx.globalAlpha = a;
+  // crevasse on both sides
+  const cg = ctx.createLinearGradient(0, L1.y, 0, L0.y);
+  cg.addColorStop(0, 'rgba(20,40,110,.95)'); cg.addColorStop(1, 'rgba(8,16,60,.98)');
+  ctx.fillStyle = cg;
+  ctx.beginPath(); ctx.moveTo(far0.x, far0.y); ctx.lineTo(L0.x, L0.y); ctx.lineTo(L1.x, L1.y); ctx.lineTo(far1.x, far1.y); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(R0.x, R0.y); ctx.lineTo(farR0.x, farR0.y); ctx.lineTo(farR1.x, farR1.y); ctx.lineTo(R1.x, R1.y); ctx.closePath(); ctx.fill();
+  // icy deck
+  const dg = ctx.createLinearGradient(L0.x, 0, R0.x, 0);
+  dg.addColorStop(0, '#9fe6ff'); dg.addColorStop(.5, '#e9fbff'); dg.addColorStop(1, '#9fe6ff');
+  ctx.fillStyle = dg;
+  ctx.beginPath(); ctx.moveTo(L0.x, L0.y); ctx.lineTo(R0.x, R0.y); ctx.lineTo(R1.x, R1.y); ctx.lineTo(L1.x, L1.y); ctx.closePath(); ctx.fill();
+  // cracks/planks across the deck
+  ctx.strokeStyle = 'rgba(80,160,220,.45)'; ctx.lineWidth = Math.max(1, .03 * L0.s);
+  ctx.beginPath(); ctx.moveTo(L0.x, L0.y); ctx.lineTo(R0.x, R0.y); ctx.stroke();
+  // glowing rails
+  ctx.save();
+  ctx.shadowColor = '#2ef2ff'; ctx.shadowBlur = 10;
+  ctx.strokeStyle = 'rgba(127,249,255,' + (.75 + .25 * Math.sin(t * 8 + o.z)).toFixed(2) + ')';
+  ctx.lineWidth = Math.max(1.5, .09 * L0.s);
+  ctx.beginPath(); ctx.moveTo(L0.x, L0.y); ctx.lineTo(L1.x, L1.y); ctx.moveTo(R0.x, R0.y); ctx.lineTo(R1.x, R1.y); ctx.stroke();
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+// banner arch announcing a set-piece (purely decorative, you ride under it)
+function drawSign(o){
+  const hwid = 3.6;
+  const lp = project(o.x - hwid, 0, o.z), rp = project(o.x + hwid, 0, o.z);
+  const lt = project(o.x - hwid, 4.2, o.z), rt = project(o.x + hwid, 4.2, o.z);
+  const s = lp.s;
+  ctx.strokeStyle = '#5a3a2e'; ctx.lineWidth = Math.max(2, .16 * s);
+  ctx.beginPath(); ctx.moveTo(lp.x, lp.y); ctx.lineTo(lt.x, lt.y); ctx.moveTo(rp.x, rp.y); ctx.lineTo(rt.x, rt.y); ctx.stroke();
+  const bh = .9 * s;
+  ctx.fillStyle = 'rgba(40,16,90,.92)';
+  ctx.fillRect(lt.x, lt.y - bh * .2, rt.x - lt.x, bh);
+  ctx.strokeStyle = '#7ff9ff'; ctx.lineWidth = Math.max(1, .05 * s);
+  ctx.strokeRect(lt.x, lt.y - bh * .2, rt.x - lt.x, bh);
+  if (bh > 6){
+    ctx.font = '900 ' + Math.round(bh * .6) + 'px ' + FONT;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffe066';
+    ctx.fillText(o.label, (lt.x + rt.x) / 2, lt.y + bh * .3);
+  }
+}
+
+function sledColors(sd){
+  if (!sd.rainbow) return [sd.a, sd.b, sd.s];
+  const h = (t * 60) % 360;
+  return ['hsl(' + h + ',100%,75%)', 'hsl(' + ((h + 60) % 360) + ',90%,48%)', 'hsl(' + ((h + 180) % 360) + ',100%,70%)'];
+}
+// the sled deck (used by the rider and the shop preview)
+function paintSled(g, s, sd){
+  const c = sledColors(sd);
+  const dg = g.createLinearGradient(0, -.4 * s, 0, 0);
+  dg.addColorStop(0, c[0]); dg.addColorStop(1, sd.stripes ? '#dfeeff' : c[1]);
+  g.fillStyle = dg;
+  g.beginPath(); g.moveTo(-.56 * s, -.08 * s); g.lineTo(.56 * s, -.08 * s); g.lineTo(.4 * s, -.42 * s); g.lineTo(-.4 * s, -.42 * s); g.closePath(); g.fill();
+  if (sd.stripes){
+    g.save(); g.clip();
+    g.fillStyle = c[1];
+    for (let k = -4; k <= 4; k++){ g.beginPath(); g.moveTo(k * .2 * s, -.45 * s); g.lineTo(k * .2 * s + .09 * s, -.45 * s); g.lineTo(k * .2 * s - .06 * s, 0); g.lineTo(k * .2 * s - .15 * s, 0); g.closePath(); g.fill(); }
+    g.restore();
+  }
+  g.fillStyle = c[2]; g.fillRect(-.56 * s, -.13 * s, 1.12 * s, .06 * s);
+}
+
 function drawWorld(){
   drawSky();
   drawGround();
-  const list = objs.filter(o => o.z < FAR + 2);
+  const bl = objs.filter(o => o.type === 'bridge' && o.z < FAR).sort((a, b) => b.z - a.z);
+  for (const o of bl) drawBridge(o);
+  const list = objs.filter(o => o.z < FAR + 2 && o.type !== 'bridge');
   list.push({ type: 'player', z: PZ });
   list.sort((a, b) => b.z - a.z);
   for (const o of list){
@@ -903,6 +1267,7 @@ function drawWorld(){
     else if (o.type === 'frost') drawFrost(o);
     else if (o.type === 'ramp') drawRamp(o);
     else if (o.type === 'gift') drawGift(o);
+    else if (o.type === 'sign') drawSign(o);
     ctx.globalAlpha = 1;
   }
   for (const p of parts){
@@ -936,6 +1301,31 @@ function drawOverlayFX(){
     ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, 7); ctx.fill();
   }
   ctx.globalAlpha = 1;
+  // avalanche: a churning white wall right behind you, plus chunks blasting past
+  if (avalK > 0.01){
+    const k = avalK, base = H * (1.01 - .07 * k);
+    ctx.save();
+    const ag = ctx.createLinearGradient(0, base - H * .12, 0, H);
+    ag.addColorStop(0, 'rgba(255,255,255,0)'); ag.addColorStop(.35, 'rgba(240,248,255,' + (.75 * k).toFixed(3) + ')'); ag.addColorStop(1, 'rgba(255,255,255,' + (.95 * k).toFixed(3) + ')');
+    ctx.fillStyle = ag;
+    ctx.beginPath(); ctx.moveTo(0, H);
+    for (let x = 0; x <= W + 20; x += 20){
+      const y = base + Math.sin(x * .02 + t * 5) * 14 * k + Math.sin(x * .053 - t * 7) * 9 * k - Math.abs(Math.sin(x * .011 + t * 2)) * 30 * k;
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+    // puffs
+    ctx.fillStyle = 'rgba(255,255,255,' + (.55 * k).toFixed(3) + ')';
+    for (let i = 0; i < 9; i++){
+      const x = ((i * 137 + t * 90) % (W + 120)) - 60, y = base + 18 + Math.sin(t * 3 + i) * 10;
+      ctx.beginPath(); ctx.arc(x, y, (30 + 18 * Math.sin(t * 4 + i * 2)) * k * (H / 800), 0, 7); ctx.fill();
+    }
+    ctx.restore();
+  }
+  if (chunks.length){
+    ctx.fillStyle = 'rgba(250,253,255,.95)';
+    for (const c of chunks){ ctx.beginPath(); ctx.arc(c.x, c.y, Math.max(1, c.r), 0, 7); ctx.fill(); }
+  }
   const sv = clamp((speed - 20) / 30, 0, 1);
   const vg = ctx.createRadialGradient(W / 2, H * .55, Math.min(W, H) * .35, W / 2, H * .55, Math.max(W, H) * .8);
   vg.addColorStop(0, 'rgba(5,10,40,0)'); vg.addColorStop(1, 'rgba(5,10,40,' + (.22 + sv * .25 + env.night * .15).toFixed(3) + ')');
@@ -995,12 +1385,27 @@ function drawHUD(){
     text(q.text, q.x, q.y, (q.big ? clamp(m * .1, 30, 60) : clamp(m * .045, 15, 26)) * sc, q.c, q.c);
   }
   ctx.globalAlpha = 1;
+  if (avalLeft > 0 && state === 'play'){
+    const bw = Math.min(220, W * .5), by = top + sz * 2.45 + (combo > 1 ? 14 : 0);
+    text('AVALANCHE  ' + Math.ceil(avalLeft) + 's', W / 2, by, clamp(sz * .36, 13, 17), '#ffffff', '#2e6cff', 'center', 900);
+    ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(W / 2 - bw / 2, by + 11, bw, 5);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(W / 2 - bw / 2, by + 11, bw * clamp(1 - avalLeft / AVAL_LEN, 0, 1), 5);
+  }
+  if (banner){
+    const a = clamp(banner.life * 2, 0, 1), pz = 1 + Math.max(0, banner.life - 2.1) * 1.6;
+    ctx.globalAlpha = a;
+    ctx.save(); ctx.translate(W / 2, H * .47); ctx.scale(pz, pz);
+    text(banner.text, 0, 0, clamp(m * .085, 26, 52), banner.c, '#ff3fb4');
+    if (banner.sub) text(banner.sub, 0, clamp(m * .07, 26, 44), clamp(m * .04, 14, 20), '#ffffff', 'rgba(0,20,60,.9)', 'center', 700);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
 }
 function drawTitle(){
   ctx.fillStyle = 'rgba(4,8,30,.45)'; ctx.fillRect(0, 0, W, H);
   const m = Math.min(W, H);
-  const ts = clamp(Math.min(W * .13, H * .12), 34, 96);
-  const cy = Math.max(H * .26, 80 + ts * .5);
+  const ts = clamp(Math.min(W * .13, H * .095), 34, 84);
+  const cy = Math.max(H * .17, 78 + ts * .5);
   const wob = Math.sin(t * 2) * 3;
   text('SLED STORM', W / 2, cy + wob, ts, '#eaffff', '#2ef2ff');
   ctx.save();
@@ -1008,46 +1413,68 @@ function drawTitle(){
   ctx.rotate(-.08);
   text('3D', 0, 0, ts * .55, '#ff5fd2', '#ff5fd2');
   ctx.restore();
-  text('An endless downhill blizzard run', W / 2, cy + ts * 1.3, clamp(m * .04, 14, 22), '#bff6ff', null, 'center', 600);
+  const fs = clamp(m * .036, 13, 18);
+  let y = cy + ts * 1.25;
+  text(isTouch ? 'Hold LEFT or RIGHT side to steer' : 'Steer with  ← →  or  A / D', W / 2, y, fs, '#ffffff', null, 'center', 700);
+  y += fs * 1.5;
+  text('Shave past things for COMBOS · grab gifts · hit ramps', W / 2, y, fs * .82, '#bff6ff', null, 'center', 500);
 
-  const pw = Math.min(W - 32, 460), ph = clamp(m * .36, 150, 210);
-  const py0 = Math.max(H * .48, cy + ts * 1.65);
+  // missions panel
+  const act = activeMissions();
+  const rowH = clamp(fs * 1.75, 24, 32);
+  const pw = Math.min(W - 24, 470), ph = rowH * Math.max(1, act.length) + rowH * 1.35;
+  const py0 = y + fs * 1.2;
   panel(W / 2 - pw / 2, py0, pw, ph);
-  const fs = clamp(m * .036, 13, 19);
-  text(isTouch ? 'Hold LEFT or RIGHT side to steer' : 'Steer with  ← →  or  A / D', W / 2, py0 + ph * .18, fs, '#ffffff', null, 'center', 700);
-  text('Dodge trees, rocks and Frostlings', W / 2, py0 + ph * .35, fs * .92, '#ff9be3', null, 'center', 500);
-  text('Shave past them to build a COMBO', W / 2, py0 + ph * .5, fs * .92, '#ffffff', null, 'center', 600);
-  text('Grab gifts  ·  hit ramps to fly over walls', W / 2, py0 + ph * .65, fs * .92, '#ffe066', null, 'center', 500);
-  text('Always one clear line through the trees', W / 2, py0 + ph * .82, fs * .85, '#bff6ff', null, 'center', 500);
+  text('MISSIONS  ' + (MISSIONS.length - MISSIONS.filter(x => missionsDone.indexOf(x.id) < 0).length) + ' / ' + MISSIONS.length, W / 2, py0 + rowH * .62, fs * .95, '#ffe066', '#ff3fb4', 'center', 900);
+  if (!act.length) text('All missions complete. You are a Sled Storm legend!', W / 2, py0 + rowH * 1.6, fs * .85, '#ffffff', null, 'center', 600);
+  act.forEach((mi, i) => {
+    const ry = py0 + rowH * (1.55 + i);
+    const x0 = W / 2 - pw / 2 + 16;
+    ctx.strokeStyle = 'rgba(127,249,255,.8)'; ctx.lineWidth = 2;
+    ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x0, ry - 8, 16, 16, 4); else ctx.rect(x0, ry - 8, 16, 16); ctx.stroke();
+    text(mi.text, x0 + 26, ry, fs * .86, '#ffffff', null, 'left', 600);
+    text('+' + mi.reward, W / 2 + pw / 2 - 40, ry, fs * .86, '#ffe066', null, 'right', 800);
+    drawMiniGift(W / 2 + pw / 2 - 26, ry, 12);
+  });
 
   const blink = .55 + .45 * Math.sin(t * 4);
   ctx.globalAlpha = blink;
-  text('Tap / press Space to start', W / 2, Math.min(H - 44, py0 + ph + clamp(m * .09, 34, 60)), clamp(m * .05, 18, 28), '#ffffff', '#2ef2ff');
+  const sy = Math.min(H - 110, py0 + ph + clamp(m * .07, 30, 50));
+  text('Tap / press Space to start', W / 2, sy, clamp(m * .05, 18, 28), '#ffffff', '#2ef2ff');
   ctx.globalAlpha = 1;
-  if (best > 0) text('BEST ' + best.toLocaleString(), W / 2, Math.min(H - 16, py0 + ph + clamp(m * .15, 60, 100)), clamp(m * .035, 13, 18), '#bff6ff', null, 'center', 700);
+  if (best > 0) text('BEST ' + best.toLocaleString(), W / 2, sy + clamp(m * .055, 24, 34), clamp(m * .035, 13, 18), '#bff6ff', null, 'center', 700);
+}
+function drawMiniGift(x, y, sz){
+  ctx.fillStyle = '#ff3fb4'; ctx.fillRect(x - sz / 2, y - sz / 2, sz, sz);
+  ctx.fillStyle = '#ffe066'; ctx.fillRect(x - sz * .1, y - sz / 2, sz * .2, sz); ctx.fillRect(x - sz / 2, y - sz * .1, sz, sz * .2);
 }
 function drawOver(){
   const a = clamp(overTimer * 3, 0, 1);
   ctx.fillStyle = 'rgba(4,8,30,' + (.55 * a).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H);
   ctx.globalAlpha = a;
   const m = Math.min(W, H);
-  const pw = Math.min(W - 32, 420), ph = clamp(m * .66, 280, 370);
-  const x0 = W / 2 - pw / 2, y0 = Math.max(60, H / 2 - ph / 2);
+  const extra = runMissions.length * 22;
+  const pw = Math.min(W - 32, 420), ph = clamp(m * .66, 300, 380) + extra;
+  const x0 = W / 2 - pw / 2, y0 = Math.max(64, Math.min(H / 2 - ph / 2, H - 80 - ph));
   panel(x0, y0, pw, ph);
-  text('WIPEOUT!', W / 2, y0 + ph * .13, clamp(m * .09, 30, 56), '#ffffff', '#ff4fa3');
-  text('SCORE', W / 2, y0 + ph * .28, 14, '#bff6ff', null, 'center', 700);
-  text(Math.floor(score).toLocaleString(), W / 2, y0 + ph * .4, clamp(m * .1, 34, 64), '#ffffff', '#2ef2ff');
-  text('BEST  ' + best.toLocaleString(), W / 2, y0 + ph * .54, clamp(m * .04, 15, 22), '#ffe066', null, 'center', 700);
-  text('Gifts ' + gifts + '   ·   Close shaves ' + closes + '   ·   Top combo x' + bestCombo, W / 2, y0 + ph * .65, clamp(m * .03, 12, 16), '#ff9be3', null, 'center', 600);
+  let y = y0 + 40;
+  text(crashCause === 'bridge' ? 'OFF THE BRIDGE!' : 'WIPEOUT!', W / 2, y, clamp(m * .085, 28, 52), '#ffffff', '#ff4fa3');
+  y += 44; text('SCORE', W / 2, y, 14, '#bff6ff', null, 'center', 700);
+  y += 36; text(Math.floor(score).toLocaleString(), W / 2, y, clamp(m * .1, 34, 60), '#ffffff', '#2ef2ff');
+  y += 42; text('BEST  ' + best.toLocaleString(), W / 2, y, clamp(m * .04, 15, 22), '#ffe066', null, 'center', 700);
+  y += 30; text('Gifts ' + gifts + '  ·  Close shaves ' + closes + '  ·  Top combo x' + bestCombo, W / 2, y, clamp(m * .03, 12, 15), '#ff9be3', null, 'center', 600);
+  y += 26; text('+' + gifts + ' gifts saved  ·  Bank: ' + bank, W / 2, y, clamp(m * .032, 12, 16), '#ffe066', null, 'center', 700);
+  for (const mi of runMissions){ y += 22; text('✓ ' + mi.text + '  +' + mi.reward, W / 2, y, clamp(m * .03, 12, 15), '#7ff9ff', null, 'center', 700); }
   if (newBest){
+    y += 28;
     const s = 1 + Math.sin(t * 6) * .05;
-    ctx.save(); ctx.translate(W / 2, y0 + ph * .76); ctx.scale(s, s);
+    ctx.save(); ctx.translate(W / 2, y); ctx.scale(s, s);
     text('NEW BEST!', 0, 0, clamp(m * .045, 16, 24), '#ffe066', '#ffd23f');
     ctx.restore();
   }
   if (overTimer > .7){
     ctx.globalAlpha = a * (.55 + .45 * Math.sin(t * 4));
-    text('Tap / press Space to restart', W / 2, y0 + ph * .9, clamp(m * .04, 15, 22), '#ffffff', '#2ef2ff');
+    text('Tap / press Space to restart', W / 2, y0 + ph - 24, clamp(m * .04, 15, 22), '#ffffff', '#2ef2ff');
   }
   ctx.globalAlpha = 1;
 }
@@ -1085,6 +1512,9 @@ function frame(now){
 }
 
 resize();
+refreshShopBtn();
+// test hook for automated play-testing only (?test=1); not used in normal play
+try { if (/[?&]test=1/.test(location.search)) window.__game = code => eval(code); } catch(e){}
 // pre-populate slope for the title screen
 for (let z = 14; z < FAR; z += rowGap()) spawnRow(z);
 requestAnimationFrame(t0 => { last = t0; frame(t0); });
